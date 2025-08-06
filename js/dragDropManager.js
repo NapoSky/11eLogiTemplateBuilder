@@ -63,19 +63,11 @@ export class DragDropManager {
 
     addItemToSection(sectionElement, icon) {
         const sectionContent = sectionElement.querySelector('.section-content');
-        const existingItem = sectionContent.querySelector(`[data-icon="${icon.filename}"]`);
-
-        if (existingItem) {
-            // Incrémenter la quantité
-            const quantityBadge = existingItem.querySelector('.quantity-badge');
-            const currentQuantity = parseInt(quantityBadge.textContent) || 1;
-            quantityBadge.textContent = currentQuantity + 1;
-        } else {
-            // Utiliser createCanvasIcon de l'iconManager pour avoir les boutons de suppression
-            const canvasIcon = this.iconManager.createCanvasIcon(icon.filename, 0, 0, 1, true);
-            sectionContent.appendChild(canvasIcon);
-            // Les icônes dans les sections ne sont pas draggables individuellement
-        }
+        
+        // Maintenant on crée toujours une nouvelle icône pour permettre les subtypes différents
+        const canvasIcon = this.iconManager.createCanvasIcon(icon.filename, 0, 0, 1, true);
+        sectionContent.appendChild(canvasIcon);
+        // Les icônes dans les sections ne sont pas draggables individuellement
     }
 
     createDefaultSection(icon) {

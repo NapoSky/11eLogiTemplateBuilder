@@ -1,5 +1,5 @@
 // Application principale - orchestre tous les modules
-import { iconCategories, iconFiles } from './config.js';
+import { iconCategories, iconFiles, subtypeFiles, loadSubtypeMapping } from './config.js';
 import { IconManager } from './iconManager.js';
 import { DragDropManager } from './dragDropManager.js';
 import { SectionManager } from './sectionManager.js';
@@ -28,7 +28,8 @@ class FoxholeTemplateBuilder {
         this.sectionManager.updateDropZoneVisibility();
         
         // Délai pour s'assurer que le DOM est prêt
-        setTimeout(() => {
+        setTimeout(async () => {
+            await loadSubtypeMapping();
             this.iconManager.loadIcons();
             this.setupPredefinedTemplates();
         }, 100);
@@ -110,6 +111,7 @@ class FoxholeTemplateBuilder {
 
     confirmQuantity() {
         const newQuantity = parseInt(document.getElementById('itemQuantity').value) || 1;
+        const newSubtype = document.getElementById('itemSubtype').value || null;
         
         if (this.currentItemElement && this.currentQuantityBadge) {
             if (newQuantity <= 0) {
@@ -118,10 +120,57 @@ class FoxholeTemplateBuilder {
             } else {
                 // Mettre à jour la quantité
                 this.currentQuantityBadge.textContent = newQuantity;
+                
+                // Mettre à jour le subtype
+                const oldSubtype = this.currentItemElement.dataset.subtype;
+                
+                if (newSubtype) {
+                    this.currentItemElement.dataset.subtype = newSubtype;
+                    
+                    // Ajouter ou mettre à jour l'icône de subtype
+                    let subtypeImg = this.currentItemElement.querySelector('.subtype-icon');
+                    if (subtypeImg) {
+                        subtypeImg.src = `assets/icons/subtypes/${newSubtype}`;
+                    } else {
+                        subtypeImg = document.createElement('img');
+                        subtypeImg.src = `assets/icons/subtypes/${newSubtype}`;
+                        subtypeImg.alt = newSubtype;
+                        subtypeImg.className = 'subtype-icon';
+                        subtypeImg.style.cssText = `
+                            position: absolute;
+                            top: 2px;
+                            left: 2px;
+                            width: 20px;
+                            height: 20px;
+                            object-fit: contain;
+                            pointer-events: none;
+                            z-index: 500;
+                            border-radius: 2px;
+                            background: rgba(255, 255, 255, 0.8);
+                            padding: 1px;
+                            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                        `;
+                        this.currentItemElement.appendChild(subtypeImg);
+                    }
+                } else {
+                    // Supprimer le subtype s'il n'y en a plus
+                    delete this.currentItemElement.dataset.subtype;
+                    const subtypeImg = this.currentItemElement.querySelector('.subtype-icon');
+                    if (subtypeImg) {
+                        subtypeImg.remove();
+                    }
+                }
             }
         }
         
         document.getElementById('quantityModal').classList.remove('active');
+        
+        // Réinitialiser la preview
+        const preview = document.getElementById('subtypePreviewContainer');
+        if (preview) {
+            preview.classList.add('hidden');
+        }
+        
         this.currentItemElement = null;
         this.currentQuantityBadge = null;
     }
@@ -178,6 +227,16 @@ class FoxholeTemplateBuilder {
         if (cancelQuantity) {
             cancelQuantity.addEventListener('click', () => {
                 quantityModal.classList.remove('active');
+                
+                // Réinitialiser la preview
+                const preview = document.getElementById('subtypePreviewContainer');
+                if (preview) {
+                    preview.classList.add('hidden');
+                }
+                
+                // Réinitialiser les éléments courants
+                this.currentItemElement = null;
+                this.currentQuantityBadge = null;
             });
         }
 

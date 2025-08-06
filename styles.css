@@ -680,6 +680,34 @@ body {
     box-shadow: 0 0 0 3px rgb(37 99 235 / 0.1);
 }
 
+.subtype-selection {
+    margin-bottom: var(--spacing-lg);
+}
+
+.subtype-selection label {
+    display: block;
+    margin-bottom: var(--spacing-sm);
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.subtype-selection select {
+    width: 100%;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    transition: border-color 0.2s ease;
+    background: white;
+    cursor: pointer;
+}
+
+.subtype-selection select option {
+    padding: 8px 12px;
+    background: white;
+    color: var(--text-primary);
+}
+
 .quantity-input {
     margin-bottom: var(--spacing-lg);
 }
@@ -709,6 +737,182 @@ body {
 .item-preview span {
     font-weight: 500;
     color: var(--text-primary);
+}
+
+/* Styles pour les previews de subtypes */
+.subtype-preview {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+    vertical-align: middle;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 3px;
+    padding: 2px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.subtype-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* Amélioration du select de subtype avec preview */
+.subtype-selection select {
+    width: 100%;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    transition: border-color 0.2s ease;
+    background: white;
+    cursor: pointer;
+}
+
+.subtype-selection select option {
+    padding: 8px 12px;
+    background: white;
+    color: var(--text-primary);
+}
+
+/* Preview dans la modale */
+.subtype-modal-preview {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    padding: 10px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+.subtype-modal-preview .icon-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.subtype-modal-preview .main-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 4px;
+    padding: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.subtype-modal-preview .subtype-overlay {
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    width: 16px;
+    height: 16px;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 2px;
+    padding: 1px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    z-index: 10;
+}
+
+.subtype-modal-preview .preview-text {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+/* Fond sombre pour toutes les icônes avec fond transparent */
+.canvas-icon img,
+.icon-item img,
+.item-preview img {
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 4px;
+    padding: 2px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Exception pour les icônes de subtype qui ont déjà leur propre style */
+.subtype-icon {
+    background: rgba(0, 0, 0, 0.8) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Style pour les options du select avec preview d'icône */
+.subtype-selection select {
+    width: 100%;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    transition: border-color 0.2s ease;
+    background: white;
+    cursor: pointer;
+}
+
+.subtype-selection select option {
+    padding: 8px 12px 8px 40px;
+    background: white;
+    color: var(--text-primary);
+    background-repeat: no-repeat;
+    background-position: 8px center;
+    background-size: 20px 20px;
+    min-height: 36px;
+    line-height: 20px;
+}
+
+/* Preview de subtype dans la modale */
+.subtype-preview-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    padding: 10px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    min-height: 50px;
+}
+
+.subtype-preview-container.hidden {
+    display: none;
+}
+
+.subtype-preview-icon-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.subtype-preview-main-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 4px;
+    padding: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    object-fit: contain;
+}
+
+.subtype-preview-overlay {
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    width: 16px;
+    height: 16px;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 2px;
+    padding: 1px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    z-index: 10;
+    object-fit: contain;
+}
+
+.subtype-preview-text {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
 }
 
 /* Animations */

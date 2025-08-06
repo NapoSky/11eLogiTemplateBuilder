@@ -2,6 +2,7 @@
 
 // Charger le mapping des noms d'icônes
 let iconNameMapping = {};
+let subtypeNameMapping = {};
 
 export const loadIconMapping = async () => {
     try {
@@ -26,9 +27,36 @@ export const loadIconMapping = async () => {
     }
 };
 
+export const loadSubtypeMapping = async () => {
+    try {
+        // D'abord, essayer de charger depuis localStorage
+        const localMapping = localStorage.getItem('subtypeMapping');
+        if (localMapping) {
+            subtypeNameMapping = JSON.parse(localMapping);
+            console.log('Mapping des subtypes chargé depuis localStorage:', Object.keys(subtypeNameMapping).length, 'entrées');
+        } else {
+            // Sinon, charger depuis le fichier JSON
+            const response = await fetch('./subtypeMapping.json');
+            if (response.ok) {
+                subtypeNameMapping = await response.json();
+                console.log('Mapping des subtypes chargé depuis fichier:', Object.keys(subtypeNameMapping).length, 'entrées');
+            } else {
+                console.warn('Impossible de charger subtypeMapping.json');
+            }
+        }
+    } catch (error) {
+        console.warn('Erreur lors du chargement du mapping des subtypes:', error);
+    }
+};
+
 // Fonction pour obtenir le nom traduit d'une icône
 export const getIconDisplayName = (filename) => {
     return iconNameMapping[filename] || filename.replace(/ItemIcon\.png|Icon\.png|\.png/g, '').replace(/([A-Z])/g, ' $1').trim();
+};
+
+// Fonction pour obtenir le nom traduit d'un subtype
+export const getSubtypeDisplayName = (filename) => {
+    return subtypeNameMapping[filename] || filename.replace(/Subtype|Icon\.png|\.png/g, '').replace(/([A-Z])/g, ' $1').trim();
 };
 
 // Configuration des icônes et catégories
@@ -87,6 +115,15 @@ export const iconFiles = [
     'StilSwordCIcon.png', 'SubMachineGunAmmoIcon.png', 'SubMachineGunIcon.png', 'SulfurIcon.png',
     'TankUniformCIcon.png', 'TankUniformWIcon.png', 'TorpedoIcon.png', 'TrainHospitalItemIcon.png',
     'TraumaKitItemIcon.png', 'TrenchMaceWIcon.png', 'WaterIcon.png', 'WindsockItemIcon.png', 'WorkWrench.png'
+];
+
+// Liste des fichiers de subtypes
+export const subtypeFiles = [
+    'SubtypeAPIcon.png', 'SubtypeATIcon.png', 'SubtypeAmmoIcon.png', 'SubtypeAntiTank.png',
+    'SubtypeEngineerIcon.png', 'SubtypeFLIcon.png', 'SubtypeGAIcon.png', 'SubtypeGrenadeIcon.png',
+    'SubtypeHBIcon.png', 'SubtypeHEIcon.png', 'SubtypeLRAIcon.png', 'SubtypeMedicIcon.png',
+    'SubtypeRainIcon.png', 'SubtypeSBIcon.png', 'SubtypeSEIcon.png', 'SubtypeSHIcon.png',
+    'SubtypeSMKIcon.png', 'SubtypeScoutIcon.png', 'SubtypeSnowIcon.png', 'SubtypeTankIcon.png'
 ];
 
 // Templates prédéfinis

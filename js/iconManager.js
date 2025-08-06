@@ -134,10 +134,13 @@ export class IconManager {
         this.dragDropManager.createDefaultSection(icon);
     }
 
-    createCanvasIcon(iconFile, x = 0, y = 0, quantity = 1, inSection = false) {
+    createCanvasIcon(iconFile, x = 0, y = 0, quantity = 1, inSection = false, subtype = null) {
         const iconContainer = document.createElement('div');
         iconContainer.className = 'canvas-icon';
         iconContainer.dataset.icon = iconFile;
+        if (subtype) {
+            iconContainer.dataset.subtype = subtype;
+        }
         
         // Styles différents selon si l'icône est dans une section ou sur le canvas
         if (inSection) {
@@ -318,16 +321,50 @@ export class IconManager {
         iconContainer.appendChild(quantityBadge);
         iconContainer.appendChild(deleteBtn);
 
+        // Ajouter l'icône de subtype si spécifiée
+        if (subtype) {
+            const subtypeImg = document.createElement('img');
+            subtypeImg.src = `assets/icons/subtypes/${subtype}`;
+            subtypeImg.alt = subtype;
+            subtypeImg.className = 'subtype-icon';
+            subtypeImg.style.cssText = `
+                position: absolute;
+                top: 2px;
+                left: 2px;
+                width: 20px;
+                height: 20px;
+                object-fit: contain;
+                pointer-events: none;
+                z-index: 500;
+                border-radius: 2px;
+                background: rgba(255, 255, 255, 0.8);
+                padding: 1px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            `;
+            iconContainer.appendChild(subtypeImg);
+        }
+
         return iconContainer;
     }
 
     editQuantity(iconContainer, badge) {
         const currentQuantity = parseInt(badge.textContent);
         const iconFile = iconContainer.dataset.icon;
+        const currentSubtype = iconContainer.dataset.subtype || '';
         
         // Utiliser la jolie modale au lieu du prompt
         document.getElementById('itemQuantity').value = currentQuantity;
         document.getElementById('previewIcon').src = `assets/icons/${iconFile}`;
+        
+        // Populer la liste des subtypes
+        this.populateSubtypeOptions();
+        document.getElementById('itemSubtype').value = currentSubtype;
+        
+        // Initialiser la preview du subtype si applicable
+        setTimeout(() => {
+            const event = new Event('change');
+            document.getElementById('itemSubtype').dispatchEvent(event);
+        }, 100);
         
         // Trouver le nom d'affichage de l'icône
         const iconData = this.icons.find(i => i.filename === iconFile);
@@ -341,6 +378,67 @@ export class IconManager {
         document.getElementById('quantityModal').classList.add('active');
         document.getElementById('itemQuantity').focus();
         document.getElementById('itemQuantity').select();
+    }
+
+    populateSubtypeOptions() {
+        const select = document.getElementById('itemSubtype');
+        
+        // Vider les options existantes (sauf "Aucun")
+        select.innerHTML = '<option value="">Aucun</option>';
+        
+        // Charger les subtypes depuis la configuration
+        import('./config.js').then(({ subtypeFiles, getSubtypeDisplayName }) => {
+            subtypeFiles.forEach(subtypeFile => {
+                const option = document.createElement('option');
+                option.value = subtypeFile;
+                option.textContent = `📋 ${getSubtypeDisplayName(subtypeFile)}`;
+                option.dataset.iconPath = `assets/icons/subtypes/${subtypeFile}`;
+                
+                // Ajouter le style pour l'icône de preview (pour les navigateurs qui le supportent)
+                option.style.backgroundImage = `url("assets/icons/subtypes/${subtypeFile}")`;
+                option.style.backgroundSize = '20px 20px';
+                option.style.backgroundRepeat = 'no-repeat';
+                option.style.backgroundPosition = '8px center';
+                option.style.paddingLeft = '40px';
+                option.style.minHeight = '32px';
+                option.style.lineHeight = '20px';
+                
+                select.appendChild(option);
+            });
+            
+            // Ajouter l'event listener pour la preview
+            this.setupSubtypePreview();
+        });
+    }
+
+    setupSubtypePreview() {
+        const select = document.getElementById('itemSubtype');
+        const preview = document.getElementById('subtypePreviewContainer');
+        const mainIconPreview = document.getElementById('previewMainIcon');
+        const subtypeIconPreview = document.getElementById('previewSubtypeIcon');
+        const previewText = document.getElementById('previewSubtypeText');
+        
+        select.addEventListener('change', (e) => {
+            const selectedValue = e.target.value;
+            const mainIconSrc = document.getElementById('previewIcon').src;
+            
+            if (selectedValue) {
+                // Afficher la preview
+                preview.classList.remove('hidden');
+                mainIconPreview.src = mainIconSrc;
+                subtypeIconPreview.src = `assets/icons/subtypes/${selectedValue}`;
+                subtypeIconPreview.style.display = 'block';
+                
+                // Charger le nom du subtype
+                import('./config.js').then(({ getSubtypeDisplayName }) => {
+                    previewText.textContent = `Preview avec subtype: ${getSubtypeDisplayName(selectedValue)}`;
+                });
+            } else {
+                // Masquer la preview
+                preview.classList.add('hidden');
+                subtypeIconPreview.style.display = 'none';
+            }
+        });
     }
 
     filterIcons(searchTerm = '') {
@@ -466,12 +564,14 @@ export class IconManager {
         
         const quantityBadge = iconElement.querySelector('.quantity-badge');
         const quantity = quantityBadge ? parseInt(quantityBadge.textContent) || 1 : 1;
+        const subtype = iconElement.dataset.subtype || null;
         
         return {
             icon: iconElement.dataset.icon,
             x: rect.left - canvasRect.left,
             y: rect.top - canvasRect.top,
-            quantity: quantity
+            quantity: quantity,
+            subtype: subtype
         };
     }
 
@@ -486,7 +586,8 @@ export class IconManager {
             iconData.icon,
             0, 0, // Position non utilisée pour les sections
             iconData.quantity || 1,
-            true // inSection = true
+            true, // inSection = true
+            iconData.subtype || null
         );
         
         sectionContent.appendChild(canvasIcon);
@@ -502,7 +603,8 @@ export class IconManager {
             iconData.x || 0,
             iconData.y || 0,
             iconData.quantity || 1,
-            false // inSection = false
+            false, // inSection = false
+            iconData.subtype || null
         );
         canvas.appendChild(canvasIcon);
         this.dragDropManager.makeDraggable(canvasIcon);

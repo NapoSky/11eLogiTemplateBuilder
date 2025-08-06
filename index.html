@@ -129,6 +129,20 @@
                     <label for="itemQuantity">Quantité :</label>
                     <input type="number" id="itemQuantity" min="0" max="99999" value="1">
                 </div>
+                <div class="subtype-selection">
+                    <label for="itemSubtype">Subtype (optionnel) :</label>
+                    <select id="itemSubtype">
+                        <option value="">Aucun</option>
+                        <!-- Les options seront générées dynamiquement -->
+                    </select>
+                </div>
+                <div class="subtype-preview-container hidden" id="subtypePreviewContainer">
+                    <div class="subtype-preview-icon-container">
+                        <img class="subtype-preview-main-icon" id="previewMainIcon" src="" alt="">
+                        <img class="subtype-preview-overlay" id="previewSubtypeIcon" src="" alt="" style="display: none;">
+                    </div>
+                    <span class="subtype-preview-text" id="previewSubtypeText">Preview avec subtype</span>
+                </div>
                 <div class="item-preview">
                     <img id="previewIcon" src="" alt="">
                     <span id="previewName"></span>
