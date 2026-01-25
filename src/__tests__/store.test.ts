@@ -152,18 +152,24 @@ describe('Store - Gestion des Sections', () => {
       expect(store.sections[0].icons).toHaveLength(0);
     });
     
-    test('setIconQuantity modifie la quantité (minimum 1)', () => {
+    test('setIconQuantity modifie la quantité (minimum -1 pour valeurs spéciales)', () => {
       store.addIconToSection('section-1', mockIcon);
       const iconInstanceId = store.sections[0].icons[0].id;
       
       store.setIconQuantity('section-1', iconInstanceId, 5);
       expect(store.sections[0].icons[0].quantity).toBe(5);
       
+      // 0 = étoile (non nécessaire)
       store.setIconQuantity('section-1', iconInstanceId, 0);
-      expect(store.sections[0].icons[0].quantity).toBe(1);
+      expect(store.sections[0].icons[0].quantity).toBe(0);
       
+      // -1 = spécifique (?)
+      store.setIconQuantity('section-1', iconInstanceId, -1);
+      expect(store.sections[0].icons[0].quantity).toBe(-1);
+      
+      // -10 doit être limité à -1
       store.setIconQuantity('section-1', iconInstanceId, -10);
-      expect(store.sections[0].icons[0].quantity).toBe(1);
+      expect(store.sections[0].icons[0].quantity).toBe(-1);
     });
     
     test('setIconSubtype ajoute/modifie le subtype', () => {

@@ -9,7 +9,7 @@ interface InteractMoveEvent {
 }
 
 // Constantes pour le layout
-const TITLE_HEIGHT = 24; // Hauteur du titre au-dessus
+const TITLE_HEIGHT = 32; // Hauteur du titre au-dessus
 const PADDING = 6; // Padding interne
 
 export class SectionComponent {
@@ -63,8 +63,8 @@ export class SectionComponent {
     this.element.innerHTML = `
       <!-- Titre au-dessus du cadre -->
       <div class="section-title-container flex items-center justify-center gap-2 mb-0.5" style="height: ${TITLE_HEIGHT}px;">
-        <span class="section-title text-sm font-semibold text-white tracking-wide"
-              style="text-shadow: 0 2px 4px rgba(0,0,0,0.8);">
+        <span class="section-title text-xl font-bold text-white tracking-wider"
+              style="text-shadow: 0 0 8px rgba(0,0,0,1), 0 2px 4px rgba(0,0,0,0.9), 0 4px 8px rgba(0,0,0,0.7);">
           ${this.section.title}
         </span>
         <div class="section-controls flex gap-1 opacity-0 transition-opacity duration-200">
@@ -160,9 +160,14 @@ export class SectionComponent {
     const subtypeHtml = icon.subtype 
       ? `<img src="${icon.subtype}" alt="" class="absolute -top-0.5 -left-0.5 pointer-events-none drop-shadow-md" style="width: ${subtypeSize}px; height: ${subtypeSize}px;" />`
       : '';
-    const quantityHtml = icon.quantity > 1
-      ? `<span class="absolute -bottom-0.5 -right-0.5 bg-gradient-to-br from-gray-800 to-gray-900 text-white text-xs font-bold px-1 py-0.5 rounded shadow-lg border border-white/20">${icon.quantity}</span>`
-      : '';
+    let quantityHtml = '';
+    if (icon.quantity === 0) {
+      quantityHtml = `<span class="absolute -bottom-0.5 -right-0.5 bg-gradient-to-br from-amber-600 to-amber-800 text-white text-sm font-bold px-1.5 py-0.5 rounded shadow-lg border border-white/20">★</span>`;
+    } else if (icon.quantity === -1) {
+      quantityHtml = `<span class="absolute -bottom-0.5 -right-0.5 bg-gradient-to-br from-purple-600 to-purple-800 text-white text-sm font-bold px-1.5 py-0.5 rounded shadow-lg border border-white/20">?</span>`;
+    } else if (icon.quantity > 1) {
+      quantityHtml = `<span class="absolute -bottom-0.5 -right-0.5 bg-gradient-to-br from-gray-800 to-gray-900 text-white text-sm font-bold px-1.5 py-0.5 rounded shadow-lg border border-white/20">${icon.quantity}</span>`;
+    }
     
     return `
       <div class="grid-cell icon-cell flex items-center justify-center"

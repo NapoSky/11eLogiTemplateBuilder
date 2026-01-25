@@ -2,14 +2,27 @@ import { store } from '../store';
 import { Section, generateId } from '../types';
 
 const COLORS = [
-  '#3b82f6', // blue
-  '#22c55e', // green
-  '#ef4444', // red
-  '#f59e0b', // amber
-  '#8b5cf6', // violet
-  '#06b6d4', // cyan
-  '#ec4899', // pink
-  '#64748b', // slate
+  // Couleurs Foxhole exactes (basées sur le jeu)
+  '#8b7d3a', // olive/gold (armes légères 7.92)
+  '#6b5234', // marron (munitions AT)
+  '#8b3538', // rouge bordeaux (RPG/launchers)
+  '#3d5a80', // bleu (utilitaires)
+  '#5c4a6e', // violet/mauve
+  
+  // Variations utiles
+  '#a08b3a', // olive clair
+  '#4a3728', // marron foncé
+  '#b84545', // rouge plus vif
+  '#2d4a6b', // bleu foncé
+  '#7c5a9e', // violet clair
+  
+  // Couleurs complémentaires
+  '#d4a534', // jaune/or
+  '#e67e22', // orange
+  '#27ae60', // vert
+  '#16a085', // teal/turquoise
+  '#95a5a6', // gris
+  '#34495e', // slate foncé
 ];
 
 export class SectionModal {

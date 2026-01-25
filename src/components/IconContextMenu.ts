@@ -49,8 +49,12 @@ export class IconContextMenu {
           <label class="block text-xs text-gray-400 uppercase mb-1">Quantité</label>
           <div class="flex items-center gap-2">
             <button class="qty-btn w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded flex items-center justify-center" data-qty-action="minus">−</button>
-            <input type="number" id="qty-input" value="${currentQuantity}" min="1" max="999" class="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-center text-sm" />
+            <input type="number" id="qty-input" value="${currentQuantity}" min="-1" max="999" class="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-center text-sm" />
             <button class="qty-btn w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded flex items-center justify-center" data-qty-action="plus">+</button>
+          </div>
+          <div class="flex gap-1 mt-2">
+            <button class="qty-preset flex-1 px-2 py-1 text-xs rounded ${currentQuantity === 0 ? 'bg-amber-600' : 'bg-gray-700 hover:bg-gray-600'}" data-qty-preset="0" title="Non nécessaire">★ Non</button>
+            <button class="qty-preset flex-1 px-2 py-1 text-xs rounded ${currentQuantity === -1 ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'}" data-qty-preset="-1" title="Spécifique">? Spé</button>
           </div>
         </div>
         <div class="overflow-y-auto flex-1">
@@ -122,12 +126,29 @@ export class IconContextMenu {
         const action = (btn as HTMLElement).dataset.qtyAction;
         const input = this.container!.querySelector('#qty-input') as HTMLInputElement;
         let qty = parseInt(input.value) || 1;
-        if (action === 'plus') qty++;
+        if (action === 'plus') {
+          if (qty < 1) qty = 1; // Passer de valeur spéciale à 1
+          else qty++;
+        }
         if (action === 'minus' && qty > 1) qty--;
         input.value = String(qty);
         if (this.currentSectionId && this.currentIconId) {
           store.setIconQuantity(this.currentSectionId, this.currentIconId, qty);
         }
+      });
+    });
+
+    // Quantity preset buttons (★ and ?)
+    this.container.querySelectorAll('.qty-preset').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const qty = parseInt((btn as HTMLElement).dataset.qtyPreset || '1');
+        const input = this.container!.querySelector('#qty-input') as HTMLInputElement;
+        input.value = String(qty);
+        if (this.currentSectionId && this.currentIconId) {
+          store.setIconQuantity(this.currentSectionId, this.currentIconId, qty);
+        }
+        this.hide();
       });
     });
 

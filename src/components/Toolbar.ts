@@ -36,6 +36,8 @@ export class Toolbar {
           <button data-scale="small" class="icon-scale-btn px-2 py-1 text-xs rounded transition-colors" title="Petites icônes">S</button>
           <button data-scale="medium" class="icon-scale-btn px-2 py-1 text-xs rounded transition-colors" title="Moyennes icônes">M</button>
           <button data-scale="large" class="icon-scale-btn px-2 py-1 text-xs rounded transition-colors" title="Grandes icônes">L</button>
+          <button data-scale="xlarge" class="icon-scale-btn px-2 py-1 text-xs rounded transition-colors" title="Très grandes icônes">XL</button>
+          <button data-scale="xxlarge" class="icon-scale-btn px-2 py-1 text-xs rounded transition-colors" title="Extra grandes icônes">XXL</button>
         </div>
       </div>
       

@@ -1,14 +1,17 @@
 import { Icon, Section, Template, IconCategory, generateId, Subtype, SectionIcon } from './types';
+import { getBaseUrl } from './config';
 
 // Simple event emitter pattern
 type Listener = () => void;
 
 // Tailles d'icônes disponibles
-export type IconScale = 'small' | 'medium' | 'large';
+export type IconScale = 'small' | 'medium' | 'large' | 'xlarge' | 'xxlarge';
 export const ICON_SCALES: Record<IconScale, { cell: number; icon: number; img: number }> = {
   small: { cell: 52, icon: 48, img: 38 },
   medium: { cell: 64, icon: 58, img: 46 },
-  large: { cell: 76, icon: 70, img: 56 }
+  large: { cell: 76, icon: 70, img: 56 },
+  xlarge: { cell: 92, icon: 84, img: 68 },
+  xxlarge: { cell: 110, icon: 100, img: 82 }
 };
 
 class Store {
@@ -148,7 +151,7 @@ class Store {
       return {
         ...s,
         icons: s.icons.map(i => 
-          i.id === iconInstanceId ? { ...i, quantity: Math.max(1, quantity) } : i
+          i.id === iconInstanceId ? { ...i, quantity: Math.max(-1, quantity) } : i
         )
       };
     });
@@ -319,16 +322,39 @@ class Store {
   }
   
   exportJSON(): string {
-    return JSON.stringify({ sections: this.sections }, null, 2);
+    const baseUrl = getBaseUrl();
+    // Normaliser les chemins en retirant le BASE_URL pour portabilité
+    const normalizedSections = this.sections.map(section => ({
+      ...section,
+      icons: section.icons.map(icon => ({
+        ...icon,
+        path: icon.path.startsWith(baseUrl) 
+          ? icon.path.slice(baseUrl.length - 1) // Garde le / initial
+          : icon.path,
+        subtype: icon.subtype?.startsWith(baseUrl)
+          ? icon.subtype.slice(baseUrl.length - 1)
+          : icon.subtype
+      }))
+    }));
+    return JSON.stringify({ sections: normalizedSections }, null, 2);
   }
   
   importJSON(json: string): void {
     try {
       const template: Template = JSON.parse(json);
-      // Migrer les anciennes icônes sans gridRow/gridCol
+      const baseUrl = getBaseUrl();
+      // Restaurer les chemins avec le BASE_URL courant
       this.sections = (template.sections || []).map(section => ({
         ...section,
-        icons: this.migrateIcons(section.icons, section.width)
+        icons: this.migrateIcons(section.icons, section.width).map(icon => ({
+          ...icon,
+          path: icon.path.startsWith('/assets') 
+            ? baseUrl.slice(0, -1) + icon.path // Ajoute le baseUrl sans le / final
+            : icon.path,
+          subtype: icon.subtype?.startsWith('/assets')
+            ? baseUrl.slice(0, -1) + icon.subtype
+            : icon.subtype
+        }))
       }));
       this.save();
       this.emit();

@@ -450,11 +450,11 @@ describe('SectionModal - Composant réel', () => {
 
     window.dispatchEvent(new CustomEvent('open-section-modal', { detail: {} }));
 
-    const colorBtn = container.querySelector('[data-color="#ef4444"]') as HTMLElement;
+    const colorBtn = container.querySelector('[data-color="#8b7d3a"]') as HTMLElement;
     colorBtn?.click();
 
     const hiddenInput = container.querySelector('#selected-color') as HTMLInputElement;
-    expect(hiddenInput.value).toBe('#ef4444');
+    expect(hiddenInput.value).toBe('#8b7d3a');
   });
 
   test('ferme sur clic backdrop', () => {

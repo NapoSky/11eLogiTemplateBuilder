@@ -1,7 +1,7 @@
 # 11eRC-FL Template Builder
 
-[![Build & Deploy](https://github.com/11eRC-FL/11eTemplateBuilder/actions/workflows/deploy.yml/badge.svg)](https://github.com/11eRC-FL/11eTemplateBuilder/actions/workflows/deploy.yml)
-[![Tests](https://github.com/11eRC-FL/11eTemplateBuilder/actions/workflows/test.yml/badge.svg)](https://github.com/11eRC-FL/11eTemplateBuilder/actions/workflows/test.yml)
+[![Build & Deploy](https://github.com/NapoSky/11eLogiTemplateBuilder/actions/workflows/deploy.yml/badge.svg)](https://github.com/NapoSky/11eLogiTemplateBuilder/actions/workflows/deploy.yml)
+[![Tests](https://github.com/NapoSky/11eLogiTemplateBuilder/actions/workflows/test.yml/badge.svg)](https://github.com/NapoSky/11eLogiTemplateBuilder/actions/workflows/test.yml)
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 
 Un générateur de templates de stockpile pour le jeu Foxhole, spécialement conçu pour le régiment 11eRC-FL.
