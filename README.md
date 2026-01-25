@@ -1,5 +1,9 @@
 # 11eRC-FL Template Builder
 
+[![Build & Deploy](https://github.com/11eRC-FL/11eTemplateBuilder/actions/workflows/deploy.yml/badge.svg)](https://github.com/11eRC-FL/11eTemplateBuilder/actions/workflows/deploy.yml)
+[![Tests](https://github.com/11eRC-FL/11eTemplateBuilder/actions/workflows/test.yml/badge.svg)](https://github.com/11eRC-FL/11eTemplateBuilder/actions/workflows/test.yml)
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
+
 Un générateur de templates de stockpile pour le jeu Foxhole, spécialement conçu pour le régiment 11eRC-FL.
 
 ## 🎯 Fonctionnalités
@@ -128,7 +132,15 @@ Utilisez les boutons **S** / **M** / **L** dans la toolbar pour ajuster la taill
 
 ## 🎮 À propos de Foxhole
 
-Foxhole est un jeu de guerre MMO développé par Clapfoot Inc. Ce template builder est un outil communautaire créé pour faciliter la gestion logistique des régiments.
+Foxhole est un jeu de guerre MMO développé par Siegecamp Inc. Ce template builder est un outil communautaire créé pour faciliter la gestion logistique des régiments.
+
+## 📜 Licence
+
+Ce projet est sous licence **CC BY-NC 4.0** (Creative Commons Attribution - Pas d'Utilisation Commerciale).
+
+> ⚠️ **Note importante** : Les icônes et assets graphiques de Foxhole sont la propriété de **Siegecamp Inc.** et sont utilisés uniquement à des fins communautaires non commerciales.
+
+Voir le fichier [LICENSE](LICENSE) pour plus de détails.
 
 ---
 

@@ -247,7 +247,7 @@ class Store {
     }
     
     if (this.searchQuery.trim()) {
-      const q = this.searchQuery.toLowerCase();
+      const q = this.searchQuery.trim().toLowerCase();
       filtered = filtered.filter(i => 
         i.displayName.toLowerCase().includes(q) ||
         i.filename.toLowerCase().includes(q)

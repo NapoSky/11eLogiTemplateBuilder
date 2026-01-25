@@ -1,7 +1,8 @@
 import { Icon, IconCategory, Subtype } from '../types';
+import { getBaseUrl } from '../config';
 
-// Obtenir le base path pour les assets (défini par Vite)
-const BASE_URL = import.meta.env.BASE_URL;
+// Obtenir le base path pour les assets
+const BASE_URL = getBaseUrl();
 
 // Interface pour le fichier categoryMapping.json
 interface CategoryMapping {

@@ -1,9 +1,10 @@
 import { store } from '../store';
 import { SectionComponent } from './Section';
 import { Section } from '../types';
+import { getBaseUrl } from '../config';
 
-// Obtenir le base path pour les assets (défini par Vite)
-const BASE_URL = import.meta.env.BASE_URL;
+// Obtenir le base path pour les assets
+const BASE_URL = getBaseUrl();
 
 export class Canvas {
   private container: HTMLElement | null = null;
