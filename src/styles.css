@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+/* SortableJS classes - ne peuvent pas avoir d'espaces */
+.sortable-ghost {
+  opacity: 0.4;
+  transform: scale(0.95);
+}
+
+.sortable-chosen {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.sortable-drag {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  transform: rotate(2deg);
+}
+
+/* Hover sur section-header pour voir les contrôles */
+.section:hover .section-controls {
+  opacity: 1 !important;
+}
+
+/* Animation subtile sur les sections */
+.section {
+  transition: box-shadow 0.2s ease;
+}
+
+.section:hover .section-box {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Scrollbar custom pour les sections */
+.section-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.section-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.section-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.section-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}

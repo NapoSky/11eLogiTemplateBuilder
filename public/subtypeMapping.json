@@ -1,0 +1,22 @@
+{
+  "SubtypeAPIcon.png": "AP (Armor Piercing)",
+  "SubtypeATIcon.png": "AT (Anti-Tank)",
+  "SubtypeAmmoIcon.png": "Ammo",
+  "SubtypeAntiTank.png": "Anti-Tank",
+  "SubtypeEngineerIcon.png": "Engineer",
+  "SubtypeFLIcon.png": "FL (Foxhole Legion)",
+  "SubtypeGAIcon.png": "GA (Gas)",
+  "SubtypeGrenadeIcon.png": "Grenade",
+  "SubtypeHBIcon.png": "HB (High Blast)",
+  "SubtypeHEIcon.png": "HE (High Explosive)",
+  "SubtypeLRAIcon.png": "LRA (Long Range Artillery)",
+  "SubtypeMedicIcon.png": "Medic",
+  "SubtypeRainIcon.png": "Rain",
+  "SubtypeSBIcon.png": "SB (Smoke Barrage)",
+  "SubtypeSEIcon.png": "SE (Smoke)",
+  "SubtypeSHIcon.png": "SH (Shell)",
+  "SubtypeSMKIcon.png": "SMK (Smoke)",
+  "SubtypeScoutIcon.png": "Scout",
+  "SubtypeSnowIcon.png": "Snow",
+  "SubtypeTankIcon.png": "Tank"
+}

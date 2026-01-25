@@ -2,11 +2,18 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "Start Development Server",
+			"label": "dev",
 			"type": "shell",
-			"command": "python3 -m http.server 8000",
+			"command": "npm run dev -- --host 0.0.0.0",
 			"group": "build",
 			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "build",
+			"type": "shell",
+			"command": "npm run build",
+			"group": "build",
 			"problemMatcher": []
 		}
 	]
