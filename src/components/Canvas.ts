@@ -10,6 +10,7 @@ export class Canvas {
   private canvas: HTMLElement | null = null;
   private sectionComponents: Map<string, SectionComponent> = new Map();
   private unsubscribe: (() => void) | null = null;
+  private lastIconScale: string = store.iconScale;
 
   mount(container: HTMLElement): void {
     this.container = container;
@@ -46,6 +47,17 @@ export class Canvas {
 
   private renderSections(): void {
     if (!this.canvas) return;
+    
+    // Si iconScale a changé, recréer toutes les sections pour le nouveau sizing
+    const iconScaleChanged = this.lastIconScale !== store.iconScale;
+    if (iconScaleChanged) {
+      this.lastIconScale = store.iconScale;
+      // Forcer la destruction et recréation de toutes les sections
+      for (const component of this.sectionComponents.values()) {
+        component.destroy();
+      }
+      this.sectionComponents.clear();
+    }
     
     const currentIds = new Set(store.sections.map(s => s.id));
     

@@ -49,3 +49,23 @@
 .section-content::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.5);
 }
+
+/* Grid drag & drop feedback */
+.grid-cell.drag-over {
+  background: rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+}
+
+.grid-cell.drag-over > div {
+  border-color: rgba(59, 130, 246, 0.8) !important;
+  opacity: 1 !important;
+}
+
+.grid-cell.empty-cell:hover > div {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Icon dragging state */
+.section-icon[draggable="true"]:active {
+  cursor: grabbing;
+}

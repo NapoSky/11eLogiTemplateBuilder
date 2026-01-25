@@ -1,5 +1,5 @@
 import html2canvas from 'html2canvas-pro';
-import { store } from '../store';
+import { store, IconScale, ICON_SCALES } from '../store';
 
 export class Toolbar {
   private container: HTMLElement | null = null;
@@ -7,6 +7,9 @@ export class Toolbar {
   mount(container: HTMLElement): void {
     this.container = container;
     this.render();
+    
+    // Écouter les changements de store pour mettre à jour le bouton actif
+    store.subscribe(() => this.updateScaleButtons());
   }
 
   private render(): void {
@@ -22,6 +25,14 @@ export class Toolbar {
           </svg>
           Nouvelle Section
         </button>
+        
+        <!-- Sélecteur de taille d'icônes -->
+        <div class="flex items-center gap-1 ml-2 border-l border-gray-600 pl-4">
+          <span class="text-xs text-gray-400 mr-1">Taille:</span>
+          <button data-scale="small" class="icon-scale-btn px-2 py-1 text-xs rounded transition-colors" title="Petites icônes">S</button>
+          <button data-scale="medium" class="icon-scale-btn px-2 py-1 text-xs rounded transition-colors" title="Moyennes icônes">M</button>
+          <button data-scale="large" class="icon-scale-btn px-2 py-1 text-xs rounded transition-colors" title="Grandes icônes">L</button>
+        </div>
       </div>
       
       <div class="flex items-center gap-2">
@@ -40,8 +51,23 @@ export class Toolbar {
         </button>
       </div>
     `;
+    
+    this.updateScaleButtons();
 
     this.attachEvents();
+  }
+
+  private updateScaleButtons(): void {
+    if (!this.container) return;
+    const currentScale = store.iconScale;
+    this.container.querySelectorAll('.icon-scale-btn').forEach(btn => {
+      const scale = btn.getAttribute('data-scale') as IconScale;
+      if (scale === currentScale) {
+        btn.className = 'icon-scale-btn px-2 py-1 text-xs rounded transition-colors bg-blue-600 text-white';
+      } else {
+        btn.className = 'icon-scale-btn px-2 py-1 text-xs rounded transition-colors bg-gray-600 hover:bg-gray-500 text-gray-300';
+      }
+    });
   }
 
   private attachEvents(): void {
@@ -50,6 +76,16 @@ export class Toolbar {
     // New section
     this.container.querySelector('#btn-new-section')?.addEventListener('click', () => {
       window.dispatchEvent(new CustomEvent('open-section-modal', { detail: { x: 100, y: 100 } }));
+    });
+
+    // Icon scale buttons
+    this.container.querySelectorAll('.icon-scale-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const scale = btn.getAttribute('data-scale') as IconScale;
+        if (scale) {
+          store.setIconScale(scale);
+        }
+      });
     });
 
     // Export PNG

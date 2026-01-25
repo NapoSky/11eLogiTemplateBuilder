@@ -24,6 +24,8 @@ export interface SectionIcon {
   path: string;
   subtype?: string; // Chemin vers l'icône de subtype
   quantity: number; // Quantité affichée sur l'icône
+  gridRow: number;  // Position sur la grille (ligne, commence à 0)
+  gridCol: number;  // Position sur la grille (colonne, commence à 0)
 }
 
 export interface Subtype {
