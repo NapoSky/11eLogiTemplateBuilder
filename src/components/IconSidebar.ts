@@ -18,6 +18,29 @@ export class IconSidebar {
   private render(): void {
     if (!this.container) return;
 
+    // Check if we already have the structure, if so just update the icon grid
+    const existingGrid = this.container.querySelector('#icon-grid');
+    const existingSearchInput = this.container.querySelector('#search-input') as HTMLInputElement;
+    
+    if (existingGrid && existingSearchInput) {
+      // Just update the icon grid and category buttons without touching the search input
+      existingGrid.innerHTML = store.filteredIcons.map(icon => this.renderIcon(icon)).join('');
+      
+      // Update category button states
+      this.container.querySelectorAll('[data-category]').forEach(btn => {
+        const cat = btn.getAttribute('data-category');
+        if (cat === store.selectedCategory) {
+          btn.className = 'px-2 py-1 text-xs rounded bg-blue-600';
+        } else {
+          btn.className = 'px-2 py-1 text-xs rounded bg-gray-700 hover:bg-gray-600';
+        }
+      });
+      
+      // Re-attach drag events for new icons
+      this.attachIconDragEvents();
+      return;
+    }
+
     this.container.innerHTML = `
       <div class="p-3 border-b border-gray-700">
         <input
@@ -68,6 +91,25 @@ export class IconSidebar {
     `;
   }
 
+  private attachIconDragEvents(): void {
+    if (!this.container) return;
+    
+    // Drag start for icons
+    this.container.querySelectorAll('.sidebar-icon').forEach(el => {
+      el.addEventListener('dragstart', (e) => {
+        const target = e.currentTarget as HTMLElement;
+        const iconData = {
+          id: target.dataset.iconId,
+          filename: target.dataset.iconFilename,
+          path: target.dataset.iconPath,
+          displayName: target.dataset.iconName
+        };
+        (e as DragEvent).dataTransfer?.setData('application/json', JSON.stringify(iconData));
+        (e as DragEvent).dataTransfer!.effectAllowed = 'copy';
+      });
+    });
+  }
+
   private attachEvents(): void {
     if (!this.container) return;
 
@@ -86,18 +128,6 @@ export class IconSidebar {
     });
 
     // Drag start for icons
-    this.container.querySelectorAll('.sidebar-icon').forEach(el => {
-      el.addEventListener('dragstart', (e) => {
-        const target = e.currentTarget as HTMLElement;
-        const iconData = {
-          id: target.dataset.iconId,
-          filename: target.dataset.iconFilename,
-          path: target.dataset.iconPath,
-          displayName: target.dataset.iconName
-        };
-        (e as DragEvent).dataTransfer?.setData('application/json', JSON.stringify(iconData));
-        (e as DragEvent).dataTransfer!.effectAllowed = 'copy';
-      });
-    });
+    this.attachIconDragEvents();
   }
 }

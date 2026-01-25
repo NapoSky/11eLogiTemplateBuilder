@@ -116,7 +116,7 @@ export class Toolbar {
                 <li>• <span class="text-gray-300">Double-clic</span> sur le canvas → Nouvelle section</li>
                 <li>• <span class="text-gray-300">Glisser</span> une icône vers une section → Ajouter</li>
                 <li>• <span class="text-gray-300">Glisser</span> dans la grille → Réorganiser</li>
-                <li>• <span class="text-gray-300">Clic</span> sur une icône → Modifier quantité</li>
+                <li>• <span class="text-gray-300">Clic droit</span> sur une icône → Quantité & sous-type</li>
               </ul>
             </div>
             
