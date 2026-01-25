@@ -4,112 +4,132 @@ Un générateur de templates de stockpile pour le jeu Foxhole, spécialement con
 
 ## 🎯 Fonctionnalités
 
-- **Interface intuitive** : Glisser-déposer pour organiser facilement les icônes
-- **Catégorisation automatique** : Les icônes sont automatiquement classées par type (armes, munitions, uniformes, etc.)
-- **Gestion des quantités** : Clic simple pour modifier les quantités de chaque item
-- **Système de sections** : Créez des sections personnalisées avec des couleurs de bordure différentes
-- **Export haute qualité** : Génération d'images PNG en 1920x1080 prêtes à l'emploi
-- **Sauvegarde/Chargement** : Sauvegardez vos templates et rechargez-les plus tard
-- **Recherche** : Trouvez rapidement une icône spécifique
-- **Responsive** : Fonctionne sur desktop et mobile
+- **Interface moderne** : Application TypeScript avec Tailwind CSS
+- **Glisser-déposer** : Organisez facilement les icônes dans des sections
+- **Grille intelligente** : Placement précis des icônes sur une grille CSS
+- **Catégorisation automatique** : Les icônes sont classées par type (Armes, Munitions, Uniformes, etc.)
+- **Taille ajustable** : Changez la taille globale des icônes (S/M/L)
+- **Gestion des quantités** : Clic pour modifier la quantité de chaque item
+- **Export PNG** : Image haute qualité 1920x1080 prête à l'emploi
+- **Sauvegarde JSON** : Sauvegardez et rechargez vos templates
+- **Raccourcis clavier** : Navigation rapide avec Ctrl+S, Ctrl+O, Ctrl+E
+- **Menu d'aide** : Bouton `?` pour voir tous les raccourcis
 
 ## 🚀 Utilisation
 
-1. **Ouvrez** le fichier `index.html` dans votre navigateur
-2. **Recherchez** ou parcourez les icônes dans la sidebar
-3. **Glissez-déposez** les icônes sur le canvas pour créer votre template
-4. **Cliquez** sur une icône placée pour modifier sa quantité
-5. **Créez des sections** avec le bouton "Ajouter Section"
-6. **Exportez** votre template en PNG haute qualité
+### Démarrage rapide
+
+```bash
+# Installation des dépendances
+npm install
+
+# Lancement en mode développement
+npm run dev
+
+# Build de production
+npm run build
+```
+
+### Workflow
+
+1. **Double-cliquez** sur le canvas pour créer une nouvelle section
+2. **Recherchez** ou parcourez les icônes dans la sidebar gauche
+3. **Glissez-déposez** les icônes vers une section
+4. **Réorganisez** les icônes en les glissant dans la grille
+5. **Cliquez** sur une icône pour modifier sa quantité
+6. **Exportez** en PNG ou sauvegardez en JSON
+
+## ⌨️ Raccourcis clavier
+
+| Raccourci | Action |
+|-----------|--------|
+| `Ctrl + S` | Sauvegarder le template (JSON) |
+| `Ctrl + O` | Charger un template |
+| `Ctrl + E` | Exporter en PNG |
+| `?` | Afficher/masquer l'aide |
+| `Escape` | Fermer les modals |
+
+## 🖱️ Actions souris
+
+- **Double-clic** sur le canvas → Créer une nouvelle section
+- **Glisser** une icône de la sidebar → Ajouter à une section
+- **Glisser** une icône dans la grille → Réorganiser
+- **Clic** sur une icône placée → Modifier quantité/sous-type
+- **Glisser** le header d'une section → Déplacer la section
+- **Glisser** le coin d'une section → Redimensionner
+
+## 📐 Taille des icônes
+
+Utilisez les boutons **S** / **M** / **L** dans la toolbar pour ajuster la taille globale des icônes :
+- **S** (Small) : Icônes compactes pour plus de contenu
+- **M** (Medium) : Taille par défaut équilibrée  
+- **L** (Large) : Icônes plus visibles
 
 ## 📁 Structure du projet
 
 ```
 11eTemplateBuilder/
-├── index.html          # Interface principale
-├── styles.css          # Styles CSS
-├── script.js           # Logique JavaScript
+├── src/
+│   ├── main.ts              # Point d'entrée
+│   ├── store.ts             # État global (sections, icônes)
+│   ├── types.ts             # Types TypeScript
+│   ├── styles.css           # Styles Tailwind
+│   └── components/
+│       ├── Toolbar.ts       # Barre d'outils + raccourcis
+│       ├── Sidebar.ts       # Liste des icônes
+│       ├── Canvas.ts        # Zone de travail
+│       ├── Section.ts       # Composant section
+│       └── ...
 ├── assets/
-│   └── icons/          # Dossier contenant toutes les icônes Foxhole
-│       ├── AmmoUniformWIcon.png
-│       ├── AssaultRifleItemIcon.png
-│       └── ... (toutes les autres icônes)
-└── README.md           # Ce fichier
+│   ├── icons/               # Icônes Foxhole (PNG)
+│   └── template_background.png
+├── data/
+│   ├── iconMapping.json     # Noms d'affichage des icônes
+│   └── categoryMapping.json # Catégorisation des icônes
+├── index.html
+├── package.json
+├── tsconfig.json
+└── vite.config.ts
 ```
 
 ## 🎨 Catégories d'icônes
 
-Les icônes sont automatiquement classées dans les catégories suivantes :
-
-- **🎯 Armes** : Fusils, pistolets, lance-roquettes, etc.
-- **🔴 Munitions** : Balles, obus, grenades, mines
-- **👤 Uniformes** : Tous types d'uniformes et armures
-- **📦 Matériaux** : Matériaux de construction, combustibles, composants
-- **❤️ Médical** : Trousses de soins, plasma sanguin, etc.
-- **🚛 Véhicules** : Équipements et munitions pour véhicules
-- **➕ Autres** : Tout ce qui ne rentre pas dans les autres catégories
-
-## 🎨 Couleurs de sections
-
-Vous pouvez choisir parmi 6 couleurs de bordure pour vos sections :
-
-- **Bleu** : Équipement général
-- **Rouge** : Munitions et explosifs
-- **Vert** : Médical et ravitaillement
-- **Orange** : Matériaux et construction
-- **Violet** : Emplacements et fortifications
-- **Gris** : Uniformes et équipement personnel
+- **🔫 Armes** : Fusils, pistolets, lance-roquettes
+- **🔴 Munitions** : Balles, obus, grenades, mines  
+- **👤 Uniformes** : Équipements personnels et armures
+- **📦 Ressources** : Matériaux de construction, composants
+- **❤️ Médical** : Kits de soins, plasma sanguin
+- **🚗 Véhicules** : Munitions et équipements véhicules
+- **⚓ Naval** : Équipements maritimes
+- **🏗️ Emplacements** : Structures défensives
+- **➕ Autres** : Divers
 
 ## 💾 Formats d'export
 
-- **PNG** : Image haute qualité (1920x1080) pour partage direct
-- **JSON** : Sauvegarde du template pour modification ultérieure
+| Format | Usage |
+|--------|-------|
+| **PNG** | Image 1920x1080 pour partage Discord/forums |
+| **JSON** | Sauvegarde complète pour modification ultérieure |
 
-## 🔧 Fonctionnalités avancées
+## 🛠️ Stack technique
 
-### Raccourcis clavier
-- `Suppr` : Supprimer une section sélectionnée
-- `Ctrl/Cmd + S` : Sauvegarder le template
-- `Ctrl/Cmd + O` : Charger un template
-- `Ctrl/Cmd + E` : Exporter en PNG
-
-### Glisser-déposer
-- Glissez une icône vers une section existante pour l'ajouter
-- Glissez une icône vers une zone vide pour créer une nouvelle section
-- Déplacez les sections en glissant leur en-tête
-
-### Gestion des quantités
-- Clic simple sur une icône pour modifier sa quantité
-- Entrez 0 pour supprimer un item
-- Les quantités sont automatiquement affichées avec un badge
+- **TypeScript** : Typage statique
+- **Vite** : Build rapide et HMR
+- **Tailwind CSS v4** : Styles utilitaires
+- **interact.js** : Drag & resize des sections
+- **html2canvas-pro** : Export PNG (support oklab/oklch)
 
 ## 🌐 Compatibilité
 
-- ✅ Chrome 80+
-- ✅ Firefox 75+
-- ✅ Safari 13+
-- ✅ Edge 80+
-
-## 📝 Notes de développement
-
-L'application est entièrement côté client et ne nécessite aucun serveur. Elle utilise :
-
-- **HTML5** pour la structure
-- **CSS3** avec variables personnalisées pour le style
-- **JavaScript ES6+** pour la logique
-- **Canvas API** pour l'export d'images
-- **File API** pour la sauvegarde/chargement
-
-## 🐛 Problèmes connus
-
-- Les icônes doivent être au format PNG et dans le dossier `assets/icons/`
-- L'export peut prendre quelques secondes pour les templates complexes
-- La qualité d'export dépend de la qualité des icônes sources
+- ✅ Chrome 90+
+- ✅ Firefox 90+
+- ✅ Safari 15+
+- ✅ Edge 90+
 
 ## 🎮 À propos de Foxhole
 
-Foxhole est un jeu de guerre multijoueur massivement en ligne développé par Clapfoot Inc. Ce template builder est un outil communautaire créé pour faciliter la gestion logistique des régiments.
+Foxhole est un jeu de guerre MMO développé par Clapfoot Inc. Ce template builder est un outil communautaire créé pour faciliter la gestion logistique des régiments.
 
 ---
 
-Créé avec ❤️ pour le 11eRC-FL
+**v2.0** - Créé avec ❤️ pour le 11eRC-FL
