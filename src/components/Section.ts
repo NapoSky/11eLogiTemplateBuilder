@@ -1,6 +1,5 @@
 import interact from 'interactjs';
-import Sortable, { SortableEvent } from 'sortablejs';
-import { store } from '../store';
+import { store, ICON_SCALES } from '../store';
 import { Section as SectionType, SectionIcon } from '../types';
 
 interface InteractMoveEvent {
@@ -9,12 +8,16 @@ interface InteractMoveEvent {
   rect: { width: number; height: number };
 }
 
+// Constantes pour le layout
+const TITLE_HEIGHT = 24; // Hauteur du titre au-dessus
+const PADDING = 6; // Padding interne
+
 export class SectionComponent {
   private element: HTMLElement;
   private section: SectionType;
-  private sortable: Sortable | null = null;
   private onDelete: (id: string) => void;
   private onEdit: (id: string) => void;
+  private draggedIconId: string | null = null;
 
   constructor(section: SectionType, onDelete: (id: string) => void, onEdit: (id: string) => void) {
     this.section = section;
@@ -30,6 +33,20 @@ export class SectionComponent {
     this.setupDropZone();
   }
 
+  private getCellSize(): number {
+    return ICON_SCALES[store.iconScale].cell;
+  }
+
+  private getGridDimensions(): { cols: number; rows: number } {
+    const cellSize = this.getCellSize();
+    const contentWidth = this.section.width - PADDING * 2;
+    const contentHeight = this.section.height - TITLE_HEIGHT - PADDING * 2;
+    return {
+      cols: Math.max(1, Math.floor(contentWidth / cellSize)),
+      rows: Math.max(1, Math.floor(contentHeight / cellSize))
+    };
+  }
+
   private updateStyle(): void {
     this.element.style.left = `${this.section.x}px`;
     this.element.style.top = `${this.section.y}px`;
@@ -38,44 +55,45 @@ export class SectionComponent {
   }
 
   private render(): void {
-    // Destroy old sortable before re-rendering
-    if (this.sortable) {
-      this.sortable.destroy();
-      this.sortable = null;
-    }
-
     const color = this.section.color;
+    const { cols, rows } = this.getGridDimensions();
+    const cellSize = this.getCellSize();
     
+    // Design épuré : titre AU-DESSUS du cadre, pas de header intégré
     this.element.innerHTML = `
-      <div class="section-box relative rounded-xl overflow-hidden h-full backdrop-blur-sm" 
-           style="background: linear-gradient(135deg, ${color}15 0%, ${color}08 100%); border: 2px solid ${color}; box-shadow: 0 4px 20px ${color}30, inset 0 1px 0 rgba(255,255,255,0.1);">
-        
-        <!-- Header with title -->
-        <div class="section-header flex items-center justify-between px-3 py-1.5" 
-             style="background: linear-gradient(180deg, ${color}40 0%, ${color}20 100%); border-bottom: 1px solid ${color}50;">
-          <div class="flex-1"></div>
-          <div class="section-title text-center text-sm font-semibold text-white tracking-wide"
-               style="text-shadow: 0 1px 3px rgba(0,0,0,0.8);">
-            ${this.section.title}
-          </div>
-          <div class="section-controls flex-1 flex justify-end gap-1 opacity-0 transition-opacity duration-200">
-            <button class="btn-edit p-1 bg-white/10 hover:bg-white/25 rounded-lg transition-colors" title="Éditer">
-              <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
-              </svg>
-            </button>
-            <button class="btn-delete p-1 bg-white/10 hover:bg-red-500/60 rounded-lg transition-colors" title="Supprimer">
-              <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-              </svg>
-            </button>
-          </div>
+      <!-- Titre au-dessus du cadre -->
+      <div class="section-title-container flex items-center justify-center gap-2 mb-0.5" style="height: ${TITLE_HEIGHT}px;">
+        <span class="section-title text-sm font-semibold text-white tracking-wide"
+              style="text-shadow: 0 2px 4px rgba(0,0,0,0.8);">
+          ${this.section.title}
+        </span>
+        <div class="section-controls flex gap-1 opacity-0 transition-opacity duration-200">
+          <button class="btn-edit p-0.5 bg-black/40 hover:bg-white/25 rounded transition-colors" title="Éditer">
+            <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+            </svg>
+          </button>
+          <button class="btn-delete p-0.5 bg-black/40 hover:bg-red-500/60 rounded transition-colors" title="Supprimer">
+            <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
         </div>
+      </div>
+      
+      <!-- Cadre simple et épuré -->
+      <div class="section-box relative rounded-lg overflow-hidden" 
+           style="height: calc(100% - ${TITLE_HEIGHT}px); background: rgba(0,0,0,0.35); border: 2px solid ${color};">
         
-        <!-- Content area -->
-        <div class="section-content p-2 h-[calc(100%-36px)] overflow-auto cursor-move">
-          <div class="icon-grid flex flex-wrap gap-1.5 content-start">
-            ${this.section.icons.map(icon => this.renderIcon(icon)).join('')}
+        <!-- Content area with CSS Grid -->
+        <div class="section-content p-1.5 h-full overflow-hidden">
+          <div class="icon-grid relative" style="
+            display: grid;
+            grid-template-columns: repeat(${cols}, ${cellSize}px);
+            grid-template-rows: repeat(${rows}, ${cellSize}px);
+            gap: 0;
+          ">
+            ${this.renderGridCells(cols, rows)}
           </div>
         </div>
       </div>
@@ -91,40 +109,166 @@ export class SectionComponent {
       this.onEdit(this.section.id);
     });
     
-    // Drag from content area
-    const content = this.element.querySelector('.section-content');
-    if (content) {
-      content.addEventListener('mousedown', (e) => {
-        if ((e.target as HTMLElement).closest('.section-icon')) return;
-        // Let interact.js handle the drag
-      });
-    }
-    
-    this.setupSortable();
+    this.setupIconDragDrop();
   }
 
-  private renderIcon(icon: SectionIcon): string {
+  private renderGridCells(cols: number, rows: number): string {
+    const cells: string[] = [];
+    const iconsByPosition = new Map<string, SectionIcon>();
+    const cellSize = this.getCellSize();
+    const { icon: iconSize, img: imgSize } = ICON_SCALES[store.iconScale];
+    
+    // Mapper les icônes par position
+    for (const icon of this.section.icons) {
+      const key = `${icon.gridRow},${icon.gridCol}`;
+      iconsByPosition.set(key, icon);
+    }
+    
+    // Générer les cellules de la grille
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const key = `${row},${col}`;
+        const icon = iconsByPosition.get(key);
+        
+        if (icon) {
+          cells.push(this.renderIcon(icon, row, col, cellSize, iconSize, imgSize));
+        } else {
+          // Cellule vide (drop target)
+          cells.push(`
+            <div class="grid-cell empty-cell flex items-center justify-center rounded transition-all duration-150"
+                 data-row="${row}" data-col="${col}"
+                 style="grid-row: ${row + 1}; grid-column: ${col + 1}; width: ${cellSize}px; height: ${cellSize}px;">
+              <div style="width: ${iconSize}px; height: ${iconSize}px;" class="border-2 border-dashed border-white/5 rounded opacity-0 hover:opacity-100 hover:border-white/20 transition-opacity"></div>
+            </div>
+          `);
+        }
+      }
+    }
+    
+    // Ajouter les icônes qui sont hors de la grille visible
+    for (const icon of this.section.icons) {
+      if (icon.gridRow >= rows || icon.gridCol >= cols) {
+        cells.push(this.renderIcon(icon, icon.gridRow, icon.gridCol, cellSize, iconSize, imgSize));
+      }
+    }
+    
+    return cells.join('');
+  }
+
+  private renderIcon(icon: SectionIcon, row: number, col: number, cellSize: number, iconSize: number, imgSize: number): string {
+    const subtypeSize = Math.round(imgSize * 0.4);
     const subtypeHtml = icon.subtype 
-      ? `<img src="${icon.subtype}" alt="" class="absolute -top-0.5 -left-0.5 w-5 h-5 pointer-events-none drop-shadow-md" />`
+      ? `<img src="${icon.subtype}" alt="" class="absolute -top-0.5 -left-0.5 pointer-events-none drop-shadow-md" style="width: ${subtypeSize}px; height: ${subtypeSize}px;" />`
       : '';
     const quantityHtml = icon.quantity > 1
-      ? `<span class="absolute -bottom-0.5 -right-0.5 bg-gradient-to-br from-gray-800 to-gray-900 text-white text-xs font-bold px-1.5 py-0.5 rounded-md shadow-lg border border-white/20">${icon.quantity}</span>`
+      ? `<span class="absolute -bottom-0.5 -right-0.5 bg-gradient-to-br from-gray-800 to-gray-900 text-white text-xs font-bold px-1 py-0.5 rounded shadow-lg border border-white/20">${icon.quantity}</span>`
       : '';
+    
     return `
-      <div class="section-icon relative w-14 h-14 bg-black/40 rounded-lg flex items-center justify-center cursor-grab hover:bg-black/60 hover:scale-105 transition-all duration-150 select-none ring-1 ring-white/10 hover:ring-white/30" 
-           data-icon-instance-id="${icon.id}" data-section-id="${this.section.id}">
-        <img src="${icon.path}" alt="" class="w-11 h-11 object-contain pointer-events-none select-none drop-shadow-sm" draggable="false" />
-        ${subtypeHtml}
-        ${quantityHtml}
+      <div class="grid-cell icon-cell flex items-center justify-center"
+           data-row="${row}" data-col="${col}"
+           style="grid-row: ${row + 1}; grid-column: ${col + 1}; width: ${cellSize}px; height: ${cellSize}px;">
+        <div class="section-icon relative bg-black/30 rounded flex items-center justify-center cursor-grab hover:bg-black/50 hover:scale-105 transition-all duration-150 select-none ring-1 ring-white/10 hover:ring-white/25" 
+             style="width: ${iconSize}px; height: ${iconSize}px;"
+             data-icon-instance-id="${icon.id}" data-section-id="${this.section.id}" draggable="true">
+          <img src="${icon.path}" alt="" style="width: ${imgSize}px; height: ${imgSize}px;" class="object-contain pointer-events-none select-none drop-shadow-sm" draggable="false" />
+          ${subtypeHtml}
+          ${quantityHtml}
+        </div>
       </div>
     `;
+  }
+
+  private setupIconDragDrop(): void {
+    const iconGrid = this.element.querySelector('.icon-grid') as HTMLElement;
+    if (!iconGrid) return;
+
+    // Drag start sur les icônes
+    iconGrid.addEventListener('dragstart', (e) => {
+      const iconEl = (e.target as HTMLElement).closest('.section-icon') as HTMLElement;
+      if (!iconEl) return;
+      
+      this.draggedIconId = iconEl.dataset.iconInstanceId || null;
+      iconEl.classList.add('opacity-50');
+      
+      e.dataTransfer!.effectAllowed = 'move';
+      e.dataTransfer!.setData('text/plain', this.draggedIconId || '');
+      e.dataTransfer!.setData('application/x-section-icon', JSON.stringify({
+        iconInstanceId: this.draggedIconId,
+        fromSectionId: this.section.id
+      }));
+    });
+
+    // Drag end
+    iconGrid.addEventListener('dragend', (e) => {
+      const iconEl = (e.target as HTMLElement).closest('.section-icon') as HTMLElement;
+      if (iconEl) {
+        iconEl.classList.remove('opacity-50');
+      }
+      this.draggedIconId = null;
+      
+      // Nettoyer les highlights
+      iconGrid.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+    });
+
+    // Drag over sur les cellules
+    iconGrid.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer!.dropEffect = 'move';
+      
+      const cell = (e.target as HTMLElement).closest('.grid-cell') as HTMLElement;
+      if (cell && !cell.classList.contains('drag-over')) {
+        iconGrid.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+        cell.classList.add('drag-over');
+      }
+    });
+
+    // Drag leave
+    iconGrid.addEventListener('dragleave', (e) => {
+      const cell = (e.target as HTMLElement).closest('.grid-cell') as HTMLElement;
+      if (cell && !cell.contains(e.relatedTarget as Node)) {
+        cell.classList.remove('drag-over');
+      }
+    });
+
+    // Drop sur les cellules
+    iconGrid.addEventListener('drop', (e) => {
+      e.preventDefault();
+      
+      const cell = (e.target as HTMLElement).closest('.grid-cell') as HTMLElement;
+      if (!cell) return;
+      
+      const row = parseInt(cell.dataset.row || '0');
+      const col = parseInt(cell.dataset.col || '0');
+      
+      // Vérifier si c'est un déplacement interne
+      const internalData = e.dataTransfer!.getData('application/x-section-icon');
+      if (internalData) {
+        try {
+          const { iconInstanceId, fromSectionId } = JSON.parse(internalData);
+          
+          if (fromSectionId === this.section.id) {
+            // Déplacement dans la même section
+            store.moveIconToGridPosition(this.section.id, iconInstanceId, row, col);
+          } else {
+            // Déplacement entre sections
+            store.moveIconBetweenSections(fromSectionId, this.section.id, iconInstanceId, row, col);
+          }
+        } catch (err) {
+          console.error('Invalid internal drag data', err);
+        }
+      }
+      
+      // Nettoyer
+      iconGrid.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+    });
   }
 
   private setupInteract(): void {
     interact(this.element)
       .draggable({
-        allowFrom: '.section-box',
-        ignoreFrom: '.section-icon',
+        allowFrom: '.section-title-container, .section-box',
+        ignoreFrom: '.section-icon, .btn-edit, .btn-delete',
         modifiers: [
           interact.modifiers.restrictRect({
             restriction: 'parent'
@@ -152,7 +296,7 @@ export class SectionComponent {
         edges: { right: true, bottom: true, left: false, top: false },
         modifiers: [
           interact.modifiers.restrictSize({
-            min: { width: 100, height: 60 }
+            min: { width: 80, height: 60 }
           })
         ],
         listeners: {
@@ -161,6 +305,9 @@ export class SectionComponent {
             this.section.height = event.rect.height;
             this.element.style.width = `${event.rect.width}px`;
             this.element.style.height = `${event.rect.height}px`;
+            
+            // Re-render grid on resize
+            this.renderGridOnly();
           },
           end: () => {
             store.updateSection(this.section.id, {
@@ -173,30 +320,60 @@ export class SectionComponent {
   }
 
   private setupDropZone(): void {
+    // Drop depuis la sidebar (nouvelles icônes)
     this.element.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.dataTransfer!.dropEffect = 'copy';
-      this.element.classList.add('ring-2', 'ring-blue-500');
+      // Vérifier si c'est un drop depuis la sidebar (pas un déplacement interne)
+      if (!e.dataTransfer?.types.includes('application/x-section-icon')) {
+        e.preventDefault();
+        e.dataTransfer!.dropEffect = 'copy';
+        this.element.querySelector('.section-box')?.classList.add('ring-2', 'ring-blue-500');
+      }
     });
 
-    this.element.addEventListener('dragleave', () => {
-      this.element.classList.remove('ring-2', 'ring-blue-500');
+    this.element.addEventListener('dragleave', (e) => {
+      if (!this.element.contains(e.relatedTarget as Node)) {
+        this.element.querySelector('.section-box')?.classList.remove('ring-2', 'ring-blue-500');
+      }
     });
 
     this.element.addEventListener('drop', (e) => {
+      // Ne traiter que les drops depuis la sidebar
+      if (e.dataTransfer?.types.includes('application/x-section-icon')) {
+        return; // Laissé au handler de la grille
+      }
+      
       e.preventDefault();
-      this.element.classList.remove('ring-2', 'ring-blue-500');
+      this.element.querySelector('.section-box')?.classList.remove('ring-2', 'ring-blue-500');
       
       try {
         const data = JSON.parse(e.dataTransfer!.getData('application/json'));
         if (data.id && data.path) {
-          store.addIconToSection(this.section.id, {
-            id: data.id,
-            filename: data.filename,
-            displayName: data.displayName,
-            category: '',
-            path: data.path
-          });
+          // Calculer la position de drop dans la grille
+          const iconGrid = this.element.querySelector('.icon-grid') as HTMLElement;
+          const cellSize = this.getCellSize();
+          if (iconGrid) {
+            const rect = iconGrid.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const col = Math.max(0, Math.floor(x / cellSize));
+            const row = Math.max(0, Math.floor(y / cellSize));
+            
+            store.addIconToSection(this.section.id, {
+              id: data.id,
+              filename: data.filename,
+              displayName: data.displayName,
+              category: '',
+              path: data.path
+            }, row, col);
+          } else {
+            store.addIconToSection(this.section.id, {
+              id: data.id,
+              filename: data.filename,
+              displayName: data.displayName,
+              category: '',
+              path: data.path
+            });
+          }
         }
       } catch (err) {
         // Ignore invalid drops
@@ -204,52 +381,16 @@ export class SectionComponent {
     });
   }
 
-  private setupSortable(): void {
+  private renderGridOnly(): void {
+    const { cols, rows } = this.getGridDimensions();
+    const cellSize = this.getCellSize();
     const iconGrid = this.element.querySelector('.icon-grid') as HTMLElement;
-    if (!iconGrid) {
-      console.error('Icon grid not found');
-      return;
+    if (iconGrid) {
+      iconGrid.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
+      iconGrid.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
+      iconGrid.innerHTML = this.renderGridCells(cols, rows);
+      this.setupIconDragDrop();
     }
-
-    // Small delay to ensure DOM is ready
-    requestAnimationFrame(() => {
-      this.sortable = Sortable.create(iconGrid, {
-        group: 'icons',
-        animation: 150,
-        ghostClass: 'sortable-ghost',
-        chosenClass: 'sortable-chosen',
-        dragClass: 'sortable-drag',
-        draggable: '.section-icon',
-        filter: '.btn-edit, .btn-delete',
-        preventOnFilter: false,
-        onStart: () => {
-          document.body.style.cursor = 'grabbing';
-        },
-        onEnd: (evt: SortableEvent) => {
-          document.body.style.cursor = '';
-          const iconInstanceId = evt.item.dataset.iconInstanceId;
-          if (!iconInstanceId) return;
-          
-          const fromSection = evt.from.closest('.section') as HTMLElement | null;
-          const toSection = evt.to.closest('.section') as HTMLElement | null;
-          const fromSectionId = fromSection?.dataset.sectionId;
-          const toSectionId = toSection?.dataset.sectionId;
-          
-          if (!fromSectionId || !toSectionId) return;
-          
-          if (fromSectionId === toSectionId) {
-            // Reorder within same section
-            const newOrder = Array.from(evt.to.querySelectorAll('.section-icon'))
-              .map(el => (el as HTMLElement).dataset.iconInstanceId!)
-              .filter(Boolean);
-            store.reorderSectionIcons(toSectionId, newOrder);
-          } else {
-            // Move to different section
-            store.moveIconBetweenSections(fromSectionId, toSectionId, iconInstanceId, evt.newIndex ?? 0);
-          }
-        }
-      });
-    });
   }
 
   update(section: SectionType): void {
@@ -258,41 +399,38 @@ export class SectionComponent {
     
     // Only update style if position/size changed
     if (oldSection.x !== section.x || oldSection.y !== section.y || 
-        oldSection.width !== section.width || oldSection.height !== section.height ||
-        oldSection.color !== section.color) {
+        oldSection.width !== section.width || oldSection.height !== section.height) {
       this.updateStyle();
     }
     
-    // Only update title if changed
-    if (oldSection.title !== section.title || oldSection.color !== section.color) {
-      const header = this.element.querySelector('.section-header') as HTMLElement;
-      if (header) {
-        header.style.backgroundColor = section.color;
-        const titleEl = header.querySelector('span');
-        if (titleEl) titleEl.textContent = section.title;
-      }
-    }
+    // Re-render si la taille, le titre, la couleur ou les icônes changent
+    const needsRerender = 
+      oldSection.width !== section.width ||
+      oldSection.height !== section.height ||
+      oldSection.title !== section.title ||
+      oldSection.color !== section.color ||
+      this.iconsChanged(oldSection.icons, section.icons);
     
-    // Only re-render icons if icons changed (id, subtype, or quantity)
-    const oldIconIds = oldSection.icons.map(i => `${i.id}:${i.subtype || ''}:${i.quantity}`).join(',');
-    const newIconIds = section.icons.map(i => `${i.id}:${i.subtype || ''}:${i.quantity}`).join(',');
-    if (oldIconIds !== newIconIds) {
-      this.renderIconsOnly();
+    if (needsRerender) {
+      this.render();
     }
   }
   
-  private renderIconsOnly(): void {
-    // Destroy old sortable
-    if (this.sortable) {
-      this.sortable.destroy();
-      this.sortable = null;
-    }
+  private iconsChanged(oldIcons: SectionIcon[], newIcons: SectionIcon[]): boolean {
+    if (oldIcons.length !== newIcons.length) return true;
     
-    const iconGrid = this.element.querySelector('.icon-grid');
-    if (iconGrid) {
-      iconGrid.innerHTML = this.section.icons.map(icon => this.renderIcon(icon)).join('');
-      this.setupSortable();
+    for (let i = 0; i < oldIcons.length; i++) {
+      const oldIcon = oldIcons[i];
+      const newIcon = newIcons.find(ic => ic.id === oldIcon.id);
+      if (!newIcon) return true;
+      if (oldIcon.gridRow !== newIcon.gridRow || 
+          oldIcon.gridCol !== newIcon.gridCol ||
+          oldIcon.subtype !== newIcon.subtype ||
+          oldIcon.quantity !== newIcon.quantity) {
+        return true;
+      }
     }
+    return false;
   }
 
   getElement(): HTMLElement {
@@ -300,7 +438,6 @@ export class SectionComponent {
   }
 
   destroy(): void {
-    this.sortable?.destroy();
     interact(this.element).unset();
     this.element.remove();
   }
