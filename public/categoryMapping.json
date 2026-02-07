@@ -119,7 +119,6 @@
       "UI/ItemIcons/BinocularsItemIcon.png",
       "UI/ItemIcons/RadioItemIcon.png",
       "UI/ItemIcons/RadioBackpackItemIcon.png",
-      "UI/StructureIcons/SatchelChargeTIcon.png",
       "UI/ItemIcons/SatchelChargeTIcon.png",
       "UI/ItemIcons/ExplosiveTripodIcon.png",
       "UI/ItemIcons/SandbagMaterialItemIcon.png",
@@ -149,7 +148,8 @@
       "UI/ItemIcons/PrototypeKitIcon.png",
       "UI/ItemIcons/ParatrooperBackpackItemIcon.png",
       "UI/ItemIcons/SeaMineIcon.png",
-      "UI/ItemIcons/SurfaceMineIcon.png"
+      "UI/ItemIcons/SurfaceMineIcon.png",
+      "UI/StructureIcons/SatchelCharge.png",
     ]
   },
   
@@ -387,7 +387,6 @@
       "UI/StructureIcons/FuelTankIcon.png",
       "UI/StructureIcons/ResourceContainerIcon.png",
       "UI/StructureIcons/ShippingContainerStructureIcon.png",
-      "UI/StructureIcons/SatchelCharge.png",
       "UI/VehicleIcons/EmplacedIndirectCIcon.png",
       "UI/ItemIcons/MaterialPlatformItemIcon.png",
       "UI/VehicleIcons/EmplacedInfantryCIcon.png",
