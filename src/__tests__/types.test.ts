@@ -69,14 +69,15 @@ describe('CATEGORIES - Liste des catégories', () => {
       'Field Weapons',
       'Structures',
       'Naval',
-      'Trains'
+      'Trains',
+      'Planes'
     ];
     
     expect(CATEGORIES).toEqual(expectedCategories);
   });
 
-  test('contient exactement 12 catégories', () => {
-    expect(CATEGORIES).toHaveLength(12);
+  test('contient exactement 13 catégories', () => {
+    expect(CATEGORIES).toHaveLength(13);
   });
 
   test('ne contient pas de doublons', () => {
