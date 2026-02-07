@@ -78,15 +78,11 @@
       "UI/ItemIcons/RpgItemIcon.png",
       "UI/ItemIcons/GrenadeLauncherCItemIcon.png",
       "UI/ItemIcons/GrenadeLauncherTCIcon.png",
-      "UI/ItemIcons/GrenadeAdapterIcon.png",
       "UI/ItemIcons/HeavyMachineGunIcon.png",
       "UI/ItemIcons/MGHeavyTWItemIcon.png",
       "UI/ItemIcons/FlamegunCICon.png",
       "UI/ItemIcons/FlamegunWICon.png",
-      "UI/ItemIcons/InfantrySupportGunItemIcon.png",
-      "UI/ItemIcons/FlameAmmoIcon.png",
-      "UI/ItemIcons/FlamePackCIcon.png",
-      "UI/ItemIcons/FlamePackWIcon.png"
+      "UI/ItemIcons/InfantrySupportGunItemIcon.png"
     ]
   },
   
@@ -109,6 +105,7 @@
       "UI/ItemIcons/HERocketAmmoIcon.png",
       "UI/ItemIcons/FlameRocketAmmoIcon.png",
       "UI/ItemIcons/DepthChargeIcon.png",
+      "UI/ItemIcons/FlameAmmoIcon.png",
       "UI/ItemIcons/TorpedoIcon.png"
     ]
   },
@@ -142,6 +139,9 @@
       "UI/ItemIcons/TrenchMaceWIcon.png",
       "UI/ItemIcons/BannerTCItemIcon.png",
       "UI/ItemIcons/BannerTWItemIcon.png",
+      "UI/ItemIcons/FlamePackCIcon.png",
+      "UI/ItemIcons/GrenadeAdapterIcon.png",
+      "UI/ItemIcons/FlamePackWIcon.png",
       "UI/ItemIcons/PrototypeKitIcon.png"
     ]
   },
@@ -217,6 +217,7 @@
       "UI/ItemIcons/Uniforms/GrenadeUniformCIcon.png",
       "UI/ItemIcons/Uniforms/AmmoUniformWIcon.png",
       "UI/ItemIcons/Uniforms/ArmourUniformW.png",
+      "UI/ItemIcons/Uniforms/ParatrooperUniformCIcon.png",
       "UI/ItemIcons/Uniforms/ArmourUniformC.png"
     ]
   },
@@ -263,6 +264,7 @@
       "UI/VehicleIcons/TanketteFlameCIcon.png",
       "UI/VehicleIcons/TanketteMultiCIcon.png",
       "UI/VehicleIcons/TanketteOffensiveCVehicleIcon.png",
+      "UI/VehicleIcons/TanketteCVehicleIcon.png",
       "UI/VehicleIcons/ArmoredCarVehicleIcon.png",
       "UI/VehicleIcons/ArmoredCarWarVehicleIcon.png",
       "UI/VehicleIcons/ArmoredCarOffensiveWVehicleIcon.png",
@@ -270,6 +272,8 @@
       "UI/VehicleIcons/ArmoredCarMobilityWarVehicleIcon.png",
       "UI/VehicleIcons/ArmoredCarTwinCItemIcon.png",
       "UI/VehicleIcons/ArmoredCarTwinWIcon.png",
+      "UI/VehicleIcons/ArmoredCarATWVehicleIcon.png",
+      "UI/VehicleIcons/ArmoredCarOffensiveCVehicleIcon.png",
       "UI/VehicleIcons/HalfTrackColVehicleIcon.png",
       "UI/VehicleIcons/HalfTrackWarVehicleIcon.png",
       "UI/VehicleIcons/HalfTrackColHeavyArmorVehicleIcon.png",
@@ -299,7 +303,9 @@
       "UI/VehicleIcons/ScoutVehicleMobilityVehicleIcon.png",
       "UI/VehicleIcons/ScoutVehicleUtilityCVehicleIcon.png",
       "UI/VehicleIcons/ScoutVehicleAmphibiousWarVehicleIcon.png",
-      "UI/VehicleIcons/InfantryCarVehicleIcon.png",
+      "UI/VehicleIcons/ScoutVehicleOffensiveVehicleIcon.png",
+      "UI/VehicleIcons/ScoutVehicleOffensiveWarVehicleIcon.png",
+      "UI/VehicleIcons/ScoutVehicleWarVehicleIcon.png",
       "UI/VehicleIcons/MotorcycleVehicleIcon.png",
       "UI/VehicleIcons/MotorcycleWIcon.png",
       "UI/VehicleIcons/MotorcycleOffensiveVehicleIcon.png",
@@ -362,6 +368,7 @@
       "UI/StructureIcons/ShippingContainerStructureIcon.png",
       "UI/StructureIcons/SatchelCharge.png",
       "UI/VehicleIcons/EmplacedIndirectCIcon.png",
+      "UI/ItemIcons/MaterialPlatformItemIcon.png",
       "UI/VehicleIcons/EmplacedInfantryCIcon.png"
     ]
   },
@@ -378,6 +385,11 @@
       "UI/VehicleIcons/LandingShipWIcon.png",
       "UI/VehicleIcons/LargeShipSubmarineWIcon.png",
       "UI/VehicleIcons/LargeShipResourceIcon.png",
+      "UI/VehicleIcons/LargeShipBaseShipIcon.png",
+      "UI/VehicleIcons/LargeShipBattleshipCIcon.png",
+      "UI/VehicleIcons/LargeShipBattleshipWIcon.png",
+      "UI/VehicleIcons/LargeShipDestroyerCIcon.png",
+      "UI/VehicleIcons/LargeShipStorageShipIcon.png",
       "UI/VehicleIcons/ShipPart1.png",
       "UI/VehicleIcons/ShipPart2.png",
       "UI/VehicleIcons/ShipPart3.png"
@@ -398,6 +410,7 @@
       "UI/VehicleIcons/SmallTrainFuelContainerIcon.png",
       "UI/VehicleIcons/SmallTrainShippingContainerIcon.png",
       "UI/VehicleIcons/CombatCarCVehicleIcon.png",
+      "UI/VehicleIcons/InfantryCarVehicleIcon.png",
       "UI/VehicleIcons/CombatCarWVehicleIcon.png"
     ]
   }
