@@ -110,7 +110,8 @@
       "UI/ItemIcons/MiniTorpedoAmmoIcon.png",
       "UI/VehicleIcons/AAAmmoIcon.png",
       "UI/VehicleIcons/AerialBombsIcon.png",
-      "UI/VehicleIcons/DiveBomberAmmoIcon.png"
+      "UI/VehicleIcons/DiveBomberAmmoIcon.png",
+      "UI/ItemIcons/Facilities/SurfaceMineIcon.png"
     ]
   },
   

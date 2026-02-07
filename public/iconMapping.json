@@ -425,6 +425,7 @@
   "UI/VehicleIcons/MediumBoatCIcon.png": "Medium Boat (Colonial)",
   "UI/VehicleIcons/MediumBoatWVehicleIcon.png": "Medium Boat (Warden)",
   "UI/VehicleIcons/MineboatIcon.png": "Mineboat",
+  "UI/ItemIcons/Facilities/SurfaceMineIcon.png": "Surface Mine",
 
   "_comment_vehicles_extended": "=== VEHICLES (EXTENDED) ===",
   "Vehicles/HalftrackTwinW.png": "Half-Track Twin (Warden)"
