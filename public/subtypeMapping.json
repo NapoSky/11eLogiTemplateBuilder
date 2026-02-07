@@ -23,5 +23,6 @@
   "SubtypeSMKIcon.png": "SMK (Smoke)",
   "SubtypeScoutIcon.png": "Scout",
   "SubtypeSnowIcon.png": "Snow",
-  "SubtypeTankIcon.png": "Tank"
+  "SubtypeTankIcon.png": "Tank",
+  "SubtypeWreckedIcon.png": "Wrecked"
 }
