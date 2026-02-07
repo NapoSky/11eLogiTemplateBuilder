@@ -120,6 +120,7 @@
       "UI/ItemIcons/RadioItemIcon.png",
       "UI/ItemIcons/RadioBackpackItemIcon.png",
       "UI/StructureIcons/SatchelChargeTIcon.png",
+      "UI/ItemIcons/SatchelChargeTIcon.png",
       "UI/ItemIcons/ExplosiveTripodIcon.png",
       "UI/ItemIcons/SandbagMaterialItemIcon.png",
       "UI/ItemIcons/DeployableTripodItemIcon.png",
@@ -196,7 +197,16 @@
       "UI/ItemIcons/ResourceCopperRefinedIcon.png",
       "UI/ItemIcons/GroundMaterialsIcon.png",
       "UI/ItemIcons/Facilities/HeavyExplosiveMaterialsIcon.png",
-      "UI/StructureIcons/EngineRoomPipeIcon.png"
+      "UI/StructureIcons/EngineRoomPipeIcon.png",
+      "UI/ItemIcons/Facilities/ConstructionMaterialsIcon.png",
+      "UI/ItemIcons/Facilities/EnrichedOilIcon.png",
+      "UI/ItemIcons/Facilities/HeavyOilIcon.png",
+      "UI/ItemIcons/Facilities/OilIcon.png",
+      "UI/ItemIcons/Facilities/ProcessedConstructionMaterialsIcon.png",
+      "UI/ItemIcons/Facilities/RareMaterialsIcon.png",
+      "UI/ItemIcons/Facilities/SteelConstructionMaterialsIcon.png",
+      "UI/ItemIcons/Facilities/WaterIcon.png",
+      "UI/ItemIcons/MetalBeamPlatformItemIcon.png"
     ]
   },
   
