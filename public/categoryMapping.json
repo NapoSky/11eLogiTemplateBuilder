@@ -99,7 +99,6 @@
       "UI/ItemIcons/MortarTankIcon.png",
       "UI/ItemIcons/MortarTankAmmoBRIcon.png",
       "UI/ItemIcons/SurfaceMineIcon.png",
-      "UI/ItemIcons/SeaMineIcon.png",
       "UI/ItemIcons/DemolitionRocketAmmoIcon.png",
       "UI/VehicleIcons/AircraftAmmoIcon.png",
       "UI/ItemIcons/HERocketAmmoIcon.png",
@@ -110,8 +109,7 @@
       "UI/ItemIcons/MiniTorpedoAmmoIcon.png",
       "UI/VehicleIcons/AAAmmoIcon.png",
       "UI/VehicleIcons/AerialBombsIcon.png",
-      "UI/VehicleIcons/DiveBomberAmmoIcon.png",
-      "UI/ItemIcons/Facilities/SurfaceMineIcon.png"
+      "UI/VehicleIcons/DiveBomberAmmoIcon.png"
     ]
   },
   
@@ -121,7 +119,7 @@
       "UI/ItemIcons/BinocularsItemIcon.png",
       "UI/ItemIcons/RadioItemIcon.png",
       "UI/ItemIcons/RadioBackpackItemIcon.png",
-      "UI/ItemIcons/SatchelChargeTIcon.png",
+      "UI/StructureIcons/SatchelChargeTIcon.png",
       "UI/ItemIcons/ExplosiveTripodIcon.png",
       "UI/ItemIcons/SandbagMaterialItemIcon.png",
       "UI/ItemIcons/DeployableTripodItemIcon.png",
@@ -148,7 +146,9 @@
       "UI/ItemIcons/GrenadeAdapterIcon.png",
       "UI/ItemIcons/FlamePackWIcon.png",
       "UI/ItemIcons/PrototypeKitIcon.png",
-      "UI/ItemIcons/ParatrooperBackpackItemIcon.png"
+      "UI/ItemIcons/ParatrooperBackpackItemIcon.png",
+      "UI/ItemIcons/SeaMineIcon.png",
+      "UI/ItemIcons/SurfaceMineIcon.png"
     ]
   },
   
@@ -195,7 +195,8 @@
       "UI/ItemIcons/ResourceCopperIcon.png",
       "UI/ItemIcons/ResourceCopperRefinedIcon.png",
       "UI/ItemIcons/GroundMaterialsIcon.png",
-      "UI/ItemIcons/Facilities/HeavyExplosiveMaterialsIcon.png"
+      "UI/ItemIcons/Facilities/HeavyExplosiveMaterialsIcon.png",
+      "UI/StructureIcons/EngineRoomPipeIcon.png"
     ]
   },
   
@@ -374,7 +375,6 @@
       "UI/StructureIcons/LongRangedArtilleryIcon.png",
       "UI/StructureIcons/ConcreteMixerIcon.png",
       "UI/StructureIcons/FuelTankIcon.png",
-      "UI/StructureIcons/EngineRoomPipeIcon.png",
       "UI/StructureIcons/ResourceContainerIcon.png",
       "UI/StructureIcons/ShippingContainerStructureIcon.png",
       "UI/StructureIcons/SatchelCharge.png",
@@ -391,7 +391,12 @@
       "UI/ItemIcons/StructureEquipmentShippableIcon.png",
       "UI/ItemIcons/WeatherStationShippableIcon.png",
       "UI/VehicleIcons/EmplacedAircraftCIcon.png",
-      "UI/VehicleIcons/EmplacedAircraftWIcon.png"
+      "UI/VehicleIcons/EmplacedAircraftWIcon.png",
+      "UI/StructureIcons/ConstructionEquipment.png",
+      "UI/StructureIcons/FortGarrisonStationIcon.png",
+      "UI/StructureIcons/FortLargeRadarIcon.png",
+      "UI/StructureIcons/IntelligenceCenterIcon.png",
+      "UI/StructureIcons/WeatherStationIcon.png"
     ]
   },
 
@@ -416,9 +421,8 @@
       "UI/VehicleIcons/ShipPart2.png",
       "UI/VehicleIcons/ShipPart3.png",
       "UI/VehicleIcons/GunBoat2CVehicleIcon.png",
-     "UI/VehicleIcons/Gunboat2WIcon.png",
+      "UI/VehicleIcons/Gunboat2WIcon.png",
       "UI/VehicleIcons/GunBoatCHullIcon.png",
-      "UI/VehicleIcons/LargeShipAircraftCIcon.png",
       "UI/VehicleIcons/LargeShipBattleshipAircraftCIcon.png",
       "UI/VehicleIcons/LargeShipBattleshipAircraftWIcon.png",
       "UI/VehicleIcons/LargeShipDestroyerWIcon.png",
@@ -472,7 +476,8 @@
       "UI/ItemIcons/AircraftPartSmallEngineCIcon.png",
       "UI/ItemIcons/AircraftPartSmallMechanicalCIcon.png",
       "UI/ItemIcons/AircraftSmallEngineWIcon.png",
-      "UI/ItemIcons/AircraftWingsIcon.png"
+      "UI/ItemIcons/AircraftWingsIcon.png",
+      "UI/VehicleIcons/AircraftFigtherCIcon.png"
     ]
   }
 }
