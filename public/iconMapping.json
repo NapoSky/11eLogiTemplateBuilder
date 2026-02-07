@@ -359,7 +359,6 @@
 
   "_comment_construction": "=== CONSTRUCTION & FACILITIES ===",
   "UI/ItemIcons/ConstructionPartsShippableIcon.png": "Construction Parts (Shippable)",
-  "UI/ItemIcons/CriticallyWoundedIcon.png": "Critically Wounded",
   "UI/ItemIcons/Facilities/ConstructionMaterialsIcon.png": "Construction Materials",
   "UI/ItemIcons/Facilities/EnrichedOilIcon.png": "Enriched Oil",
   "UI/ItemIcons/Facilities/HeavyOilIcon.png": "Heavy Oil",
