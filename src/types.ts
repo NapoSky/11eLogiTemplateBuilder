@@ -62,7 +62,8 @@ export type IconCategory =
   | 'Field Weapons'     // Armes de campagne (canons, mortiers, MGs)
   | 'Structures'        // Emplacements, structures défensives
   | 'Naval'             // Bateaux, navires, sous-marins
-  | 'Trains';           // Locomotives et wagons
+  | 'Trains'            // Locomotives et wagons
+  | 'Planes';           // Avions et pièces d'avions
 
 export const CATEGORIES: IconCategory[] = [
   'Small Arms',
@@ -76,5 +77,6 @@ export const CATEGORIES: IconCategory[] = [
   'Field Weapons',
   'Structures',
   'Naval',
-  'Trains'
+  'Trains',
+  'Planes'
 ];

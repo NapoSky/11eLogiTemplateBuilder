@@ -451,7 +451,7 @@
     ]
   },
 
-    "Avions": {
+    "Planes": {
     "_comment": "Avions et pièces d'avions",
     "items": [
       "UI/VehiclesIcons/AircraftBomberCIcon.png",
@@ -472,8 +472,7 @@
       "UI/ItemIcons/AircraftPartSmallEngineCIcon.png",
       "UI/ItemIcons/AircraftPartSmallMechanicalCIcon.png",
       "UI/ItemIcons/AircraftSmallEngineWIcon.png",
-      "UI/ItemIcons/AircraftWingsIcon.png",
-
+      "UI/ItemIcons/AircraftWingsIcon.png"
     ]
   }
 }
