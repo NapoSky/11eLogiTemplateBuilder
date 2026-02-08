@@ -390,6 +390,7 @@
   "UI/StructureIcons/WeatherStationIcon.png": "Weather Station",
 
   "_comment_aircraft": "=== AIRCRAFT ===",
+  "UI/VehicleIcons/AircraftAmmoIcon.png": "20mm",
   "UI/VehicleIcons/AAAmmoIcon.png": "Anti-Aircraft Ammunition",
   "UI/VehicleIcons/AerialBombsIcon.png": "Aerial Bombs",
   "UI/VehicleIcons/AircraftBomberCIcon.png": "Bomber (Colonial)",
