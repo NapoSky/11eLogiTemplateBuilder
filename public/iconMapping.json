@@ -175,6 +175,7 @@
   "UI/ItemIcons/WaterIcon.png": "Water",
   "UI/ItemIcons/WindsockItemIcon.png": "Wind Sock",
   "UI/ItemIcons/WorkWrench.png": "Wrench",
+  "UI/Menus/BangaloreItemIcon.png": "Hydra's Whisper",
 
   "_comment_vehicles": "=== VEHICLES ===",
   "UI/VehicleIcons/BattleTank.png": "Lance-36 Battle Tank",
