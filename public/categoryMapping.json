@@ -90,7 +90,7 @@
     "_comment": "Munitions lourdes pour véhicules/artillerie (produits dans l'onglet Heavy Ammunition de la Factory)",
     "items": [
       "UI/ItemIcons/ATAmmoIcon.png",
-      "UI/ATLargeAmmoIcon.png",
+       "UI/ATLargeAmmoIcon.png",
       "UI/ItemIcons/LightTankAmmoItemIcon.png",
       "UI/ItemIcons/BattleTankAmmoItemIcon.png",
       "UI/ItemIcons/HeavyArtilleryAmmoItemIcon.png",
@@ -109,7 +109,8 @@
       "UI/ItemIcons/MiniTorpedoAmmoIcon.png",
       "UI/VehicleIcons/AAAmmoIcon.png",
       "UI/VehicleIcons/AerialBombsIcon.png",
-      "UI/VehicleIcons/DiveBomberAmmoIcon.png"
+      "UI/VehicleIcons/DiveBomberAmmoIcon.png",
+      "UI/VehicleIcons/AircraftAmmoIcon.png"
     ]
   },
   

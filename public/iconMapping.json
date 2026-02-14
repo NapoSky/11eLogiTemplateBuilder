@@ -46,6 +46,7 @@
   "UI/ItemIcons/ConcreteBagIcon.png": "Concrete Materials",
   "UI/ItemIcons/DeadlyGas01Icon.png": "Green Ash Grenade",
   "UI/ItemIcons/DeployableTripodItemIcon.png": "Tripod",
+  "UI/ItemIcons/DemolitionRocketAmmoIcon.png": "Shatter Missile",
   "UI/ItemIcons/DepthChargeIcon.png": "Model-7 \"Evie\"",
   "UI/ItemIcons/Uniforms/EngineerUniformCIcon.png": "Fabri Rucksack",
   "UI/ItemIcons/Uniforms/EngineerUniformWIcon.png": "Sapper Gear",
@@ -101,6 +102,7 @@
   "UI/ItemIcons/MiniTankAmmoItemIcon.png": "30mm",
   "UI/ItemIcons/MortarAmmoIcon.png": "Mortar Shell",
   "UI/ItemIcons/MortarItemIcon.png": "Cremari Mortar",
+  "UI/ItemIcons/MortarTankAmmoBRIcon.png": "250mm \"Fury\" Shell",
   "UI/ItemIcons/MortarTankIcon.png": "Mortar Tank",
   "UI/ItemIcons/Uniforms/NavalUniformW.png": "Sailor's Overalls",
   "UI/ItemIcons/Uniforms/OfficerUniformCIcon.png": "Officialis' Attire",
@@ -175,6 +177,7 @@
   "UI/ItemIcons/WaterIcon.png": "Water",
   "UI/ItemIcons/WindsockItemIcon.png": "Wind Sock",
   "UI/ItemIcons/WorkWrench.png": "Wrench",
+  "UI/Menus/BangaloreItemIcon.png": "Hydra's Whisper",
 
   "_comment_vehicles": "=== VEHICLES ===",
   "UI/VehicleIcons/BattleTank.png": "Lance-36 Battle Tank",
@@ -390,6 +393,7 @@
   "UI/StructureIcons/WeatherStationIcon.png": "Weather Station",
 
   "_comment_aircraft": "=== AIRCRAFT ===",
+  "UI/VehicleIcons/AircraftAmmoIcon.png": "20mm",
   "UI/VehicleIcons/AAAmmoIcon.png": "Anti-Aircraft Ammunition",
   "UI/VehicleIcons/AerialBombsIcon.png": "Aerial Bombs",
   "UI/VehicleIcons/AircraftBomberCIcon.png": "Bomber (Colonial)",
