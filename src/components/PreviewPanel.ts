@@ -89,19 +89,28 @@ export class PreviewPanel {
       const clone = sourceCanvas.cloneNode(true) as HTMLElement;
       clone.style.position = 'absolute';
       clone.style.left = '-9999px';
+      // Annuler le fit-to-screen éventuellement appliqué sur l'original.
+      clone.style.transform = 'none';
+      clone.style.transformOrigin = '';
       document.body.appendChild(clone);
-      
+
       // Hide section controls (edit/delete buttons) for preview
       clone.querySelectorAll('.section-controls').forEach(el => {
         (el as HTMLElement).style.display = 'none';
       });
-      
+
       // html2canvas-pro supports oklab/oklch natively - no color conversion needed!
+      // width/height/windowWidth/windowHeight forcés pour rendre la preview déterministe
+      // (sinon html2canvas utilise window.innerWidth/Height -> dépend de la résolution).
       const { default: html2canvas } = await import('html2canvas-pro');
       const result = await html2canvas(clone, {
         backgroundColor: null,
         useCORS: true,
         scale: 0.5, // Lower scale for preview performance
+        width: 1920,
+        height: 1080,
+        windowWidth: 1920,
+        windowHeight: 1080,
         logging: false
       });
       

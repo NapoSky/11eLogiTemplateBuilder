@@ -1,18 +1,11 @@
-import { Icon, Section, Template, IconCategory, generateId, Subtype, SectionIcon } from './types';
+import { Icon, Section, Template, IconCategory, generateId, Subtype, SectionIcon, IconScale, ICON_SCALES } from './types';
 import { getBaseUrl } from './config';
+
+export type { IconScale };
+export { ICON_SCALES };
 
 // Simple event emitter pattern
 type Listener = () => void;
-
-// Tailles d'icônes disponibles
-export type IconScale = 'small' | 'medium' | 'large' | 'xlarge' | 'xxlarge';
-export const ICON_SCALES: Record<IconScale, { cell: number; icon: number; img: number }> = {
-  small: { cell: 52, icon: 48, img: 38 },
-  medium: { cell: 64, icon: 58, img: 46 },
-  large: { cell: 76, icon: 70, img: 56 },
-  xlarge: { cell: 92, icon: 84, img: 68 },
-  xxlarge: { cell: 110, icon: 100, img: 82 }
-};
 
 class Store {
   private listeners: Set<Listener> = new Set();
@@ -270,7 +263,7 @@ class Store {
     try {
       // Charger la taille des icônes
       const savedScale = localStorage.getItem('iconScale') as IconScale | null;
-      if (savedScale && ['small', 'medium', 'large'].includes(savedScale)) {
+      if (savedScale && (['small', 'medium', 'large', 'xlarge', 'xxlarge'] as string[]).includes(savedScale)) {
         this.iconScale = savedScale;
       }
       
@@ -336,13 +329,20 @@ class Store {
           : icon.subtype
       }))
     }));
-    return JSON.stringify({ sections: normalizedSections }, null, 2);
+    const template: Template = { sections: normalizedSections, iconScale: this.iconScale };
+    return JSON.stringify(template, null, 2);
   }
   
   importJSON(json: string): void {
     try {
       const template: Template = JSON.parse(json);
       const baseUrl = getBaseUrl();
+      // Restaurer la taille des icônes si présente dans le template
+      const validScales: IconScale[] = ['small', 'medium', 'large', 'xlarge', 'xxlarge'];
+      if (template.iconScale && validScales.includes(template.iconScale)) {
+        this.iconScale = template.iconScale;
+        localStorage.setItem('iconScale', template.iconScale);
+      }
       // Restaurer les chemins avec le BASE_URL courant
       this.sections = (template.sections || []).map(section => ({
         ...section,

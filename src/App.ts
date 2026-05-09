@@ -42,7 +42,7 @@ export class App {
       <header id="toolbar" class="shrink-0"></header>
       <main class="flex flex-1 overflow-hidden">
         <aside id="sidebar" class="w-72 shrink-0 border-r border-gray-700 overflow-hidden flex flex-col"></aside>
-        <div id="canvas-container" class="flex-1 overflow-auto relative"></div>
+        <div id="canvas-container" class="flex-1 overflow-hidden relative"></div>
       </main>
       <div id="modal-container"></div>
       <div id="context-menu-container"></div>

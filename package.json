@@ -13,24 +13,24 @@
   },
   "devDependencies": {
     "@interactjs/types": "^1.10.27",
-    "@tailwindcss/vite": "^4.1.18",
+    "@tailwindcss/vite": "^4.3.0",
     "@types/jest": "^30.0.0",
-    "@types/node": "^25.0.10",
+    "@types/node": "^25.6.2",
     "@types/sortablejs": "^1.15.9",
-    "autoprefixer": "^10.4.23",
-    "jest": "^30.2.0",
-    "jest-environment-jsdom": "^30.2.0",
-    "jest-junit": "^16.0.0",
-    "jsdom": "^27.4.0",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.18",
-    "ts-jest": "^29.4.6",
-    "typescript": "^5.9.3",
-    "vite": "^7.3.1"
+    "autoprefixer": "^10.5.0",
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1",
+    "jest-junit": "^17.0.0",
+    "jsdom": "^29.1.1",
+    "postcss": "^8.5.14",
+    "tailwindcss": "^4.3.0",
+    "ts-jest": "^29.4.9",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.11"
   },
   "dependencies": {
-    "html2canvas-pro": "^1.6.6",
+    "html2canvas-pro": "^1.6.7",
     "interactjs": "^1.10.27",
-    "sortablejs": "^1.15.6"
+    "sortablejs": "^1.15.7"
   }
 }

@@ -1,4 +1,3 @@
-import html2canvas from 'html2canvas-pro';
 import { store, IconScale, ICON_SCALES } from '../store';
 
 export class Toolbar {
@@ -285,18 +284,29 @@ export class Toolbar {
       const clone = canvas.cloneNode(true) as HTMLElement;
       clone.style.position = 'absolute';
       clone.style.left = '-9999px';
+      // Annuler le fit-to-screen éventuellement appliqué sur l'original :
+      // l'export doit toujours capturer le canvas à sa taille canonique 1920x1080.
+      clone.style.transform = 'none';
+      clone.style.transformOrigin = '';
       document.body.appendChild(clone);
-      
+
       // Hide section controls (edit/delete buttons) for export
       clone.querySelectorAll('.section-controls').forEach(el => {
         (el as HTMLElement).style.display = 'none';
       });
-      
+
       // html2canvas-pro supports oklab/oklch natively - no color conversion needed!
+      // width/height/windowWidth/windowHeight forcés à 1920x1080 pour garantir un export
+      // déterministe indépendant de la résolution écran et de la taille de la fenêtre.
+      const { default: html2canvas } = await import('html2canvas-pro');
       const result = await html2canvas(clone, {
         backgroundColor: null,
         useCORS: true,
         scale: 1,
+        width: 1920,
+        height: 1080,
+        windowWidth: 1920,
+        windowHeight: 1080,
         logging: false
       });
       

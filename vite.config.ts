@@ -8,9 +8,7 @@ const __dirname = dirname(__filename);
 
 export default defineConfig({
   plugins: [tailwindcss()],
-  // Pour GitHub Pages: utilise le nom du repo comme base path
-  // En local (dev), utilise './'
-  base: process.env.GITHUB_ACTIONS ? '/11eLogiTemplateBuilder/' : './',
+  base: '/',
   server: {
     host: true, // Expose sur 0.0.0.0 pour WSL2
     port: 5173,

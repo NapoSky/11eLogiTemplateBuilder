@@ -281,8 +281,12 @@ export class SectionComponent {
         ],
         listeners: {
           move: (event: InteractMoveEvent) => {
-            const x = this.section.x + event.dx;
-            const y = this.section.y + event.dy;
+            // event.dx/dy sont en pixels écran. Le canvas parent a un transform: scale(s)
+            // appliqué pour le fit-to-screen ; on convertit donc les deltas écran en
+            // deltas logiques (repère 1920x1080) en divisant par le scale courant.
+            const scale = this.getCanvasScale();
+            const x = this.section.x + event.dx / scale;
+            const y = this.section.y + event.dy / scale;
             
             this.section.x = x;
             this.section.y = y;
@@ -306,10 +310,14 @@ export class SectionComponent {
         ],
         listeners: {
           move: (event: InteractMoveEvent) => {
-            this.section.width = event.rect.width;
-            this.section.height = event.rect.height;
-            this.element.style.width = `${event.rect.width}px`;
-            this.element.style.height = `${event.rect.height}px`;
+            // Idem : event.rect est en pixels écran ; on reconvertit en logique.
+            const scale = this.getCanvasScale();
+            const w = event.rect.width / scale;
+            const h = event.rect.height / scale;
+            this.section.width = w;
+            this.section.height = h;
+            this.element.style.width = `${w}px`;
+            this.element.style.height = `${h}px`;
             
             // Re-render grid on resize
             this.renderGridOnly();
@@ -322,6 +330,13 @@ export class SectionComponent {
           }
         }
       });
+  }
+
+  private getCanvasScale(): number {
+    const canvas = document.getElementById('template-canvas');
+    const s = canvas?.dataset.scale;
+    const n = s ? parseFloat(s) : 1;
+    return n > 0 ? n : 1;
   }
 
   private setupDropZone(): void {
@@ -358,8 +373,11 @@ export class SectionComponent {
           const cellSize = this.getCellSize();
           if (iconGrid) {
             const rect = iconGrid.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            // rect est en pixels écran : on convertit en pixels logiques pour
+            // pouvoir comparer à cellSize qui reste dans le repère canonique.
+            const scale = this.getCanvasScale();
+            const x = (e.clientX - rect.left) / scale;
+            const y = (e.clientY - rect.top) / scale;
             const col = Math.max(0, Math.floor(x / cellSize));
             const row = Math.max(0, Math.floor(y / cellSize));
             

@@ -44,6 +44,7 @@ Thumbs.db
 
 # Coverage
 coverage/
+junit.xml
 
 # Project specific
 SPEC.md

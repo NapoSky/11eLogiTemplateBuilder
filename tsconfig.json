@@ -15,6 +15,7 @@
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
     "paths": {
       "@domain/*": ["src/domain/*"],
       "@application/*": ["src/application/*"],

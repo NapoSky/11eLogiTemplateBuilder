@@ -45,8 +45,19 @@ export interface Section {
   icons: SectionIcon[];
 }
 
+// Tailles d'icônes disponibles
+export type IconScale = 'small' | 'medium' | 'large' | 'xlarge' | 'xxlarge';
+export const ICON_SCALES: Record<IconScale, { cell: number; icon: number; img: number }> = {
+  small:   { cell: 52,  icon: 48,  img: 38 },
+  medium:  { cell: 64,  icon: 58,  img: 46 },
+  large:   { cell: 76,  icon: 70,  img: 56 },
+  xlarge:  { cell: 92,  icon: 84,  img: 68 },
+  xxlarge: { cell: 110, icon: 100, img: 82 }
+};
+
 export interface Template {
   sections: Section[];
+  iconScale?: IconScale;
 }
 
 // Catégories identiques aux onglets de la Factory in-game Foxhole + véhicules/structures
