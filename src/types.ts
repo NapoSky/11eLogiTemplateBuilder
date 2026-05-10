@@ -91,3 +91,90 @@ export const CATEGORIES: IconCategory[] = [
   'Trains',
   'Planes'
 ];
+
+// =====================================================================
+// TodoList builder (mode #2)
+// =====================================================================
+
+export type ViewMode = 'template' | 'todolist';
+
+export type Faction = 'neutral' | 'colonial' | 'warden';
+export type FactionFilter = 'all' | 'colonial' | 'warden';
+
+// Catégories MPF (ordre d'affichage dans l'export Discord)
+export type MpfCategory =
+  | 'small_arms'
+  | 'heavy_arms'
+  | 'heavy_ammunition'
+  | 'vehicles'
+  | 'shipables'
+  | 'uniforms'
+  | 'supplies';
+
+export const MPF_CATEGORIES: MpfCategory[] = [
+  'small_arms',
+  'heavy_arms',
+  'heavy_ammunition',
+  'supplies',
+  'uniforms',
+  'vehicles',
+  'shipables',
+];
+
+export const MPF_CATEGORY_LABELS: Record<MpfCategory, string> = {
+  small_arms: 'Small arms',
+  heavy_arms: 'Heavy arms',
+  heavy_ammunition: 'Heavy ammunition',
+  vehicles: 'Vehicles',
+  shipables: 'Shippables',
+  uniforms: 'Uniforms',
+  supplies: 'Supplies',
+};
+
+export interface MpfDataEntry {
+  iconFilename: string;
+  itemName: string;
+  itemCategory: MpfCategory;
+  faction: Faction[];
+  cost: { bmat?: number; rmat?: number; emat?: number; hemat?: number };
+  numberProduced: number;
+  crateBonus?: number;
+  maxCrates: 9 | 5;
+}
+
+export interface TodoListItem {
+  id: string;
+  iconFilename: string;
+  itemName: string;
+  category: MpfCategory;
+  faction: Faction[];
+  cost: { bmat?: number; rmat?: number; emat?: number; hemat?: number };
+  maxCrates: 9 | 5;
+  numberProduced: number;
+  crateBonus?: number;
+  orderCount: number; // nombre de full orders MPF (chaque order = maxCrates caisses)
+}
+
+export interface TodoList {
+  title: string;        // libre, par défaut "TODOLIST"
+  autoDate: boolean;    // si true, ajoute la date dans l'export
+  faction: FactionFilter;
+  items: TodoListItem[];
+  textBlocks: TextBlock[];
+}
+
+// =====================================================================
+// Free-form text blocks anchored in the TodoList output.
+// =====================================================================
+
+export type TextAnchor =
+  | { kind: 'top' }
+  | { kind: 'category'; category: MpfCategory }
+  | { kind: 'footer' };
+
+export interface TextBlock {
+  id: string;
+  content: string;
+  anchor: TextAnchor;
+}
+

@@ -1,4 +1,4 @@
-import { Icon, Section, Template, IconCategory, generateId, Subtype, SectionIcon, IconScale, ICON_SCALES } from './types';
+import { Icon, Section, Template, IconCategory, generateId, Subtype, SectionIcon, IconScale, ICON_SCALES, ViewMode, MpfDataEntry, TodoList, TodoListItem, FactionFilter, TextBlock, TextAnchor } from './types';
 import { getBaseUrl } from './config';
 
 export type { IconScale };
@@ -6,6 +6,18 @@ export { ICON_SCALES };
 
 // Simple event emitter pattern
 type Listener = () => void;
+
+const TODOLIST_STORAGE_KEY = 'todolist';
+
+function defaultTodoList(): TodoList {
+  return {
+    title: 'TODOLIST',
+    autoDate: true,
+    faction: 'all',
+    items: [],
+    textBlocks: [],
+  };
+}
 
 class Store {
   private listeners: Set<Listener> = new Set();
@@ -17,6 +29,11 @@ class Store {
   selectedCategory: IconCategory | 'Toutes' = 'Toutes';
   searchQuery: string = '';
   iconScale: IconScale = 'medium'; // Taille globale des icônes
+
+  // TodoList builder state
+  viewMode: ViewMode = 'template';
+  mpfData: MpfDataEntry[] = [];
+  todolist: TodoList = defaultTodoList();
   
   // Subscribe to changes
   subscribe(listener: Listener): () => void {
@@ -234,6 +251,156 @@ class Store {
     this.emit();
   }
   
+  // ============================================================
+  // TodoList builder actions
+  // ============================================================
+
+  setViewMode(mode: ViewMode): void {
+    if (this.viewMode === mode) return;
+    this.viewMode = mode;
+    localStorage.setItem('viewMode', mode);
+    this.emit();
+  }
+
+  setMpfData(data: MpfDataEntry[]): void {
+    this.mpfData = data;
+    this.emit();
+  }
+
+  setTodoListTitle(title: string): void {
+    this.todolist = { ...this.todolist, title };
+    this.saveTodoList();
+    this.emit();
+  }
+
+  setTodoListAutoDate(autoDate: boolean): void {
+    this.todolist = { ...this.todolist, autoDate };
+    this.saveTodoList();
+    this.emit();
+  }
+
+  setTodoListFaction(faction: FactionFilter): void {
+    this.todolist = { ...this.todolist, faction };
+    this.saveTodoList();
+    this.emit();
+  }
+
+  /** Returns true if added, false if rejected (item not MPF craftable). */
+  addTodoListItemFromIcon(iconFilename: string): boolean {
+    const entry = this.mpfData.find(e => e.iconFilename === iconFilename);
+    if (!entry) return false;
+    const existing = this.todolist.items.find(i => i.iconFilename === iconFilename);
+    if (existing) {
+      this.setTodoListOrderCount(existing.id, existing.orderCount + 1);
+      return true;
+    }
+    const item: TodoListItem = {
+      id: generateId(),
+      iconFilename: entry.iconFilename,
+      itemName: entry.itemName,
+      category: entry.itemCategory,
+      faction: entry.faction,
+      cost: entry.cost,
+      maxCrates: entry.maxCrates,
+      numberProduced: entry.numberProduced,
+      crateBonus: entry.crateBonus,
+      orderCount: 1,
+    };
+    this.todolist = { ...this.todolist, items: [...this.todolist.items, item] };
+    this.saveTodoList();
+    this.emit();
+    return true;
+  }
+
+  setTodoListOrderCount(itemId: string, count: number): void {
+    const orderCount = Math.max(1, Math.floor(count));
+    this.todolist = {
+      ...this.todolist,
+      items: this.todolist.items.map(i => i.id === itemId ? { ...i, orderCount } : i),
+    };
+    this.saveTodoList();
+    this.emit();
+  }
+
+  removeTodoListItem(itemId: string): void {
+    this.todolist = {
+      ...this.todolist,
+      items: this.todolist.items.filter(i => i.id !== itemId),
+    };
+    this.saveTodoList();
+    this.emit();
+  }
+
+  reorderTodoListItems(category: string, orderedIds: string[]): void {
+    const inCategory = this.todolist.items.filter(i => i.category === category);
+    const others = this.todolist.items.filter(i => i.category !== category);
+    const reordered = orderedIds
+      .map(id => inCategory.find(i => i.id === id))
+      .filter((i): i is TodoListItem => i !== undefined);
+    const missing = inCategory.filter(i => !orderedIds.includes(i.id));
+    this.todolist = { ...this.todolist, items: [...others, ...reordered, ...missing] };
+    this.saveTodoList();
+    this.emit();
+  }
+
+  clearTodoList(): void {
+    this.todolist = defaultTodoList();
+    this.saveTodoList();
+    this.emit();
+  }
+
+  /** Add a text block at the given anchor; returns the new block id. */
+  addTextBlock(anchor: TextAnchor): string {
+    const block: TextBlock = { id: generateId(), content: '', anchor };
+    this.todolist = { ...this.todolist, textBlocks: [...this.todolist.textBlocks, block] };
+    this.saveTodoList();
+    this.emit();
+    return block.id;
+  }
+
+  updateTextBlock(id: string, patch: Partial<Pick<TextBlock, 'content' | 'anchor'>>): void {
+    this.todolist = {
+      ...this.todolist,
+      textBlocks: this.todolist.textBlocks.map(b => b.id === id ? { ...b, ...patch } : b),
+    };
+    this.saveTodoList();
+    this.emit();
+  }
+
+  removeTextBlock(id: string): void {
+    this.todolist = {
+      ...this.todolist,
+      textBlocks: this.todolist.textBlocks.filter(b => b.id !== id),
+    };
+    this.saveTodoList();
+    this.emit();
+  }
+
+  private saveTodoList(): void {
+    localStorage.setItem(TODOLIST_STORAGE_KEY, JSON.stringify(this.todolist));
+  }
+
+  private loadTodoList(): void {
+    try {
+      const raw = localStorage.getItem(TODOLIST_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        this.todolist = {
+          ...defaultTodoList(),
+          ...parsed,
+          items: parsed.items ?? [],
+          textBlocks: parsed.textBlocks ?? [],
+        };
+      }
+      const savedMode = localStorage.getItem('viewMode');
+      if (savedMode === 'template' || savedMode === 'todolist') {
+        this.viewMode = savedMode;
+      }
+    } catch (e) {
+      console.error('Failed to load todolist:', e);
+    }
+  }
+
   // Filtered icons getter
   get filteredIcons(): Icon[] {
     let filtered = this.icons;
@@ -257,8 +424,7 @@ class Store {
   save(): void {
     const template: Template = { sections: this.sections };
     localStorage.setItem('template', JSON.stringify(template));
-  }
-  
+  }  
   load(): void {
     try {
       // Charger la taille des icônes
@@ -277,6 +443,7 @@ class Store {
         }));
         this.emit();
       }
+      this.loadTodoList();
     } catch (e) {
       console.error('Failed to load template:', e);
     }

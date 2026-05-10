@@ -52,7 +52,9 @@ export class Canvas {
     this.unsubscribe = store.subscribe(() => this.renderSections());
     
     // Fit-to-screen : ajuste le canvas à la taille du conteneur, recalculé au resize.
-    this.applyFitScale();
+    // Différé via rAF pour laisser le browser calculer les dimensions du conteneur
+    // après insertion dans le DOM (notamment lors du switch de vue TodoList → Template).
+    requestAnimationFrame(() => this.applyFitScale());
     this.resizeHandler = () => this.scheduleFitScale();
     window.addEventListener('resize', this.resizeHandler);
     if (typeof ResizeObserver !== 'undefined') {

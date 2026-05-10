@@ -7,28 +7,52 @@ export class Toolbar {
   mount(container: HTMLElement): void {
     this.container = container;
     this.render();
-    
-    // Écouter les changements de store pour mettre à jour le bouton actif
-    store.subscribe(() => this.updateScaleButtons());
-    
-    // Setup global keyboard shortcuts
+
+    // Re-render on store changes (mostly viewMode), then re-update scale buttons
+    let prevMode = store.viewMode;
+    store.subscribe(() => {
+      if (store.viewMode !== prevMode) {
+        prevMode = store.viewMode;
+        this.render();
+      } else {
+        this.updateScaleButtons();
+      }
+    });
+
+    // Setup global keyboard shortcuts (once)
     this.setupKeyboardShortcuts();
   }
 
   private render(): void {
     if (!this.container) return;
 
+    const isTemplate = store.viewMode === 'template';
+    const tplActive = isTemplate
+      ? 'bg-blue-600 text-white'
+      : 'bg-gray-700 hover:bg-gray-600 text-gray-300';
+    const todoActive = !isTemplate
+      ? 'bg-blue-600 text-white'
+      : 'bg-gray-700 hover:bg-gray-600 text-gray-300';
+
     this.container.className = 'flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700';
     this.container.innerHTML = `
       <div class="flex items-center gap-4">
         <h1 class="text-lg font-bold">11e Template Builder</h1>
+
+        <!-- Mode toggle -->
+        <div class="flex items-center rounded overflow-hidden border border-gray-600">
+          <button id="btn-mode-template" class="px-3 py-1.5 text-xs ${tplActive} transition-colors">🎨 Template</button>
+          <button id="btn-mode-todolist" class="px-3 py-1.5 text-xs ${todoActive} transition-colors">📋 TodoList</button>
+        </div>
+
+        ${isTemplate ? `
         <button id="btn-new-section" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm flex items-center gap-1">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>
           Nouvelle Section
         </button>
-        
+
         <!-- Sélecteur de taille d'icônes -->
         <div class="flex items-center gap-1 ml-2 border-l border-gray-600 pl-4">
           <span class="text-xs text-gray-400 mr-1">Taille:</span>
@@ -38,8 +62,16 @@ export class Toolbar {
           <button data-scale="xlarge" class="icon-scale-btn px-2 py-1 text-xs rounded transition-colors" title="Très grandes icônes">XL</button>
           <button data-scale="xxlarge" class="icon-scale-btn px-2 py-1 text-xs rounded transition-colors" title="Extra grandes icônes">XXL</button>
         </div>
+        ` : `
+        <button id="btn-add-text" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm flex items-center gap-1" title="Ajouter un bloc texte libre">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Texte
+        </button>
+        `}
       </div>
-      
+
       <div class="flex items-center gap-2">
         <!-- Helper button -->
         <button id="btn-help" class="px-2 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-sm flex items-center gap-1" title="Aide & Raccourcis">
@@ -48,9 +80,10 @@ export class Toolbar {
           </svg>
           <span class="text-xs">?</span>
         </button>
-        
+
         <div class="border-l border-gray-600 h-6 mx-1"></div>
-        
+
+        ${isTemplate ? `
         <button id="btn-export-png" class="px-3 py-1.5 bg-green-600 hover:bg-green-700 rounded text-sm flex items-center gap-1" title="Ctrl+E">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -70,11 +103,12 @@ export class Toolbar {
           Load
           <input type="file" accept=".json" id="import-json" class="hidden" />
         </label>
+        ` : ''}
         <button id="btn-clear" class="px-3 py-1.5 bg-red-600/50 hover:bg-red-600 rounded text-sm">
           Effacer
         </button>
       </div>
-      
+
       <!-- Help Modal -->
       <div id="help-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60">
         <div class="bg-gray-800 rounded-lg shadow-2xl border border-gray-600 p-6 max-w-md w-full mx-4">
@@ -91,7 +125,7 @@ export class Toolbar {
               </svg>
             </button>
           </div>
-          
+
           <div class="space-y-4">
             <div>
               <h3 class="text-sm font-semibold text-gray-300 mb-2">⌨️ Raccourcis clavier</h3>
@@ -110,7 +144,7 @@ export class Toolbar {
                 </div>
               </div>
             </div>
-            
+
             <div>
               <h3 class="text-sm font-semibold text-gray-300 mb-2">🖱️ Actions souris</h3>
               <ul class="text-sm text-gray-400 space-y-1">
@@ -120,21 +154,21 @@ export class Toolbar {
                 <li>• <span class="text-gray-300">Clic droit</span> sur une icône → Quantité & sous-type</li>
               </ul>
             </div>
-            
+
             <div>
               <h3 class="text-sm font-semibold text-gray-300 mb-2">📐 Taille des icônes</h3>
               <p class="text-sm text-gray-400">Utilisez les boutons <kbd class="px-1.5 py-0.5 bg-gray-700 rounded text-xs">S</kbd> <kbd class="px-1.5 py-0.5 bg-gray-700 rounded text-xs">M</kbd> <kbd class="px-1.5 py-0.5 bg-gray-700 rounded text-xs">L</kbd> dans la barre d'outils pour ajuster la taille globale des icônes.</p>
             </div>
           </div>
-          
+
           <div class="mt-5 pt-4 border-t border-gray-700 text-center">
             <span class="text-xs text-gray-500">11eRC-FL Template Builder v2.0</span>
           </div>
         </div>
       </div>
     `;
-    
-    this.updateScaleButtons();
+
+    if (isTemplate) this.updateScaleButtons();
 
     this.attachEvents();
   }
@@ -155,9 +189,23 @@ export class Toolbar {
   private attachEvents(): void {
     if (!this.container) return;
 
+    // Mode toggle
+    this.container.querySelector('#btn-mode-template')?.addEventListener('click', () => {
+      store.setViewMode('template');
+    });
+    this.container.querySelector('#btn-mode-todolist')?.addEventListener('click', () => {
+      store.setViewMode('todolist');
+    });
+
     // New section
     this.container.querySelector('#btn-new-section')?.addEventListener('click', () => {
       window.dispatchEvent(new CustomEvent('open-section-modal', { detail: { x: 100, y: 100 } }));
+    });
+
+    // Add text block (todolist mode)
+    this.container.querySelector('#btn-add-text')?.addEventListener('click', () => {
+      const id = store.addTextBlock({ kind: 'top' });
+      window.dispatchEvent(new CustomEvent('focus-text-block', { detail: { id } }));
     });
 
     // Icon scale buttons
@@ -206,8 +254,14 @@ export class Toolbar {
 
     // Clear
     this.container.querySelector('#btn-clear')?.addEventListener('click', () => {
-      if (confirm('Effacer tout le template ?')) {
-        store.sections.forEach(s => store.deleteSection(s.id));
+      if (store.viewMode === 'todolist') {
+        if (confirm('Effacer toute la todolist ?')) {
+          store.clearTodoList();
+        }
+      } else {
+        if (confirm('Effacer tout le template ?')) {
+          store.sections.forEach(s => store.deleteSection(s.id));
+        }
       }
     });
   }
