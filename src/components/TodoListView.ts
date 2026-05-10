@@ -175,7 +175,8 @@ export class TodoListView {
           <div class="bg-gray-800 rounded-lg border border-gray-700">
             <header class="px-4 py-2 border-b border-gray-700 font-semibold text-gray-200 flex items-center justify-between">
               <span>Discord Preview</span>
-              <div class="flex gap-1">
+              <div class="flex items-center gap-2">
+                <span id="tl-char-count" class="text-xs font-mono ${exportText.length > 4000 ? 'text-red-400 font-bold' : 'text-gray-400'}">${exportText.length} / 4000</span>
                 <button id="tl-copy" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs">📋 Copy</button>
                 <button id="tl-download" class="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs">⬇️ .txt</button>
               </div>
@@ -184,6 +185,9 @@ export class TodoListView {
           </div>
           <div class="text-xs text-gray-500">
             ${tl.items.length} item(s), total = ${this.computeGrandTotal()}.
+          </div>
+          <div class="text-xs text-gray-500 mt-1">
+            ${this.computeCratesSummary()}
           </div>
         </div>
       </div>
@@ -325,6 +329,23 @@ export class TodoListView {
     return parts.length ? parts.join(' / ') : '—';
   }
 
+  private computeCratesSummary(): string {
+    const total = { bmat: 0, rmat: 0, emat: 0, hemat: 0 };
+    for (const item of store.todolist.items) {
+      const c = displayedCost(item);
+      total.bmat += c.bmat;
+      total.rmat += c.rmat;
+      total.emat += c.emat;
+      total.hemat += c.hemat;
+    }
+    const parts: string[] = [];
+    if (total.bmat) parts.push(`${Math.ceil(total.bmat / 100)} Bmat crate(s)`);
+    if (total.rmat) parts.push(`${Math.ceil(total.rmat / 20)} Rmat crate(s)`);
+    if (total.emat) parts.push(`${Math.ceil(total.emat / 40)} Emat crate(s)`);
+    if (total.hemat) parts.push(`${Math.ceil(total.hemat / 30)} HEmat crate(s)`);
+    return parts.length ? `≈ ${parts.join(' / ')}` : '';
+  }
+
   private attachEvents(): void {
     if (!this.container) return;
 
@@ -438,6 +459,11 @@ export class TodoListView {
             const rawText = renderTodoList(tlSnapshot);
             previewEl.dataset.raw = rawText;
             previewEl.innerHTML = renderPreviewHtml(rawText);
+            const charCountEl = this.container?.querySelector('#tl-char-count') as HTMLElement | null;
+            if (charCountEl) {
+              charCountEl.textContent = `${rawText.length} / 4000`;
+              charCountEl.className = `text-xs font-mono ${rawText.length > 4000 ? 'text-red-400 font-bold' : 'text-gray-400'}`;
+            }
           }
         });
         // Commit on blur / change
