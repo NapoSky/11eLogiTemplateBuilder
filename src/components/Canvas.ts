@@ -1,6 +1,6 @@
 import { store } from '../store';
 import { SectionComponent } from './Section';
-import { Section } from '../types';
+import { Section, TemplateBackground } from '../types';
 import { getBaseUrl } from '../config';
 
 // Obtenir le base path pour les assets
@@ -18,6 +18,7 @@ export class Canvas {
   private sectionComponents: Map<string, SectionComponent> = new Map();
   private unsubscribe: (() => void) | null = null;
   private lastIconScale: string = store.iconScale;
+  private lastBackgroundKey: string = '';
   private resizeHandler: (() => void) | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private resizeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -30,14 +31,7 @@ export class Canvas {
     this.canvas = document.createElement('div');
     this.canvas.id = 'template-canvas';
     this.canvas.className = 'relative';
-    // URL absolue : html2canvas-pro rend dans un iframe dont le baseURI est about:blank,
-    // donc une URL relative (BASE_URL = './' en dev) ne s'y résout pas. En prod
-    // (BASE_URL = '/11eLogiTemplateBuilder/'), l'URL est déjà absolue depuis l'origine.
-    const bgUrl = new URL(`${BASE_URL}assets/template_background.png`, window.location.href).href;
-    this.canvas.style.backgroundImage = `url(${bgUrl})`;
-    this.canvas.style.backgroundSize = 'contain';
-    this.canvas.style.backgroundRepeat = 'no-repeat';
-    this.canvas.style.backgroundPosition = 'center';
+    this.applyBackground(store.background);
     this.canvas.style.width = `${CANVAS_LOGICAL_WIDTH}px`;
     this.canvas.style.height = `${CANVAS_LOGICAL_HEIGHT}px`;
     this.canvas.style.transformOrigin = 'top left';
@@ -96,7 +90,14 @@ export class Canvas {
 
   private renderSections(): void {
     if (!this.canvas) return;
-    
+
+    // Reapply background if it changed in the store
+    const bgKey = JSON.stringify(store.background);
+    if (bgKey !== this.lastBackgroundKey) {
+      this.lastBackgroundKey = bgKey;
+      this.applyBackground(store.background);
+    }
+
     // Si iconScale a changé, recréer toutes les sections pour le nouveau sizing
     const iconScaleChanged = this.lastIconScale !== store.iconScale;
     if (iconScaleChanged) {
@@ -136,6 +137,44 @@ export class Canvas {
 
   getCanvasElement(): HTMLElement | null {
     return this.canvas;
+  }
+
+  /**
+   * Apply a background to the canvas. Handles all 4 kinds:
+   * - color: solid color, no image
+   * - preset: relative path resolved against BASE_URL
+   * - upload: data: URL used directly
+   * - url: external URL used directly (CORS may affect PNG export)
+   */
+  private applyBackground(bg: TemplateBackground): void {
+    if (!this.canvas) return;
+    // Common image properties
+    this.canvas.style.backgroundSize = 'contain';
+    this.canvas.style.backgroundRepeat = 'no-repeat';
+    this.canvas.style.backgroundPosition = 'center';
+
+    switch (bg.kind) {
+      case 'color':
+        this.canvas.style.backgroundImage = 'none';
+        this.canvas.style.backgroundColor = bg.color;
+        break;
+      case 'preset': {
+        this.canvas.style.backgroundColor = bg.fillColor ?? '#1b2a38';
+        const cleaned = bg.path.replace(/^\//, '');
+        const url = new URL(`${BASE_URL}${cleaned}`, window.location.href).href;
+        this.canvas.style.backgroundImage = `url("${url}")`;
+        break;
+      }
+      case 'upload':
+        this.canvas.style.backgroundColor = bg.fillColor ?? '#1b2a38';
+        this.canvas.style.backgroundImage = `url("${bg.dataUrl}")`;
+        break;
+      case 'url':
+        this.canvas.style.backgroundColor = bg.fillColor ?? '#1b2a38';
+        this.canvas.style.backgroundImage = `url("${bg.url}")`;
+        break;
+    }
+    this.lastBackgroundKey = JSON.stringify(bg);
   }
 
   destroy(): void {

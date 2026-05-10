@@ -6,8 +6,11 @@ import { SectionModal } from './components/SectionModal';
 import { IconContextMenu } from './components/IconContextMenu';
 import { PreviewPanel } from './components/PreviewPanel';
 import { TodoListView } from './components/TodoListView';
+import { TodoListLoadModal } from './components/TodoListLoadModal';
+import { BackgroundModal } from './components/BackgroundModal';
 import { loadIcons, loadSubtypes } from './services/iconLoader';
 import { loadMpfData } from './services/mpfDataLoader';
+import { loadBackgroundPresets } from './services/backgroundLoader';
 
 export class App {
   private container: HTMLElement | null = null;
@@ -16,6 +19,8 @@ export class App {
   private todolistView: TodoListView;
   private toolbar: Toolbar;
   private modal: SectionModal;
+  private todolistLoadModal: TodoListLoadModal;
+  private backgroundModal: BackgroundModal;
   private contextMenu: IconContextMenu;
   private previewPanel: PreviewPanel;
   private currentMode: 'template' | 'todolist' = 'template';
@@ -26,6 +31,8 @@ export class App {
     this.todolistView = new TodoListView();
     this.toolbar = new Toolbar();
     this.modal = new SectionModal();
+    this.todolistLoadModal = new TodoListLoadModal();
+    this.backgroundModal = new BackgroundModal();
     this.contextMenu = new IconContextMenu();
     this.previewPanel = new PreviewPanel();
   }
@@ -34,14 +41,16 @@ export class App {
     this.container = container;
 
     // Load icons, subtypes and MPF data in parallel
-    const [icons, subtypes, mpfData] = await Promise.all([
+    const [icons, subtypes, mpfData, bgPresets] = await Promise.all([
       loadIcons(),
       loadSubtypes(),
       loadMpfData(),
+      loadBackgroundPresets(),
     ]);
     store.setIcons(icons);
     store.setSubtypes(subtypes);
     store.setMpfData(mpfData);
+    store.setBackgroundPresets(bgPresets);
 
     // Load saved template + todolist + viewMode
     store.load();
@@ -55,6 +64,8 @@ export class App {
         <div id="main-view" class="flex-1 overflow-hidden relative"></div>
       </main>
       <div id="modal-container"></div>
+      <div id="tl-load-modal-container"></div>
+      <div id="bg-modal-container"></div>
       <div id="context-menu-container"></div>
       <div id="preview-panel-container"></div>
     `;
@@ -63,6 +74,8 @@ export class App {
     this.toolbar.mount(this.container.querySelector('#toolbar')!);
     this.sidebar.mount(this.container.querySelector('#sidebar')!);
     this.modal.mount(this.container.querySelector('#modal-container')!);
+    this.todolistLoadModal.mount(this.container.querySelector('#tl-load-modal-container')!);
+    this.backgroundModal.mount(this.container.querySelector('#bg-modal-container')!);
     this.contextMenu.mount(this.container.querySelector('#context-menu-container')!);
     this.previewPanel.mount(this.container.querySelector('#preview-panel-container')!);
 

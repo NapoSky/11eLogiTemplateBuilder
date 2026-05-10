@@ -87,8 +87,9 @@ Utilisez les boutons **S** / **M** / **L** dans la toolbar pour ajuster la taill
 │       ├── Section.ts       # Composant section
 │       └── ...
 ├── assets/
-│   ├── icons/               # Icônes Foxhole (PNG)
-│   └── template_background.png
+│   ├── backgrounds/         # Fonds de templates (PNG)
+│   ├── emojis/              # Icones pour Todolists
+│   └── icons/               # Icônes Foxhole (PNG)
 ├── data/
 │   ├── iconMapping.json     # Noms d'affichage des icônes
 │   └── categoryMapping.json # Catégorisation des icônes
@@ -135,6 +136,10 @@ Utilisez les boutons **S** / **M** / **L** dans la toolbar pour ajuster la taill
 ## 🎮 À propos de Foxhole
 
 Foxhole est un jeu de guerre MMO développé par Siegecamp Inc. Ce template builder est un outil communautaire créé pour faciliter la gestion logistique des régiments.
+
+## 🤝 Contribuer
+
+Tu veux proposer un nouveau fond de template, ajouter des icônes d'items ou corriger un nom d'affichage ? Consulte le guide **[CONTRIBUTING.md](CONTRIBUTING.md)** pour démarrer.
 
 ## 📜 Licence
 

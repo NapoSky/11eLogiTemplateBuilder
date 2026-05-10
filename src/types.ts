@@ -58,6 +58,47 @@ export const ICON_SCALES: Record<IconScale, { cell: number; icon: number; img: n
 export interface Template {
   sections: Section[];
   iconScale?: IconScale;
+  background?: TemplateBackground;
+}
+
+// Background du canvas template (4 kinds)
+// fillColor : couleur de fond visible autour de l'image (si elle ne remplit pas tout l'espace)
+export type TemplateBackground =
+  | { kind: 'color'; color: string }
+  | { kind: 'preset'; path: string; fillColor?: string }
+  | { kind: 'upload'; dataUrl: string; name?: string; fillColor?: string }
+  | { kind: 'url'; url: string; fillColor?: string };
+
+export const DEFAULT_BACKGROUND: TemplateBackground = {
+  kind: 'color',
+  color: '#1b2a38', // Tailwind blue-900
+};
+
+export interface BackgroundPreset {
+  name: string;
+  path: string; // ex: "/assets/backgrounds/template_default.png"
+}
+
+/**
+ * Validate an unknown value as a TemplateBackground. Returns null if invalid.
+ * Used both at JSON import and at localStorage load to ensure forward/backward
+ * compatibility (legacy templates have no background field at all).
+ */
+export function isValidBackground(b: unknown): b is TemplateBackground {
+  if (!b || typeof b !== 'object') return false;
+  const obj = b as Record<string, unknown>;
+  switch (obj.kind) {
+    case 'color':
+      return typeof obj.color === 'string' && obj.color.length > 0;
+    case 'preset':
+      return typeof obj.path === 'string' && obj.path.length > 0;
+    case 'upload':
+      return typeof obj.dataUrl === 'string' && obj.dataUrl.startsWith('data:');
+    case 'url':
+      return typeof obj.url === 'string' && /^https?:\/\//i.test(obj.url);
+    default:
+      return false;
+  }
 }
 
 // Catégories identiques aux onglets de la Factory in-game Foxhole + véhicules/structures

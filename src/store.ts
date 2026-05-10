@@ -1,4 +1,4 @@
-import { Icon, Section, Template, IconCategory, generateId, Subtype, SectionIcon, IconScale, ICON_SCALES, ViewMode, MpfDataEntry, TodoList, TodoListItem, FactionFilter, TextBlock, TextAnchor } from './types';
+import { Icon, Section, Template, IconCategory, generateId, Subtype, SectionIcon, IconScale, ICON_SCALES, ViewMode, MpfDataEntry, TodoList, TodoListItem, FactionFilter, TextBlock, TextAnchor, TemplateBackground, BackgroundPreset, DEFAULT_BACKGROUND, isValidBackground } from './types';
 import { getBaseUrl } from './config';
 
 export type { IconScale };
@@ -29,6 +29,10 @@ class Store {
   selectedCategory: IconCategory | 'Toutes' = 'Toutes';
   searchQuery: string = '';
   iconScale: IconScale = 'medium'; // Taille globale des icônes
+
+  // Template background (default: bleu uni)
+  background: TemplateBackground = DEFAULT_BACKGROUND;
+  backgroundPresets: BackgroundPreset[] = [];
 
   // TodoList builder state
   viewMode: ViewMode = 'template';
@@ -69,6 +73,25 @@ class Store {
   setIconScale(scale: IconScale): void {
     this.iconScale = scale;
     localStorage.setItem('iconScale', scale);
+    this.emit();
+  }
+
+  setBackground(bg: TemplateBackground): void {
+    if (!isValidBackground(bg)) {
+      console.warn('setBackground: invalid background, ignoring', bg);
+      return;
+    }
+    this.background = bg;
+    try {
+      localStorage.setItem('templateBackground', JSON.stringify(bg));
+    } catch (e) {
+      console.warn('setBackground: failed to persist (quota?)', e);
+    }
+    this.emit();
+  }
+
+  setBackgroundPresets(presets: BackgroundPreset[]): void {
+    this.backgroundPresets = presets;
     this.emit();
   }
   
@@ -354,6 +377,22 @@ class Store {
     this.emit();
   }
 
+  /**
+   * Replace the current todolist content (items + textBlocks + title + autoDate)
+   * while preserving the currently selected faction filter.
+   */
+  replaceTodoList(tl: Omit<TodoList, 'faction'>): void {
+    this.todolist = {
+      ...this.todolist,
+      title: tl.title,
+      autoDate: tl.autoDate,
+      items: tl.items,
+      textBlocks: tl.textBlocks,
+    };
+    this.saveTodoList();
+    this.emit();
+  }
+
   /** Add a text block at the given anchor; returns the new block id. */
   addTextBlock(anchor: TextAnchor): string {
     const block: TextBlock = { id: generateId(), content: '', anchor };
@@ -448,6 +487,21 @@ class Store {
       if (savedScale && (['small', 'medium', 'large', 'xlarge', 'xxlarge'] as string[]).includes(savedScale)) {
         this.iconScale = savedScale;
       }
+
+      // Charger le background (avec validation, fallback default si invalide)
+      const savedBg = localStorage.getItem('templateBackground');
+      if (savedBg) {
+        try {
+          const parsed: unknown = JSON.parse(savedBg);
+          if (isValidBackground(parsed)) {
+            this.background = parsed;
+          } else {
+            console.warn('load: invalid persisted background, using default');
+          }
+        } catch (e) {
+          console.warn('load: failed to parse persisted background', e);
+        }
+      }
       
       const data = localStorage.getItem('template');
       if (data) {
@@ -512,7 +566,7 @@ class Store {
           : icon.subtype
       }))
     }));
-    const template: Template = { sections: normalizedSections, iconScale: this.iconScale };
+    const template: Template = { sections: normalizedSections, iconScale: this.iconScale, background: this.background };
     return JSON.stringify(template, null, 2);
   }
   
@@ -525,6 +579,22 @@ class Store {
       if (template.iconScale && validScales.includes(template.iconScale)) {
         this.iconScale = template.iconScale;
         localStorage.setItem('iconScale', template.iconScale);
+      }
+
+      // Restaurer le background : 3 cas (preset / upload / url / color), avec
+      // fallback default si absent (template legacy) ou malformé.
+      if (template.background === undefined) {
+        this.background = DEFAULT_BACKGROUND;
+      } else if (isValidBackground(template.background)) {
+        this.background = template.background;
+      } else {
+        console.warn('importJSON: invalid background, using default', template.background);
+        this.background = DEFAULT_BACKGROUND;
+      }
+      try {
+        localStorage.setItem('templateBackground', JSON.stringify(this.background));
+      } catch (e) {
+        console.warn('importJSON: failed to persist background', e);
       }
       // Restaurer les chemins avec le BASE_URL courant
       this.sections = (template.sections || []).map(section => ({

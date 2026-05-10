@@ -62,6 +62,13 @@ export class Toolbar {
           <button data-scale="xlarge" class="icon-scale-btn px-2 py-1 text-xs rounded transition-colors" title="Très grandes icônes">XL</button>
           <button data-scale="xxlarge" class="icon-scale-btn px-2 py-1 text-xs rounded transition-colors" title="Extra grandes icônes">XXL</button>
         </div>
+
+        <button id="btn-background" class="ml-2 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-sm flex items-center gap-1" title="Changer le fond du template">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          Fond
+        </button>
         ` : `
         <button id="btn-add-text" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm flex items-center gap-1" title="Ajouter un bloc texte libre">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -103,6 +110,14 @@ export class Toolbar {
           Load
           <input type="file" accept=".json" id="import-json" class="hidden" />
         </label>
+        ` : ''}
+        ${!isTemplate ? `
+        <button id="btn-tl-load" class="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 rounded text-sm flex items-center gap-1" title="Importer une todolist Discord">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+          </svg>
+          Load
+        </button>
         ` : ''}
         <button id="btn-clear" class="px-3 py-1.5 bg-red-600/50 hover:bg-red-600 rounded text-sm">
           Effacer
@@ -263,6 +278,16 @@ export class Toolbar {
           store.sections.forEach(s => store.deleteSection(s.id));
         }
       }
+    });
+
+    // Open todolist load modal (todolist mode only)
+    this.container.querySelector('#btn-tl-load')?.addEventListener('click', () => {
+      window.dispatchEvent(new CustomEvent('open-tl-load-modal'));
+    });
+
+    // Open background modal (template mode only)
+    this.container.querySelector('#btn-background')?.addEventListener('click', () => {
+      window.dispatchEvent(new CustomEvent('open-background-modal'));
     });
   }
   

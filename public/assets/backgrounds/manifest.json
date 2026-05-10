@@ -1,0 +1,32 @@
+{
+  "presets": [
+    {
+      "name": "Default 11e Template",
+      "path": "/assets/backgrounds/template_default.png"
+    },
+    {
+      "name": "Frontline Command",
+      "path": "/assets/backgrounds/template_frontline_command.png"
+    },
+    {
+        "name": "Artillery Fire Control",
+        "path": "/assets/backgrounds/template_artillery_fire_control.png"
+    },
+    {
+        "name": "Naval Logistics",
+        "path": "/assets/backgrounds/template_naval_logistics.png"
+    },
+    {
+        "name": "Recon & Partisan Ops",
+        "path": "/assets/backgrounds/template_recon_partisan_ops.png"
+    },
+    {
+        "name": "Aerial Operations",
+        "path": "/assets/backgrounds/template_aerial_operations.png"
+    },
+    {
+        "name": "Build and Facilities",
+        "path": "/assets/backgrounds/template_build_and_facilities.png"
+    }
+  ]
+}
