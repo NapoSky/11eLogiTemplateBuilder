@@ -1,41 +1,39 @@
-# Licence d'Utilisation Non Commerciale
+Creative Commons Attribution-NonCommercial 4.0 International
 
-## Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
+This work is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License.
+To view a copy of this license, visit http://creativecommons.org/licenses/by-nc/4.0/
 
-### Vous êtes autorisé à :
+PERMISSIONS:
+You are free to:
+- Share: copy and redistribute the material in any medium or format
+- Adapt: remix, transform, and build upon the material
 
-- **Partager** — copier et redistribuer le matériel sous quelque support que ce soit ou sous n'importe quel format
-- **Adapter** — remixer, transformer et créer à partir du matériel
+CONDITIONS:
+- Attribution: You must give appropriate credit, provide a link to the license, and indicate if changes
+  were made. You may do so in any reasonable manner, but not in any way that suggests the licensor
+  endorses you or your use.
 
-### Selon les conditions suivantes :
+- NonCommercial: You may not use the material for commercial purposes.
 
-- **Attribution** — Vous devez créditer l'œuvre, intégrer un lien vers la licence et indiquer si des modifications ont été effectuées. Vous devez indiquer ces informations par tous les moyens raisonnables, sans toutefois suggérer que l'auteur vous soutient ou soutient la façon dont vous avez utilisé son œuvre.
+ASSET ATTRIBUTION:
+The graphical assets (icons, in-game images) included in this project are the property of Siegecamp Inc.
+(developer of Foxhole). These assets are used for community and non-commercial purposes only.
 
-- **Pas d'Utilisation Commerciale** — Vous n'êtes pas autorisé à faire un usage commercial de cette œuvre, tout ou partie du matériel la composant.
+This project is a community fan-made tool and is not affiliated with, endorsed by, or approved by
+Siegecamp Inc.
 
-### Avertissement concernant la propriété intellectuelle :
+SOURCE CODE:
+The source code of this project (TypeScript files, CSS, configurations) is available under the
+CC BY-NC 4.0 license.
 
-**Les assets graphiques (icônes, images de jeu)** inclus dans ce projet sont la propriété de **Siegecamp Inc.** (développeur de Foxhole). Ces assets sont utilisés à des fins communautaires et non commerciales uniquement.
+RESTRICTIONS:
+You may not use this work for any commercial purpose without explicit written permission from the
+copyright holder. This includes but is not limited to selling the software, using it as part of a
+commercial service, or deriving revenue from it in any form.
 
-Ce projet est un outil communautaire fan-made et n'est pas affilié, sponsorisé ou approuvé par Siegecamp Inc.
-
-### Code source :
-
-Le code source de ce projet (fichiers TypeScript, CSS, configurations) est disponible sous licence CC BY-NC 4.0.
-
----
-
-## Texte complet de la licence :
-
-Creative Commons Attribution-NonCommercial 4.0 International Public License
-
-En exerçant les droits accordés par la licence (définis ci-dessous), vous acceptez d'être lié par les termes et conditions de la présente Licence publique Creative Commons Attribution - Pas d'utilisation commerciale 4.0 International ("Licence publique"). Dans la mesure où la présente Licence publique peut être interprétée comme un contrat, vous bénéficiez des droits accordés par la licence en contrepartie de votre acceptation des présents termes et conditions, et le Donneur de licence vous accorde ces droits en contrepartie des avantages que lui procure le fait de mettre à disposition l'Œuvre sous licence en utilisant ces termes et conditions.
-
-Pour le texte intégral de la licence, veuillez consulter :
-https://creativecommons.org/licenses/by-nc/4.0/legalcode.fr
-
----
+DISCLAIMER:
+THIS WORK IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 
 Copyright (c) 2024-2026 11eRC-FL
-
-Les icônes et assets Foxhole © Siegecamp Inc. Tous droits réservés.
+Foxhole assets © Siegecamp Inc. All rights reserved.
