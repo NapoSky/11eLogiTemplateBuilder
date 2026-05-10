@@ -18,7 +18,7 @@ Thank you for your interest in the project! This guide explains how to propose c
 ## Prerequisites
 
 - A [GitHub](https://github.com) account
-- Node.js ≥ 18 and npm
+- Node.js ≥ 24 and npm
 - Basic Git knowledge (fork, branch, commit, push)
 
 ---
