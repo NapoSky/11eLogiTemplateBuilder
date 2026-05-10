@@ -109,14 +109,14 @@ describe('parseTodoList', () => {
 
   it('captures category-anchored text block including alarm emoji verbatim', () => {
     const raw =
-      '__**T**__\n\n__Heavy ammunition__\n<a:alarm:1308239734618984508> Heads up!\n--> link here\n\n__Small arms__\n';
+      '__**T**__\n\n__Heavy ammunition__\n<a:bell:1308239734618984508> Heads up!\n--> link here\n\n__Small arms__\n';
     const { result } = parseTodoList(raw, mpf);
     expect(result.textBlocks).toHaveLength(1);
     expect(result.textBlocks[0].anchor).toEqual({
       kind: 'category',
       category: 'heavy_ammunition',
     });
-    expect(result.textBlocks[0].content).toContain('<a:alarm:1308239734618984508>');
+    expect(result.textBlocks[0].content).toContain('<a:bell:1308239734618984508>');
     expect(result.textBlocks[0].content).toContain('--> link here');
   });
 
@@ -161,5 +161,22 @@ describe('parseTodoList', () => {
       { name: 'Argenti r.II Rifle', qty: 3 },
       { name: 'Cremari Mortar', qty: 1 },
     ]);
+  });
+
+  it('parses categories with different markdown formats (__text__, **text**, __**text**__, **__text__**)', () => {
+    const formats = [
+      '__**T**__\n\n__Small arms__\n🇦・Argenti r.II Rifle – 100 Bmats\n',
+      '__**T**__\n\n**Small arms**\n🇦・Argenti r.II Rifle – 100 Bmats\n',
+      '__**T**__\n\n__**Small arms**__\n🇦・Argenti r.II Rifle – 100 Bmats\n',
+      '__**T**__\n\n**__Small arms__**\n🇦・Argenti r.II Rifle – 100 Bmats\n',
+    ];
+
+    formats.forEach((raw, idx) => {
+      const { result, warnings } = parseTodoList(raw, mpf);
+      expect(warnings).toEqual([], `Format ${idx} should parse without warnings`);
+      expect(result.items).toHaveLength(1, `Format ${idx} should find the item`);
+      expect(result.items[0].itemName).toBe('Argenti r.II Rifle', `Format ${idx} should parse item name`);
+      expect(result.items[0].category).toBe('small_arms', `Format ${idx} should recognize category`);
+    });
   });
 });

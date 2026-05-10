@@ -27,11 +27,55 @@ function buildCategoryMap(): Map<string, MpfCategory> {
 }
 
 const TITLE_RE = /^__\*\*(.+?)\*\*__\s*$/;
-const CATEGORY_RE = /^__(.+?)__\s*$/;
 // Letter prefix: regional indicator (🇦-🇿) OR ASCII A-Z, followed by ・ or -
 const ITEM_PREFIX_RE = /^(?:[\u{1F1E6}-\u{1F1FF}]|[A-Za-z])(?:・|-)\s*/u;
 const ORDER_COUNT_RE = /\(x(\d+)\)\s*$/i;
 const DATE_SUFFIX_RE = /\s+(\d{2}\/\d{2})\s*$/;
+
+/**
+ * Extract category text from various markdown formatting patterns:
+ * - __Small Arms__
+ * - **Small Arms**
+ * - __**Small Arms**__
+ * - **__Small Arms__**
+ */
+function extractCategoryText(line: string): string | null {
+  // Test more specific patterns first (mixed markup), then simpler ones
+  const patterns = [
+    /^__\*\*(.+?)\*\*__\s*$/,   // __**text**__
+    /^\*\*__(.+?)__\*\*\s*$/,   // **__text__**
+    /^__(.+?)__\s*$/,           // __text__
+    /^\*\*(.+?)\*\*\s*$/,       // **text**
+  ];
+  
+  for (const pattern of patterns) {
+    const match = line.match(pattern);
+    if (match) return match[1];
+  }
+  
+  return null;
+}
+
+const EMOJI_NAME_MAP: Record<string, string> = {
+  'grey_exclamation': '⚠️',
+  'warning': '⚠️',
+  'alarm': '⏰',
+  'checkmark': '✅',
+  'x': '❌',
+  'information_source': 'ℹ️',
+  'question': '❓',
+  'heavy_check_mark': '✔️',
+  'white_check_mark': '✅',
+  'negative_squared_cross_mark': '❎',
+  'exclamation': '❗',
+  'bulb': '💡',
+};
+
+function convertEmojiNames(text: string): string {
+  return text.replace(/:([a-z_]+):/gi, (match, name) => {
+    return EMOJI_NAME_MAP[name.toLowerCase()] ?? match;
+  });
+}
 
 /**
  * Parse a Discord-formatted todolist text back into a TodoList structure.
@@ -67,7 +111,7 @@ export function parseTodoList(raw: string, mpfData: MpfDataEntry[]): ParseTodoLi
 
   const flushTextBuffer = (): void => {
     if (textBuffer.length === 0) return;
-    const content = textBuffer.join('\n').replace(/\s+$/, '');
+    const content = convertEmojiNames(textBuffer.join('\n').replace(/\s+$/, ''));
     textBuffer = [];
     if (!content.trim()) return;
     tl.textBlocks.push({
@@ -118,16 +162,16 @@ export function parseTodoList(raw: string, mpfData: MpfDataEntry[]): ParseTodoLi
     }
 
     // Category header
-    const catMatch = line.match(CATEGORY_RE);
-    if (catMatch) {
+    const categoryText = extractCategoryText(line);
+    if (categoryText) {
       flushTextBuffer();
-      const cat = categoryMap.get(normalize(catMatch[1]));
+      const cat = categoryMap.get(normalize(categoryText));
       if (cat) {
         currentCategory = cat;
         setAnchorForCurrent();
         continue;
       }
-      // Unknown __header__ → treat as free text below.
+      // Unknown category → treat as free text below.
     }
 
     // Strip optional letter prefix

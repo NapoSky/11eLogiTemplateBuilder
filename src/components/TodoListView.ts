@@ -10,11 +10,54 @@ function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 }
 
+/** Maps Discord emoji names to Unicode characters */
+const EMOJI_MAP: Record<string, string> = {
+  'grey_exclamation': '⚠️',
+  'warning': '⚠️',
+  'checkmark': '✅',
+  'x': '❌',
+  'information_source': 'ℹ️',
+  'question': '❓',
+  'heavy_check_mark': '✔️',
+  'white_check_mark': '✅',
+  'negative_squared_cross_mark': '❎',
+  'exclamation': '❗',
+  'bulb': '💡',
+};
+
+/** Converts Discord emoji names (e.g. :grey_exclamation:) to Unicode characters */
+function convertEmojiNames(text: string): string {
+  return text.replace(/:([a-z_]+):/gi, (match, name) => {
+    return EMOJI_MAP[name.toLowerCase()] ?? match;
+  });
+}
+
+/** Parses Discord markdown (**, *, __) and converts to HTML with styling. */
+function renderMarkdownToHtml(text: string): string {
+  // Handle bold+italic: ***text***
+  text = text.replace(/\*\*\*(.+?)\*\*\*/gs, '<strong><em>$1</em></strong>');
+  
+  // Handle bold: **text**
+  text = text.replace(/\*\*(.+?)\*\*/gs, '<strong>$1</strong>');
+  
+  // Handle underline: __text__
+  text = text.replace(/__(.+?)__/gs, '<u>$1</u>');
+  
+  // Handle italic: *text* (single asterisk, avoiding already-replaced markup)
+  text = text.replace(/\*([^*]+?)\*/gs, '<em>$1</em>');
+  
+  return text;
+}
+
 /** Renders raw Discord text as safe HTML, replacing the alarm custom emoji with a visual <img>. */
 function renderPreviewHtml(raw: string): string {
-  const escaped = escapeHtml(raw);
+  // First, convert named emojis (:grey_exclamation:) to Unicode
+  let text = convertEmojiNames(raw);
+  const escaped = escapeHtml(text);
+  // Apply markdown formatting (bold, italic, underline)
+  const withMarkdown = renderMarkdownToHtml(escaped);
   // After escapeHtml, '<a:alarm:1308239734618984508>' becomes '&lt;a:alarm:1308239734618984508&gt;'
-  return escaped.replaceAll(
+  return withMarkdown.replaceAll(
     '&lt;a:alarm:1308239734618984508&gt;',
     `<img src="${BASE_URL}assets/emojis/alarm_icon.gif" alt="<a:alarm:1308239734618984508>" title="alarm" class="inline w-5 h-5 align-middle" onerror="this.outerHTML='\u23F0'" />`
   );
@@ -278,6 +321,20 @@ export class TodoListView {
       <div class="bg-gray-800 border border-gray-700 rounded-lg p-3" data-block-id="${block.id}">
         <div class="flex items-center gap-2 mb-2">
           <span class="text-xs text-gray-400">📝 Free text</span>
+          <div class="flex gap-1">
+            <button type="button" data-format="bold" title="Bold (**text**)"
+              class="px-2 py-0.5 bg-gray-700 hover:bg-blue-600 rounded text-sm font-bold transition-colors leading-none">
+              B
+            </button>
+            <button type="button" data-format="italic" title="Italic (*text*)"
+              class="px-2 py-0.5 bg-gray-700 hover:bg-blue-600 rounded text-sm italic transition-colors leading-none">
+              I
+            </button>
+            <button type="button" data-format="underline" title="Underline (__text__)"
+              class="px-2 py-0.5 bg-gray-700 hover:bg-blue-600 rounded text-sm underline transition-colors leading-none">
+              U
+            </button>
+          </div>
           <div class="relative emoji-picker-wrapper">
             <button type="button" data-action="toggle-emoji" title="Insert emoji"
               class="px-2 py-0.5 bg-gray-700 hover:bg-blue-600 rounded text-sm transition-colors leading-none">
@@ -479,22 +536,69 @@ export class TodoListView {
       // Emoji dropdown toggle
       const toggleBtn = wrapper.querySelector('[data-action="toggle-emoji"]');
       const dropdown = wrapper.querySelector('[data-emoji-dropdown]') as HTMLElement | null;
+
+      // Save cursor position before the textarea loses focus on button click
+      let savedSelectionStart = 0;
+      let savedSelectionEnd = 0;
+      ta?.addEventListener('blur', () => {
+        savedSelectionStart = ta.selectionStart ?? 0;
+        savedSelectionEnd = ta.selectionEnd ?? 0;
+      });
+
       toggleBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
         dropdown?.classList.toggle('hidden');
       });
 
-      // Emoji quick-insert: insert at cursor then close dropdown
+      // Emoji quick-insert: insert at saved cursor position then close dropdown
       wrapper.querySelectorAll('[data-insert]').forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.preventDefault();
           dropdown?.classList.add('hidden');
           if (!ta) return;
           const text = (btn as HTMLElement).dataset.insert!;
-          const start = ta.selectionStart ?? ta.value.length;
-          const end = ta.selectionEnd ?? ta.value.length;
+          const start = savedSelectionStart;
+          const end = savedSelectionEnd;
           ta.value = ta.value.slice(0, start) + text + ta.value.slice(end);
+          ta.focus();
           ta.selectionStart = ta.selectionEnd = start + text.length;
+          savedSelectionStart = savedSelectionEnd = start + text.length;
+          ta.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+      });
+
+      // Text formatting buttons (Bold, Italic, Underline)
+      wrapper.querySelectorAll('[data-format]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          if (!ta) return;
+          
+          const start = ta.selectionStart ?? 0;
+          const end = ta.selectionEnd ?? 0;
+          const selectedText = ta.value.slice(start, end);
+
+          if (selectedText.length === 0) {
+            showToast('Please select text to format');
+            return;
+          }
+
+          const format = (btn as HTMLElement).dataset.format!;
+          let prefix = '', suffix = '';
+          
+          if (format === 'bold') {
+            prefix = suffix = '**';
+          } else if (format === 'italic') {
+            prefix = suffix = '*';
+          } else if (format === 'underline') {
+            prefix = suffix = '__';
+          }
+
+          const formattedText = prefix + selectedText + suffix;
+          ta.value = ta.value.slice(0, start) + formattedText + ta.value.slice(end);
+          
+          // Keep selection on the formatted text (excluding the markup)
+          ta.selectionStart = start + prefix.length;
+          ta.selectionEnd = start + prefix.length + selectedText.length;
           ta.focus();
           ta.dispatchEvent(new Event('input', { bubbles: true }));
         });
