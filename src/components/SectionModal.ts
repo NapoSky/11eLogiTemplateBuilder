@@ -49,7 +49,7 @@ export class SectionModal {
 
   private openCreate(): void {
     this.editingId = null;
-    this.render('Nouvelle Section', '', COLORS[Math.floor(Math.random() * COLORS.length)]);
+    this.render('New Section', '', COLORS[Math.floor(Math.random() * COLORS.length)]);
   }
 
   private openEdit(id: string): void {
@@ -66,21 +66,21 @@ export class SectionModal {
     this.container.innerHTML = `
       <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" id="modal-backdrop">
         <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-96" id="modal-content">
-          <h2 class="text-lg font-semibold mb-4">${this.editingId ? 'Modifier' : 'Créer'} une section</h2>
+          <h2 class="text-lg font-semibold mb-4">${this.editingId ? 'Edit' : 'Create'} section</h2>
           
           <div class="mb-4">
-            <label class="block text-sm text-gray-400 mb-1">Titre</label>
+            <label class="block text-sm text-gray-400 mb-1">Title</label>
             <input
               type="text"
               id="section-title"
               value="${inputValue}"
               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded focus:outline-none focus:border-blue-500"
-              placeholder="Ex: Infanterie"
+              placeholder="e.g. Infantry"
             />
           </div>
           
           <div class="mb-6">
-            <label class="block text-sm text-gray-400 mb-2">Couleur</label>
+            <label class="block text-sm text-gray-400 mb-2">Color</label>
             <div class="flex gap-2 flex-wrap" id="color-picker">
               ${COLORS.map(color => `
                 <button
@@ -95,10 +95,10 @@ export class SectionModal {
           
           <div class="flex justify-end gap-2">
             <button id="btn-cancel" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded">
-              Annuler
+              Cancel
             </button>
             <button id="btn-save" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded">
-              ${this.editingId ? 'Modifier' : 'Créer'}
+              ${this.editingId ? 'Edit' : 'Create'}
             </button>
           </div>
         </div>

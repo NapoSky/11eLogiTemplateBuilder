@@ -339,7 +339,7 @@ describe('IconContextMenu - Composant réel', () => {
     document.body.removeChild(iconEl);
   });
 
-  test('option subtype "Aucun" est présente', () => {
+  test('option subtype "None" est présente', () => {
     const menu = new IconContextMenu();
     menu.mount(container);
 
@@ -351,10 +351,10 @@ describe('IconContextMenu - Composant réel', () => {
 
     iconEl.dispatchEvent(new MouseEvent('contextmenu', { clientX: 100, clientY: 100, bubbles: true }));
 
-    // L'option "Aucun" pour subtype doit exister
+    // L'option "None" pour subtype doit exister
     const noSubtypeBtn = container.querySelector('[data-subtype=""]');
     expect(noSubtypeBtn).toBeTruthy();
-    expect(container.innerHTML).toContain('Aucun');
+    expect(container.innerHTML).toContain('None');
     
     document.body.removeChild(iconEl);
   });

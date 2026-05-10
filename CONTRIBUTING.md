@@ -1,131 +1,131 @@
-# Contribuer au 11eRC-FL Template Builder
+# Contributing to 11eRC-FL Template Builder
 
-Merci de l'intérêt que tu portes au projet ! Ce guide explique comment proposer des modifications via une Pull Request.
+Thank you for your interest in the project! This guide explains how to propose changes via a Pull Request.
 
-## Table des matières
+## Table of contents
 
-- [Prérequis](#prérequis)
-- [Fork & mise en place locale](#fork--mise-en-place-locale)
-- [Ce que tu peux contribuer](#ce-que-tu-peux-contribuer)
-  - [Backgrounds de template](#-backgrounds-de-template)
-  - [Icônes d'items](#-icônes-ditems)
-  - [Noms et catégories d'items](#-noms-et-catégories-ditems)
-- [Ouvrir une Pull Request](#ouvrir-une-pull-request)
-- [Licence et droits](#licence-et-droits)
-
----
-
-## Prérequis
-
-- Un compte [GitHub](https://github.com)
-- Node.js ≥ 18 et npm
-- Des notions basiques de Git (fork, branch, commit, push)
+- [Prerequisites](#prerequisites)
+- [Fork & local setup](#fork--local-setup)
+- [What you can contribute](#what-you-can-contribute)
+  - [Template backgrounds](#-template-backgrounds)
+  - [Item icons](#-item-icons)
+  - [Item names and categories](#-item-names-and-categories)
+- [Opening a Pull Request](#opening-a-pull-request)
+- [License and rights](#license-and-rights)
 
 ---
 
-## Fork & mise en place locale
+## Prerequisites
+
+- A [GitHub](https://github.com) account
+- Node.js ≥ 18 and npm
+- Basic Git knowledge (fork, branch, commit, push)
+
+---
+
+## Fork & local setup
 
 ```bash
-# 1. Forker le dépôt via l'interface GitHub (bouton "Fork" en haut à droite)
+# 1. Fork the repository via the GitHub interface (top-right "Fork" button)
 
-# 2. Cloner ton fork
-git clone https://github.com/<ton-pseudo>/11eLogiTemplateBuilder.git
+# 2. Clone your fork
+git clone https://github.com/<your-username>/11eLogiTemplateBuilder.git
 cd 11eLogiTemplateBuilder
 
-# 3. Installer les dépendances
+# 3. Install dependencies
 npm install
 
-# 4. Lancer le serveur de développement
+# 4. Start the development server
 npm run dev
-# L'application est disponible sur http://localhost:5173
+# The app is available at http://localhost:5173
 
-# 5. Créer une branche dédiée à ta contribution
-git checkout -b feat/mon-ajout
+# 5. Create a dedicated branch for your contribution
+git checkout -b feat/my-addition
 ```
 
 ---
 
-## Ce que tu peux contribuer
+## What you can contribute
 
-### 🖼️ Backgrounds de template
+### 🖼️ Template backgrounds
 
-Les fonds de template sont situés dans **`public/assets/backgrounds/`** et déclarés dans **`public/assets/backgrounds/manifest.json`**.
+Template backgrounds are located in **`public/assets/backgrounds/`** and declared in **`public/assets/backgrounds/manifest.json`**.
 
-#### Spécifications techniques
+#### Technical specifications
 
-| Propriété | Valeur attendue |
-|-----------|----------------|
-| Format | PNG (de préférence) ou JPG |
-| Résolution | **1920 × 1080 px** obligatoire |
-| Taille fichier | < 2 Mo recommandé |
-| Thème | En rapport avec Foxhole (carte, carte régimentaire, interface, etc.) |
+| Property | Expected value |
+|----------|---------------|
+| Format | PNG (preferred) or JPG |
+| Resolution | **1920 × 1080 px** required |
+| File size | < 2 MB recommended |
+| Theme | Related to Foxhole (map, regiment map, interface, etc.) |
 
-#### Étapes
+#### Steps
 
-1. Ajoute ton image dans `public/assets/backgrounds/` (ex : `mon_fond.png`)
-2. Déclare-la dans `manifest.json` :
+1. Add your image to `public/assets/backgrounds/` (e.g. `my_background.png`)
+2. Declare it in `manifest.json`:
 
 ```json
 {
   "presets": [
     { "name": "Default Foxhole", "path": "/assets/backgrounds/template_default.png" },
-    { "name": "Mon Fond",        "path": "/assets/backgrounds/mon_fond.png" }
+    { "name": "My Background",   "path": "/assets/backgrounds/my_background.png" }
   ]
 }
 ```
 
-3. Lance l'application (`npm run dev`) et vérifie que le preset s'affiche correctement dans la modale **Fond → Preset**.
-4. Commit ton image **et** le `manifest.json` modifié.
+3. Start the app (`npm run dev`) and verify the preset appears correctly in the **Background → Preset** modal.
+4. Commit your image **and** the updated `manifest.json`.
 
 ---
 
-### 🔫 Icônes d'items
+### 🔫 Item icons
 
-Les icônes sont extraites directement des fichiers du jeu Foxhole et organisées selon la **structure de modding officielle**.
+Icons are extracted directly from Foxhole game files and organised according to the **official modding structure**.
 
-#### Structure attendue
+#### Expected structure
 
 ```
 public/assets/icons/
 ├── UI/
-│   ├── ItemIcons/           # Items de fabrication (armes, munitions, ressources…)
-│   │   ├── Uniforms/        # Uniformes et équipements personnels
-│   │   └── Facilities/      # Items liés aux bâtiments de production
-│   ├── StructureIcons/      # Structures défensives
-│   ├── VehicleIcons/        # Icônes de véhicules (symboles d'interface)
-│   └── Menus/               # Icônes de menus in-game
-├── Vehicles/                # Silhouettes de véhicules
-└── subtypes/                # Marqueurs de sous-type (SubtypeAmmoIcon.png, etc.)
+│   ├── ItemIcons/           # Craftable items (weapons, ammo, resources…)
+│   │   ├── Uniforms/        # Personal equipment and uniforms
+│   │   └── Facilities/      # Items related to production buildings
+│   ├── StructureIcons/      # Defensive structures
+│   ├── VehicleIcons/        # Vehicle icons (interface symbols)
+│   └── Menus/               # In-game menu icons
+├── Vehicles/                # Vehicle silhouettes
+└── subtypes/                # Subtype markers (SubtypeAmmoIcon.png, etc.)
 ```
 
-> ⚠️ Respecte cette arborescence : elle correspond aux chemins utilisés dans le jeu et permet une cohérence avec les futures mises à jour de Foxhole.
+> ⚠️ Respect this directory structure: it matches the paths used in-game and ensures consistency with future Foxhole updates.
 
-#### Conventions de nommage
+#### Naming conventions
 
-Les fichiers suivent la convention PascalCase du jeu :
+Files follow the game's PascalCase convention:
 
 - `AssaultRifleItemIcon.png`
 - `AssaultRifleHeavyCItemIcon.png` (`C` = Colonial, `W` = Warden)
 - `ATMortarItemIcon.png`
 
-Les icônes spécifiques à une faction portent un suffixe `C` (Colonial) ou `W` (Warden).
+Faction-specific icons carry a `C` (Colonial) or `W` (Warden) suffix.
 
-#### Étapes
+#### Steps
 
-1. Ajoute ton fichier PNG dans le bon sous-dossier de `public/assets/icons/`.
-2. Déclare l'icône dans `public/iconMapping.json` (voir section suivante).
-3. Assigne-lui une catégorie dans `public/categoryMapping.json` (voir section suivante).
-4. Lance `npm run dev` et vérifie que l'icône apparaît dans la sidebar, dans la bonne catégorie.
+1. Add your PNG file to the correct subfolder of `public/assets/icons/`.
+2. Declare the icon in `public/iconMapping.json` (see next section).
+3. Assign it a category in `public/categoryMapping.json` (see next section).
+4. Run `npm run dev` and verify the icon appears in the sidebar, in the correct category.
 
 ---
 
-### 📋 Noms et catégories d'items
+### 📋 Item names and categories
 
-Les métadonnées des icônes sont gérées par deux fichiers JSON à la racine de `public/` :
+Icon metadata is managed by two JSON files at the root of `public/`:
 
-#### `public/iconMapping.json` — Noms d'affichage
+#### `public/iconMapping.json` — Display names
 
-Ce fichier associe le chemin relatif d'une icône à son nom lisible dans l'interface :
+This file maps an icon's relative path to its human-readable name in the UI:
 
 ```json
 {
@@ -135,12 +135,12 @@ Ce fichier associe le chemin relatif d'une icône à son nom lisible dans l'inte
 }
 ```
 
-- La **clé** est le chemin relatif depuis `public/assets/icons/` (sans ce préfixe).
-- La **valeur** est le nom exact de l'item tel qu'il apparaît dans le jeu.
+- The **key** is the relative path from `public/assets/icons/` (without that prefix).
+- The **value** is the exact item name as it appears in the game.
 
-#### `public/categoryMapping.json` — Catégories
+#### `public/categoryMapping.json` — Categories
 
-Ce fichier assigne chaque icône à l'une des catégories de l'interface :
+This file assigns each icon to one of the UI categories:
 
 ```json
 {
@@ -149,55 +149,55 @@ Ce fichier assigne chaque icône à l'une des catégories de l'interface :
 }
 ```
 
-Catégories disponibles :
+Available categories:
 
-| Clé | Description |
+| Key | Description |
 |-----|-------------|
-| `Small Arms` | Armes légères et munitions légères |
-| `Heavy Arms` | Armes lourdes et munitions intermédiaires |
-| `Heavy Ammunition` | Munitions lourdes (artillerie, blindés) |
-| `Utility` | Outils et équipements |
-| `Medical` | Soins et médical |
-| `Resources` | Ressources et matériaux |
-| `Uniforms` | Uniformes et équipements personnels |
-| `Vehicles` | Véhicules et blindés |
-| `Field Weapons` | Armes de campagne (mortiers, canons, MGs) |
-| `Structures` | Emplacements et structures défensives |
-| `Naval` | Navires et équipements maritimes |
-| `Trains` | Locomotives et wagons |
-| `Planes` | Avions et pièces d'avions |
+| `Small Arms` | Light weapons and light ammunition |
+| `Heavy Arms` | Heavy weapons and intermediate ammunition |
+| `Heavy Ammunition` | Heavy ammunition (artillery, armoured) |
+| `Utility` | Tools and equipment |
+| `Medical` | Medical supplies |
+| `Resources` | Resources and materials |
+| `Uniforms` | Personal equipment and armour |
+| `Vehicles` | Vehicles and armoured units |
+| `Field Weapons` | Field weapons (mortars, cannons, MGs) |
+| `Structures` | Emplacements and defensive structures |
+| `Naval` | Naval ships and maritime equipment |
+| `Trains` | Locomotives and railcars |
+| `Planes` | Aircraft and aircraft parts |
 
 ---
 
-## Ouvrir une Pull Request
+## Opening a Pull Request
 
-Une fois tes modifications prêtes et testées localement :
+Once your changes are ready and tested locally:
 
 ```bash
-# Vérification TypeScript (aucune erreur attendue)
+# TypeScript check (no errors expected)
 npx tsc --noEmit
 
-# Suite de tests (tous doivent passer)
+# Test suite (all must pass)
 npm test
 
-# Commit et push
+# Commit and push
 git add .
-git commit -m "feat: ajoute le preset de fond 'Mon Fond'"
-git push origin feat/mon-ajout
+git commit -m "feat: add background preset 'My Background'"
+git push origin feat/my-addition
 ```
 
-Puis ouvre une Pull Request depuis ton fork vers la branche `main` du dépôt original. Dans la description, précise :
+Then open a Pull Request from your fork to the `main` branch of the original repository. In the description, specify:
 
-- **Ce que tu ajoutes / modifies** et pourquoi
-- **Une capture d'écran** si tu touches à l'UI ou aux assets visuels
-- **La source des assets** si tu ajoutes des icônes (obligatoire — voir section Licence)
+- **What you add / modify** and why
+- **A screenshot** if you touch the UI or visual assets
+- **The source of the assets** if you add icons (required — see License section)
 
 ---
 
-## Licence et droits
+## License and rights
 
-Ce projet est distribué sous **CC BY-NC 4.0**.
+This project is distributed under **CC BY-NC 4.0**.
 
-> **Important** : les icônes et assets graphiques de Foxhole sont la propriété de **Siegecamp Inc.** Toute contribution d'icônes doit être issue des fichiers du jeu et utilisée uniquement à des fins communautaires non commerciales, conformément aux conditions d'utilisation de Siegecamp.
+> **Important**: Foxhole icons and graphical assets are the property of **Siegecamp Inc.** Any icon contribution must come from game files and be used solely for non-commercial community purposes, in accordance with Siegecamp's terms of use.
 
-En soumettant une Pull Request, tu acceptes que ta contribution soit publiée sous la même licence que le projet.
+By submitting a Pull Request, you agree that your contribution will be published under the same license as the project.

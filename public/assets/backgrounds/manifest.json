@@ -22,11 +22,11 @@
     },
     {
         "name": "Aerial Operations",
-        "path": "/assets/backgrounds/template_aerial_operations.png"
+        "path": "/assets/backgrounds/template_aerial_operation.png"
     },
     {
         "name": "Build and Facilities",
-        "path": "/assets/backgrounds/template_build_and_facilities.png"
+        "path": "/assets/backgrounds/template_build_facilities.png"
     }
   ]
 }

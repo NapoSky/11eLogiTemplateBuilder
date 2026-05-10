@@ -64,8 +64,8 @@ export class BackgroundModal {
       <div id="bg-modal-backdrop" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-[700px] max-w-[95vw] max-h-[90vh] flex flex-col">
           <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold">Fond du template</h2>
-            <button id="bg-modal-close" class="text-gray-400 hover:text-white" title="Fermer">
+            <h2 class="text-lg font-semibold">Template background</h2>
+            <button id="bg-modal-close" class="text-gray-400 hover:text-white" title="Close">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
               </svg>
@@ -74,13 +74,13 @@ export class BackgroundModal {
 
           <!-- Aperçu -->
           <div class="mb-3">
-            <div class="text-xs text-gray-400 mb-1">Aperçu</div>
+            <div class="text-xs text-gray-400 mb-1">Preview</div>
             <div id="bg-preview" class="w-full h-32 rounded border border-gray-700" style="${this.previewStyle()}"></div>
           </div>
 
           <!-- Onglets -->
           <div class="flex gap-2 mb-3">
-            ${tabBtn('color', '🎨 Couleur')}
+            ${tabBtn('color', '🎨 Color')}
             ${tabBtn('preset', '🖼️ Preset')}
             ${tabBtn('upload', '⬆️ Upload')}
             ${tabBtn('url', '🔗 URL')}
@@ -91,8 +91,8 @@ export class BackgroundModal {
           </div>
 
           <div class="flex justify-end gap-2 mt-4">
-            <button id="bg-modal-cancel" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-sm">Annuler</button>
-            <button id="bg-modal-apply" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm">Appliquer</button>
+            <button id="bg-modal-cancel" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-sm">Cancel</button>
+            <button id="bg-modal-apply" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm">Apply</button>
           </div>
         </div>
       </div>
@@ -135,10 +135,10 @@ export class BackgroundModal {
 
     const fillRow = `
       <div class="flex items-center gap-3 mt-3 pt-3 border-t border-gray-700">
-        <span class="text-xs text-gray-400 shrink-0">Couleur de fond :</span>
+        <span class="text-xs text-gray-400 shrink-0">Fill color:</span>
         <input id="bg-fill-picker" type="color" value="${escapeHtml(fillColor)}" class="w-10 h-8 rounded cursor-pointer bg-gray-900 border border-gray-700"/>
         <input id="bg-fill-hex" type="text" value="${escapeHtml(fillColor)}" maxlength="7" class="w-24 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs font-mono"/>
-        <span class="text-xs text-gray-500">Visible autour de l'image si elle ne remplit pas tout l'espace.</span>
+        <span class="text-xs text-gray-500">Visible around the image if it doesn't fill the entire space.</span>
       </div>
     `;
 
@@ -146,17 +146,17 @@ export class BackgroundModal {
       case 'color':
         return `
           <div class="space-y-3">
-            <label class="block text-sm text-gray-300">Couleur unie</label>
+            <label class="block text-sm text-gray-300">Solid color</label>
             <div class="flex items-center gap-3">
               <input id="bg-color-picker" type="color" value="${escapeHtml(draftColor)}" class="w-16 h-10 rounded cursor-pointer bg-gray-900 border border-gray-700"/>
               <input id="bg-color-hex" type="text" value="${escapeHtml(draftColor)}" maxlength="7" class="w-32 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-sm font-mono"/>
-              <span class="text-xs text-gray-500">Défaut : <code>#1b2a38</code> (bleu)</span>
+              <span class="text-xs text-gray-500">Default: <code>#1b2a38</code> (blue)</span>
             </div>
           </div>
         `;
       case 'preset':
         if (presets.length === 0) {
-          return `<p class="text-sm text-gray-400">Aucun preset disponible. Vérifiez <code>public/assets/backgrounds/manifest.json</code>.</p>`;
+          return `<p class="text-sm text-gray-400">No preset available. Check <code>public/assets/backgrounds/manifest.json</code>.</p>`;
         }
         return `
           <div class="space-y-2">
@@ -165,7 +165,7 @@ export class BackgroundModal {
                 const selected = this.draft.kind === 'preset' && this.draft.path === p.path;
                 return `
                   <button data-preset-path="${escapeHtml(p.path)}" class="bg-preset-btn text-left rounded border ${selected ? 'border-blue-500 ring-2 ring-blue-500' : 'border-gray-700 hover:border-gray-500'} p-2 bg-gray-900">
-                    <div class="w-full h-20 rounded mb-2" style="background:url('${presetUrl(p.path)}') center/contain no-repeat ${escapeHtml(fillColor)};"></div>
+                    <div class="w-full h-20 rounded mb-2" style="background:url('${presetUrl(p.path)}') center/cover no-repeat ${escapeHtml(fillColor)};"></div>
                     <div class="text-xs text-gray-200 truncate">${escapeHtml(p.name)}</div>
                   </button>
                 `;
@@ -177,9 +177,9 @@ export class BackgroundModal {
       case 'upload':
         return `
           <div class="space-y-3">
-            <label class="block text-sm text-gray-300">Importer une image locale</label>
+            <label class="block text-sm text-gray-300">Import a local image</label>
             <input id="bg-upload-input" type="file" accept="image/*" class="block text-sm text-gray-300 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700"/>
-            <p class="text-xs text-gray-500">L'image est encodée en base64 et embarquée dans le template JSON exporté (template autonome). Avertissement au-delà de 2 Mo.</p>
+            <p class="text-xs text-gray-500">The image is base64-encoded and embedded in the exported JSON template (self-contained). Warning above 2 MB.</p>
             <div id="bg-upload-status" class="text-xs"></div>
             ${fillRow}
           </div>
@@ -187,9 +187,9 @@ export class BackgroundModal {
       case 'url':
         return `
           <div class="space-y-3">
-            <label class="block text-sm text-gray-300">URL externe (http/https)</label>
-            <input id="bg-url-input" type="url" value="${escapeHtml(draftUrl)}" placeholder="https://example.com/fond.png" class="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-sm"/>
-            <p class="text-xs text-amber-400">⚠️ L'export PNG peut échouer si le serveur ne renvoie pas l'en-tête CORS <code>Access-Control-Allow-Origin</code>.</p>
+            <label class="block text-sm text-gray-300">External URL (http/https)</label>
+            <input id="bg-url-input" type="url" value="${escapeHtml(draftUrl)}" placeholder="https://example.com/background.png" class="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-sm"/>
+            <p class="text-xs text-amber-400">⚠️ PNG export may fail if the server doesn't return the <code>Access-Control-Allow-Origin</code> CORS header.</p>
             ${fillRow}
           </div>
         `;
@@ -290,8 +290,8 @@ export class BackgroundModal {
       const status = this.container?.querySelector('#bg-upload-status') as HTMLElement | null;
       if (status) {
         status.textContent = file.size > UPLOAD_WARN_BYTES
-          ? `⚠️ Fichier volumineux (${(file.size / 1024 / 1024).toFixed(1)} Mo) — risque de saturation localStorage.`
-          : `OK (${(file.size / 1024).toFixed(0)} Ko)`;
+          ? `⚠️ Large file (${(file.size / 1024 / 1024).toFixed(1)} MB) — risk of localStorage overflow.`
+          : `OK (${(file.size / 1024).toFixed(0)} KB)`;
         status.className = file.size > UPLOAD_WARN_BYTES ? 'text-xs text-amber-400' : 'text-xs text-green-400';
       }
       const reader = new FileReader();
@@ -317,7 +317,7 @@ export class BackgroundModal {
     // Apply
     this.container.querySelector('#bg-modal-apply')?.addEventListener('click', () => {
       if (!isValidBackground(this.draft)) {
-        alert('Configuration invalide.');
+        alert('Invalid configuration.');
         return;
       }
       store.setBackground(this.draft);

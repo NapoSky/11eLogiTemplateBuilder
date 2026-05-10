@@ -46,22 +46,22 @@ export class IconContextMenu {
       <div class="fixed inset-0 z-40" id="context-backdrop"></div>
       <div class="fixed bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-50 min-w-56 max-h-[70vh] flex flex-col" style="left: ${x}px; top: ${y}px" id="context-menu">
         <div class="px-3 py-2 border-b border-gray-600 shrink-0">
-          <label class="block text-xs text-gray-400 uppercase mb-1">Quantité</label>
+          <label class="block text-xs text-gray-400 uppercase mb-1">Quantity</label>
           <div class="flex items-center gap-2">
             <button class="qty-btn w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded flex items-center justify-center" data-qty-action="minus">−</button>
             <input type="number" id="qty-input" value="${currentQuantity}" min="-1" max="999" class="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-center text-sm" />
             <button class="qty-btn w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded flex items-center justify-center" data-qty-action="plus">+</button>
           </div>
           <div class="flex gap-1 mt-2">
-            <button class="qty-preset flex-1 px-2 py-1 text-xs rounded ${currentQuantity === 0 ? 'bg-amber-600' : 'bg-gray-700 hover:bg-gray-600'}" data-qty-preset="0" title="Non nécessaire">★ Non</button>
-            <button class="qty-preset flex-1 px-2 py-1 text-xs rounded ${currentQuantity === -1 ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'}" data-qty-preset="-1" title="Spécifique">? Spé</button>
+            <button class="qty-preset flex-1 px-2 py-1 text-xs rounded ${currentQuantity === 0 ? 'bg-amber-600' : 'bg-gray-700 hover:bg-gray-600'}" data-qty-preset="0" title="Not required">★ No</button>
+            <button class="qty-preset flex-1 px-2 py-1 text-xs rounded ${currentQuantity === -1 ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'}" data-qty-preset="-1" title="Specific">? Spec</button>
           </div>
         </div>
         <div class="overflow-y-auto flex-1">
           <div class="px-3 py-1 text-xs text-gray-400 uppercase sticky top-0 bg-gray-800">Subtype</div>
           <button class="context-item w-full px-3 py-2 text-left hover:bg-gray-700 flex items-center gap-2 ${!currentSubtype ? 'text-blue-400' : ''}" data-subtype="">
             <span class="w-5 h-5 flex items-center justify-center">${!currentSubtype ? '✓' : ''}</span>
-            Aucun
+            None
           </button>
           ${store.subtypes.map(st => `
             <button class="context-item w-full px-3 py-2 text-left hover:bg-gray-700 flex items-center gap-2 ${currentSubtype === st.path ? 'text-blue-400' : ''}" data-subtype="${st.path}">
@@ -72,7 +72,7 @@ export class IconContextMenu {
         </div>
         <div class="border-t border-gray-600 shrink-0">
           <button class="context-item w-full px-3 py-2 text-left hover:bg-red-600 text-red-400" data-action="delete">
-            Supprimer l'icône
+            Remove icon
           </button>
         </div>
       </div>

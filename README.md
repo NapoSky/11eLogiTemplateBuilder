@@ -1,154 +1,140 @@
 # 11eRC-FL Template Builder
 
+<p align="center">
+  <img src="public/logo.png" alt="11e Logi Template Builder logo" width="120">
+</p>
+
 [![Build & Deploy](https://github.com/NapoSky/11eLogiTemplateBuilder/actions/workflows/deploy.yml/badge.svg)](https://github.com/NapoSky/11eLogiTemplateBuilder/actions/workflows/deploy.yml)
 [![Tests](https://github.com/NapoSky/11eLogiTemplateBuilder/actions/workflows/test.yml/badge.svg)](https://github.com/NapoSky/11eLogiTemplateBuilder/actions/workflows/test.yml)
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 
-🔗 **Lien live** : [https://logitb.11e-foxhole.com](https://logitb.11e-foxhole.com)
+A stockpile template generator for the game Foxhole, designed for the 11eRC-FL regiment.
 
-Un générateur de templates de stockpile pour le jeu Foxhole, spécialement conçu pour le régiment 11eRC-FL.
+## 🎯 Features
 
-## 🎯 Fonctionnalités
+- **Modern UI**: TypeScript application with Tailwind CSS
+- **Drag & drop**: Easily organise icons into sections
+- **Smart grid**: Precise CSS grid icon placement
+- **Automatic categorisation**: Icons sorted by type (Weapons, Ammunition, Uniforms, etc.)
+- **Adjustable size**: Change the global icon size (S/M/L)
+- **Quantity management**: Click to edit the quantity of each item
+- **PNG export**: High-quality 1920×1080 image ready to use
+- **JSON save**: Save and reload your templates
+- **Keyboard shortcuts**: Quick navigation with Ctrl+S, Ctrl+O, Ctrl+E
+- **Help menu**: `?` button to view all shortcuts
 
-- **Interface moderne** : Application TypeScript avec Tailwind CSS
-- **Glisser-déposer** : Organisez facilement les icônes dans des sections
-- **Grille intelligente** : Placement précis des icônes sur une grille CSS
-- **Catégorisation automatique** : Les icônes sont classées par type (Armes, Munitions, Uniformes, etc.)
-- **Taille ajustable** : Changez la taille globale des icônes (S/M/L)
-- **Gestion des quantités** : Clic pour modifier la quantité de chaque item
-- **Export PNG** : Image haute qualité 1920x1080 prête à l'emploi
-- **Sauvegarde JSON** : Sauvegardez et rechargez vos templates
-- **Raccourcis clavier** : Navigation rapide avec Ctrl+S, Ctrl+O, Ctrl+E
-- **Menu d'aide** : Bouton `?` pour voir tous les raccourcis
+## 🚀 Usage
 
-## 🚀 Utilisation
-
-### Démarrage rapide
+### Quick start
 
 ```bash
-# Installation des dépendances
+# Install dependencies
 npm install
 
-# Lancement en mode développement
+# Start the development server
 npm run dev
 
-# Build de production
+# Production build
 npm run build
 ```
 
 ### Workflow
 
-1. **Double-cliquez** sur le canvas pour créer une nouvelle section
-2. **Recherchez** ou parcourez les icônes dans la sidebar gauche
-3. **Glissez-déposez** les icônes vers une section
-4. **Réorganisez** les icônes en les glissant dans la grille
-5. **Cliquez** sur une icône pour modifier sa quantité
-6. **Exportez** en PNG ou sauvegardez en JSON
+1. **Double-click** the canvas to create a new section
+2. **Search** or browse icons in the left sidebar
+3. **Drag & drop** icons into a section
+4. **Reorder** icons by dragging them within the grid
+5. **Click** an icon to edit its quantity
+6. **Export** as PNG or save as JSON
 
-## ⌨️ Raccourcis clavier
+## ⌨️ Keyboard shortcuts
 
-| Raccourci | Action |
-|-----------|--------|
-| `Ctrl + S` | Sauvegarder le template (JSON) |
-| `Ctrl + O` | Charger un template |
-| `Ctrl + E` | Exporter en PNG |
-| `?` | Afficher/masquer l'aide |
-| `Escape` | Fermer les modals |
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl + S` | Save template (JSON) |
+| `Ctrl + O` | Load template |
+| `Ctrl + E` | Export as PNG |
+| `?` | Show/hide help |
+| `Escape` | Close modals |
 
-## 🖱️ Actions souris
+## 🖱️ Mouse actions
 
-- **Double-clic** sur le canvas → Créer une nouvelle section
-- **Glisser** une icône de la sidebar → Ajouter à une section
-- **Glisser** une icône dans la grille → Réorganiser
-- **Clic** sur une icône placée → Modifier quantité/sous-type
-- **Glisser** le header d'une section → Déplacer la section
-- **Glisser** le coin d'une section → Redimensionner
+- **Double-click** the canvas → Create a new section
+- **Drag** an icon from the sidebar → Add to a section
+- **Drag** an icon in the grid → Reorder
+- **Click** a placed icon → Edit quantity/subtype
+- **Drag** a section header → Move the section
+- **Drag** a section corner → Resize
 
-## 📐 Taille des icônes
+## 📐 Icon size
 
-Utilisez les boutons **S** / **M** / **L** dans la toolbar pour ajuster la taille globale des icônes :
-- **S** (Small) : Icônes compactes pour plus de contenu
-- **M** (Medium) : Taille par défaut équilibrée  
-- **L** (Large) : Icônes plus visibles
+Use the **S** / **M** / **L** buttons in the toolbar to adjust the global icon size:
+- **S** (Small): Compact icons for more content
+- **M** (Medium): Default balanced size  
+- **L** (Large): Larger, more visible icons
 
-## 📁 Structure du projet
+## 📁 Project structure
 
 ```
 11eTemplateBuilder/
 ├── src/
-│   ├── main.ts              # Point d'entrée
-│   ├── store.ts             # État global (sections, icônes)
-│   ├── types.ts             # Types TypeScript
-│   ├── styles.css           # Styles Tailwind
+│   ├── main.ts              # Entry point
+│   ├── store.ts             # Global state (sections, icons)
+│   ├── types.ts             # TypeScript types
+│   ├── styles.css           # Tailwind styles
 │   └── components/
-│       ├── Toolbar.ts       # Barre d'outils + raccourcis
-│       ├── Sidebar.ts       # Liste des icônes
-│       ├── Canvas.ts        # Zone de travail
-│       ├── Section.ts       # Composant section
+│       ├── Toolbar.ts       # Toolbar + shortcuts
+│       ├── Sidebar.ts       # Icon list
+│       ├── Canvas.ts        # Work area
+│       ├── Section.ts       # Section component
 │       └── ...
 ├── assets/
-│   ├── backgrounds/         # Fonds de templates (PNG)
-│   ├── emojis/              # Icones pour Todolists
-│   └── icons/               # Icônes Foxhole (PNG)
+│   ├── backgrounds/         # Template backgrounds (PNG)
+│   ├── emojis/              # Icons for Todolists
+│   └── icons/               # Foxhole icons (PNG)
 ├── data/
-│   ├── iconMapping.json     # Noms d'affichage des icônes
-│   └── categoryMapping.json # Catégorisation des icônes
+│   ├── iconMapping.json     # Icon display names
+│   └── categoryMapping.json # Icon categorisation
 ├── index.html
 ├── package.json
 ├── tsconfig.json
 └── vite.config.ts
 ```
 
-## 🎨 Catégories d'icônes
+## 💾 Export formats
 
-- **🔫 Armes** : Fusils, pistolets, lance-roquettes
-- **🔴 Munitions** : Balles, obus, grenades, mines  
-- **👤 Uniformes** : Équipements personnels et armures
-- **📦 Ressources** : Matériaux de construction, composants
-- **❤️ Médical** : Kits de soins, plasma sanguin
-- **🚗 Véhicules** : Munitions et équipements véhicules
-- **⚓ Naval** : Équipements maritimes
-- **🏗️ Emplacements** : Structures défensives
-- **➕ Autres** : Divers
+| Format | Use |
+|--------|-----|
+| **PNG** | 1920×1080 image for Discord/forum sharing |
 
-## 💾 Formats d'export
 
-| Format | Usage |
-|--------|-------|
-| **PNG** | Image 1920x1080 pour partage Discord/forums |
-| **JSON** | Sauvegarde complète pour modification ultérieure |
+## 🛠️ Tech stack
 
-## 🛠️ Stack technique
+- **TypeScript**: Static typing
+- **Vite**: Fast build and HMR
+- **Tailwind CSS v4**: Utility-first styles
+- **interact.js**: Section drag & resize
+- **html2canvas-pro**: PNG export (oklab/oklch support)
 
-- **TypeScript** : Typage statique
-- **Vite** : Build rapide et HMR
-- **Tailwind CSS v4** : Styles utilitaires
-- **interact.js** : Drag & resize des sections
-- **html2canvas-pro** : Export PNG (support oklab/oklch)
-
-## 🌐 Compatibilité
+## 🌐 Compatibility
 
 - ✅ Chrome 90+
 - ✅ Firefox 90+
 - ✅ Safari 15+
 - ✅ Edge 90+
 
-## 🎮 À propos de Foxhole
+## 🎮 About Foxhole
 
-Foxhole est un jeu de guerre MMO développé par Siegecamp Inc. Ce template builder est un outil communautaire créé pour faciliter la gestion logistique des régiments.
+Foxhole is an MMO war game developed by Siegecamp Inc. This template builder is a community tool created to help manage regiment logistics.
 
-## 🤝 Contribuer
+## 📜 License
 
-Tu veux proposer un nouveau fond de template, ajouter des icônes d'items ou corriger un nom d'affichage ? Consulte le guide **[CONTRIBUTING.md](CONTRIBUTING.md)** pour démarrer.
+This project is released under **CC BY-NC 4.0** (Creative Commons Attribution - NonCommercial).
 
-## 📜 Licence
+> ⚠️ **Important note**: Foxhole icons and graphical assets are the property of **Siegecamp Inc.** and are used solely for non-commercial community purposes.
 
-Ce projet est sous licence **CC BY-NC 4.0** (Creative Commons Attribution - Pas d'Utilisation Commerciale).
-
-> ⚠️ **Note importante** : Les icônes et assets graphiques de Foxhole sont la propriété de **Siegecamp Inc.** et sont utilisés uniquement à des fins communautaires non commerciales.
-
-Voir le fichier [LICENSE](LICENSE) pour plus de détails.
+See the [LICENSE](LICENSE) file for details.
 
 ---
 
-**v2.0** - Créé avec ❤️ pour le 11eRC-FL
+**v2.0** - Made with ❤️ for the 11eRC-FL

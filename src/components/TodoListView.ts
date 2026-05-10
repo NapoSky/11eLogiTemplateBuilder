@@ -119,18 +119,18 @@ export class TodoListView {
           <!-- Header controls -->
           <div class="bg-gray-800 rounded-lg border border-gray-700 p-4 flex flex-wrap gap-4 items-end">
             <div class="flex-1 min-w-[180px]">
-              <label class="block text-xs text-gray-400 mb-1">Titre</label>
+              <label class="block text-xs text-gray-400 mb-1">Title</label>
               <input id="tl-title" type="text" value="${escapeHtml(tl.title)}"
                 class="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500" />
             </div>
             <label class="flex items-center gap-2 text-sm cursor-pointer">
               <input id="tl-autodate" type="checkbox" ${tl.autoDate ? 'checked' : ''} class="accent-blue-500" />
-              <span>Date auto (DD/MM)</span>
+              <span>Auto date (DD/MM)</span>
             </label>
             <div>
               <label class="block text-xs text-gray-400 mb-1">Faction</label>
               <select id="tl-faction" class="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-sm">
-                <option value="all" ${tl.faction === 'all' ? 'selected' : ''}>Toutes</option>
+                <option value="all" ${tl.faction === 'all' ? 'selected' : ''}>All</option>
                 <option value="colonial" ${tl.faction === 'colonial' ? 'selected' : ''}>Colonial</option>
                 <option value="warden" ${tl.faction === 'warden' ? 'selected' : ''}>Warden</option>
               </select>
@@ -139,14 +139,14 @@ export class TodoListView {
 
           <!-- Drop hint -->
           <div class="bg-blue-900/20 border border-blue-700/40 rounded-lg p-3 text-sm text-blue-200">
-            👉 Glissez une icône MPF-craftable depuis la sidebar pour l'ajouter à la todolist.
+            👉 Drag an MPF-craftable icon from the sidebar to add it to the todolist.
           </div>
 
           ${topBlocks.map(b => this.renderTextBlock(b)).join('')}
 
           ${tl.items.length === 0 && tl.textBlocks.length === 0 ? `
             <div class="text-center py-12 text-gray-500 italic border-2 border-dashed border-gray-700 rounded-lg">
-              Aucun item. Glissez une icône ici, ou cliquez sur « + Texte ».
+              No items. Drag an icon here, or click &ldquo;+ Text&rdquo;.
             </div>
           ` : MPF_CATEGORIES.map(cat => {
             const items = grouped[cat];
@@ -174,9 +174,9 @@ export class TodoListView {
         <div class="space-y-3 lg:sticky lg:top-4 self-start">
           <div class="bg-gray-800 rounded-lg border border-gray-700">
             <header class="px-4 py-2 border-b border-gray-700 font-semibold text-gray-200 flex items-center justify-between">
-              <span>Aperçu Discord</span>
+              <span>Discord Preview</span>
               <div class="flex gap-1">
-                <button id="tl-copy" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs">📋 Copier</button>
+                <button id="tl-copy" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs">📋 Copy</button>
                 <button id="tl-download" class="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs">⬇️ .txt</button>
               </div>
             </header>
@@ -203,7 +203,7 @@ export class TodoListView {
     const matsHtml = escapeHtml(matsParts.join(' – '));
     const letter = regionalIndicator(idx);
     const factionBadge = warnFaction
-      ? `<span title="Cet item n'appartient pas à la faction sélectionnée" class="text-amber-400 text-xs">⚠️</span>`
+      ? `<span title="This item does not belong to the selected faction" class="text-amber-400 text-xs">⚠️</span>`
       : '';
 
     return `
@@ -232,7 +232,7 @@ export class TodoListView {
             class="w-14 bg-gray-900 border border-gray-700 rounded px-1 py-0.5 text-sm" />
         </label>
         <span class="text-xs text-gray-500 w-12 text-right">/${item.maxCrates}</span>
-        <button data-action="delete" class="text-red-400 hover:text-red-300 text-sm" title="Supprimer">✕</button>
+        <button data-action="delete" class="text-red-400 hover:text-red-300 text-sm" title="Delete">✕</button>
       </li>
     `;
   }
@@ -246,10 +246,10 @@ export class TodoListView {
   private renderTextBlock(block: TextBlock): string {
     const currentValue = this.anchorValue(block.anchor);
     const options = [
-      `<option value="top" ${currentValue === 'top' ? 'selected' : ''}>↑ En tête</option>`,
+      `<option value="top" ${currentValue === 'top' ? 'selected' : ''}>↑ Header</option>`,
       ...MPF_CATEGORIES.map(c => {
         const v = `cat:${c}`;
-        return `<option value="${v}" ${currentValue === v ? 'selected' : ''}>↳ Avant ${MPF_CATEGORY_LABELS[c]}</option>`;
+        return `<option value="${v}" ${currentValue === v ? 'selected' : ''}>↳ Before ${MPF_CATEGORY_LABELS[c]}</option>`;
       }),
       `<option value="footer" ${currentValue === 'footer' ? 'selected' : ''}>↓ Footer</option>`,
     ].join('');
@@ -273,9 +273,9 @@ export class TodoListView {
     return `
       <div class="bg-gray-800 border border-gray-700 rounded-lg p-3" data-block-id="${block.id}">
         <div class="flex items-center gap-2 mb-2">
-          <span class="text-xs text-gray-400">📝 Texte libre</span>
+          <span class="text-xs text-gray-400">📝 Free text</span>
           <div class="relative emoji-picker-wrapper">
-            <button type="button" data-action="toggle-emoji" title="Insérer un émoji"
+            <button type="button" data-action="toggle-emoji" title="Insert emoji"
               class="px-2 py-0.5 bg-gray-700 hover:bg-blue-600 rounded text-sm transition-colors leading-none">
               😀 ▾
             </button>
@@ -287,11 +287,11 @@ export class TodoListView {
           <select data-action="set-anchor" class="ml-auto bg-gray-900 border border-gray-700 rounded px-2 py-0.5 text-xs">
             ${options}
           </select>
-          <button data-action="delete-block" class="text-red-400 hover:text-red-300 text-sm" title="Supprimer">✕</button>
+          <button data-action="delete-block" class="text-red-400 hover:text-red-300 text-sm" title="Delete">✕</button>
         </div>
         <textarea data-block-id="${block.id}" data-action="set-content"
           rows="2"
-          placeholder="Markdown Discord brut, multi-ligne..."
+          placeholder="Raw Discord markdown, multi-line..."
           class="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-sm font-mono resize-y focus:outline-none focus:border-blue-500"
         >${escapeHtml(block.content)}</textarea>
       </div>
@@ -358,9 +358,9 @@ export class TodoListView {
       const text = previewEl?.dataset.raw ?? previewEl?.textContent ?? '';
       try {
         await navigator.clipboard.writeText(text);
-        showToast('Copié !');
+        showToast('Copied!');
       } catch {
-        showToast('Échec de la copie');
+        showToast('Copy failed');
       }
     });
     this.container.querySelector('#tl-download')?.addEventListener('click', () => {
@@ -394,9 +394,9 @@ export class TodoListView {
           if (!payload.filename) return;
           const result = store.addTodoListItemFromIcon(payload.filename);
           if (result === 'not-mpf') {
-            showToast(`"${payload.displayName ?? payload.filename}" n'est pas craftable au MPF.`);
+            showToast(`"${payload.displayName ?? payload.filename}" is not MPF-craftable.`);
           } else if (result === 'wrong-faction') {
-            showToast(`"${payload.displayName ?? payload.filename}" appartient à la faction adverse.`);
+            showToast(`"${payload.displayName ?? payload.filename}" belongs to the opposing faction.`);
           }
         } catch (err) {
           console.error('drop parse failed:', err);
