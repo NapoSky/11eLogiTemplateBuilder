@@ -59,6 +59,8 @@
       "UI/ItemIcons/StickyBombIcon.png",
       "UI/ItemIcons/HEGrenadeItemIcon.png",
       "UI/ItemIcons/MortarItemIcon.png",
+      "UI/ItemIcons/MortarAmmoIconFlare.png",
+      "UI/ItemIcons/MortarAmmoIconShrapnel.png",
       "UI/ItemIcons/ATRifleAmmoItemIcon.png",
       "UI/ItemIcons/ATGrenadeWIcon.png",
       "UI/ItemIcons/ATLaunchedGrenadeWIcon.png",
@@ -107,6 +109,7 @@
       "UI/ItemIcons/FlameAmmoIcon.png",
       "UI/ItemIcons/TorpedoIcon.png",
       "UI/ItemIcons/MiniTorpedoAmmoIcon.png",
+      "UI/ItemIcons/SurfaceMineIcon.png",
       "UI/VehicleIcons/AAAmmoIcon.png",
       "UI/VehicleIcons/AerialBombsIcon.png",
       "UI/VehicleIcons/DiveBomberAmmoIcon.png",
@@ -149,7 +152,6 @@
       "UI/ItemIcons/PrototypeKitIcon.png",
       "UI/ItemIcons/ParatrooperBackpackItemIcon.png",
       "UI/ItemIcons/SeaMineIcon.png",
-      "UI/ItemIcons/SurfaceMineIcon.png",
       "UI/StructureIcons/SatchelCharge.png"
     ]
   },

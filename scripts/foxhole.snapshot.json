@@ -672,7 +672,7 @@
       "warden"
     ],
     "imgName": "No_1_The_Liar_Submachine_Gun.png",
-    "itemName": "No.1 \"The Liar\" Submachinegun",
+    "itemName": "No.1 \"The Liar\" Submachine Gun",
     "itemDesc": "This unique, heavy-duty submachine gun is not very useful on the run, but with careful aim and adequate cover, becomes a razorblade in the night.",
     "itemCategory": "small_arms",
     "itemClass": "Submachine Gun",
@@ -761,7 +761,7 @@
       "warden"
     ],
     "imgName": "9mm_SMG.png",
-    "itemName": "9mm SMG",
+    "itemName": "9mm",
     "itemDesc": "Standard ammunition for submachine guns.",
     "itemCategory": "small_arms",
     "numberProduced": 40,
@@ -874,7 +874,7 @@
       "warden"
     ],
     "imgName": "135_Neville_Anti_Tank_Rifle.png",
-    "itemName": "135 Neville Anti-Tank Rifle",
+    "itemName": "Neville Anti-Tank Rifle",
     "itemDesc": "The Neville is unmatched in its versatility as a portable, magazine-based anti-armor firearm.",
     "itemCategory": "heavy_arms",
     "itemClass": "Anti-Tank Rifle",
@@ -1586,7 +1586,7 @@
       "warden"
     ],
     "imgName": "R_P_G_Shell.png",
-    "itemName": "R.P.G Shell",
+    "itemName": "RPG",
     "itemDesc": "An explosive projectile fired from an R.P.G.",
     "itemCategory": "heavy_arms",
     "numberProduced": 15,
@@ -1658,7 +1658,7 @@
       "warden"
     ],
     "imgName": "Shatter_Missile.png",
-    "itemName": "Shatter Missle",
+    "itemName": "Shatter Missile",
     "itemDesc": "Short-range rockets that specialize in breaching bunker and devastating enemy structures.",
     "itemCategory": "heavy_ammunition",
     "numberProduced": 5,
@@ -1800,7 +1800,7 @@
       "warden"
     ],
     "imgName": "E681_B_Hullbreaker_Mine.png",
-    "itemName": "E6881-B Hullbreaker Mine",
+    "itemName": "E681-B Hullbreaker Mine",
     "itemDesc": "A specialized sea mine that floats near the surface, causing destructive damage to ship hulls.",
     "itemCategory": "heavy_ammunition",
     "numberProduced": 5,
@@ -3158,7 +3158,7 @@
       "colonial"
     ],
     "imgName": "H5_Hatchet.png",
-    "itemName": "H5 \"Hatchet\"",
+    "itemName": "H-5 \"Hatchet\"",
     "itemDesc": "A highly maneuverable lightweight tank. Designed for urban environments, the \"Hatchet\" is fitted with a 40mm cannon.",
     "itemCategory": "vehicles",
     "itemClass": "Light Tank",
@@ -3259,7 +3259,7 @@
       "warden"
     ],
     "imgName": "BMS_Universal_Assemly_Rig.png",
-    "itemName": "BMS - Universal Assemly Rig",
+    "itemName": "BMS - Universal Assembly Rig",
     "itemDesc": "A specialized vehicle designed by the Basset Motor Society used in the construction of large structures.",
     "itemCategory": "vehicles",
     "itemClass": "Construction Vehicle",

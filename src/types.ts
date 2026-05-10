@@ -140,6 +140,7 @@ export interface MpfDataEntry {
   numberProduced: number;
   crateBonus?: number;
   maxCrates: 9 | 5;
+  subtypeFilename?: string; // Subtype overlay icon (e.g. SubtypeFLIcon.png)
 }
 
 export interface TodoListItem {
@@ -152,6 +153,7 @@ export interface TodoListItem {
   maxCrates: 9 | 5;
   numberProduced: number;
   crateBonus?: number;
+  subtypeFilename?: string; // Subtype overlay icon
   orderCount: number; // nombre de full orders MPF (chaque order = maxCrates caisses)
 }
 

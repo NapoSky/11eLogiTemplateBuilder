@@ -174,6 +174,14 @@ async function main() {
   const orphanItems: string[] = [];
   const ambiguousItems: string[] = [];
 
+  // Manual overrides: Foxhole item name -> { iconFilename, subtypeFilename? }
+  // Use this for items whose icon filename differs from display name conventions,
+  // or that need a subtype overlay (e.g. FL/SH mortar shells).
+  const manualIconOverrides: Record<string, { icon: string; subtype?: string }> = {
+    'Mortar Flare Shell':    { icon: 'UI/ItemIcons/MortarAmmoIconFlare.png' },
+    'Mortar Shrapnel Shell': { icon: 'UI/ItemIcons/MortarAmmoIconShrapnel.png' },
+  };
+
   for (const item of foxholeData) {
     if (!item.isMpfCraftable) continue;
     if (!item.craftLocation?.includes('mpf')) continue;
@@ -183,7 +191,10 @@ async function main() {
     }
 
     const key = normalizeName(item.itemName);
-    const { candidates, ambiguous } = findIconFor(item.itemName);
+    const manualOverride = manualIconOverrides[item.itemName];
+    const { candidates, ambiguous } = manualOverride
+      ? { candidates: [manualOverride.icon], ambiguous: false }
+      : findIconFor(item.itemName);
 
     if (!candidates || candidates.length === 0) {
       orphanItems.push(item.itemName);
@@ -197,6 +208,7 @@ async function main() {
     const cat = item.itemCategory as ItemCategory;
     const maxCrates: 9 | 5 = (cat === 'vehicles' || cat === 'shipables') ? 5 : 9;
     const crateBonus = item.numberProducedBonus?.includes('2x') ? 2 : undefined;
+    const subtypeFilename = manualOverride?.subtype;
 
     entries.push({
       iconFilename,
@@ -206,6 +218,7 @@ async function main() {
       cost: item.cost ?? {},
       numberProduced: item.numberProduced,
       ...(crateBonus ? { crateBonus } : {}),
+      ...(subtypeFilename ? { subtypeFilename } : {}),
       maxCrates,
     });
   }

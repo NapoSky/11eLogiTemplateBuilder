@@ -32,7 +32,7 @@
     "maxCrates": 9
   },
   {
-    "iconFilename": "UI/ItemIcons/ATRifleAmmoItemIcon.png",
+    "iconFilename": "UI/VehicleIcons/AircraftAmmoIcon.png",
     "itemName": "20mm",
     "itemCategory": "heavy_ammunition",
     "faction": [
@@ -58,6 +58,22 @@
     "cost": {
       "bmat": 250,
       "hemat": 200
+    },
+    "numberProduced": 5,
+    "maxCrates": 9
+  },
+  {
+    "iconFilename": "UI/ItemIcons/MortarTankIcon.png",
+    "itemName": "250mm \"Purity\" Shell",
+    "itemCategory": "heavy_ammunition",
+    "faction": [
+      "neutral",
+      "colonial",
+      "warden"
+    ],
+    "cost": {
+      "bmat": 120,
+      "hemat": 100
     },
     "numberProduced": 5,
     "maxCrates": 9
@@ -95,6 +111,69 @@
     "maxCrates": 9
   },
   {
+    "iconFilename": "UI/VehicleIcons/AAAmmoIcon.png",
+    "itemName": "950-70b Anti-Aircraft Shell",
+    "itemCategory": "heavy_ammunition",
+    "faction": [
+      "neutral",
+      "colonial",
+      "warden"
+    ],
+    "cost": {
+      "bmat": 100,
+      "hemat": 15
+    },
+    "numberProduced": 5,
+    "maxCrates": 9
+  },
+  {
+    "iconFilename": "UI/ItemIcons/SurfaceMineIcon.png",
+    "itemName": "E681-B Hullbreaker Mine",
+    "itemCategory": "heavy_ammunition",
+    "faction": [
+      "neutral",
+      "colonial",
+      "warden"
+    ],
+    "cost": {
+      "bmat": 125,
+      "emat": 35
+    },
+    "numberProduced": 5,
+    "maxCrates": 9
+  },
+  {
+    "iconFilename": "UI/ItemIcons/MiniTorpedoAmmoIcon.png",
+    "itemName": "Quillback Torpedo",
+    "itemCategory": "heavy_ammunition",
+    "faction": [
+      "neutral",
+      "warden"
+    ],
+    "cost": {
+      "bmat": 125,
+      "emat": 75
+    },
+    "numberProduced": 5,
+    "maxCrates": 9
+  },
+  {
+    "iconFilename": "UI/ItemIcons/DemolitionRocketAmmoIcon.png",
+    "itemName": "Shatter Missile",
+    "itemCategory": "heavy_ammunition",
+    "faction": [
+      "neutral",
+      "colonial",
+      "warden"
+    ],
+    "cost": {
+      "bmat": 250,
+      "hemat": 250
+    },
+    "numberProduced": 5,
+    "maxCrates": 9
+  },
+  {
     "iconFilename": "UI/ItemIcons/FlamegunCICon.png",
     "itemName": "\"Molten Wind\" v.II Flame Torch",
     "itemCategory": "heavy_arms",
@@ -125,7 +204,7 @@
     "maxCrates": 9
   },
   {
-    "iconFilename": "UI/VehicleIcons/FieldAT2WIcon.png",
+    "iconFilename": "UI/ItemIcons/ATRifleAmmoItemIcon.png",
     "itemName": "14.5mm",
     "itemCategory": "heavy_arms",
     "faction": [
@@ -416,6 +495,22 @@
     "maxCrates": 9
   },
   {
+    "iconFilename": "UI/ItemIcons/MortarAmmoIconFlare.png",
+    "itemName": "Mortar Flare Shell",
+    "itemCategory": "heavy_arms",
+    "faction": [
+      "neutral",
+      "colonial",
+      "warden"
+    ],
+    "cost": {
+      "bmat": 60,
+      "emat": 15
+    },
+    "numberProduced": 15,
+    "maxCrates": 9
+  },
+  {
     "iconFilename": "UI/ItemIcons/MortarAmmoIcon.png",
     "itemName": "Mortar Shell",
     "itemCategory": "heavy_arms",
@@ -427,6 +522,22 @@
     "cost": {
       "bmat": 60,
       "emat": 70
+    },
+    "numberProduced": 15,
+    "maxCrates": 9
+  },
+  {
+    "iconFilename": "UI/ItemIcons/MortarAmmoIconShrapnel.png",
+    "itemName": "Mortar Shrapnel Shell",
+    "itemCategory": "heavy_arms",
+    "faction": [
+      "neutral",
+      "colonial",
+      "warden"
+    ],
+    "cost": {
+      "bmat": 60,
+      "emat": 20
     },
     "numberProduced": 15,
     "maxCrates": 9
@@ -459,6 +570,36 @@
       "rmat": 5
     },
     "numberProduced": 5,
+    "maxCrates": 9
+  },
+  {
+    "iconFilename": "UI/ItemIcons/ATRifleItemIcon.png",
+    "itemName": "Neville Anti-Tank Rifle",
+    "itemCategory": "heavy_arms",
+    "faction": [
+      "neutral",
+      "warden"
+    ],
+    "cost": {
+      "bmat": 150
+    },
+    "numberProduced": 3,
+    "maxCrates": 9
+  },
+  {
+    "iconFilename": "UI/ItemIcons/RpgAmmoItemIcon.png",
+    "itemName": "RPG",
+    "itemCategory": "heavy_arms",
+    "faction": [
+      "neutral",
+      "colonial",
+      "warden"
+    ],
+    "cost": {
+      "bmat": 60,
+      "emat": 90
+    },
+    "numberProduced": 15,
     "maxCrates": 9
   },
   {
@@ -506,6 +647,20 @@
     },
     "numberProduced": 10,
     "maxCrates": 9
+  },
+  {
+    "iconFilename": "UI/StructureIcons/HeavyArtilleryCIcon.png",
+    "itemName": "50-500 \"Thunderbolt\" Cannon",
+    "itemCategory": "shipables",
+    "faction": [
+      "neutral",
+      "colonial"
+    ],
+    "cost": {
+      "rmat": 585
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
   },
   {
     "iconFilename": "UI/StructureIcons/ConcreteMixerIcon.png",
@@ -566,6 +721,20 @@
     "maxCrates": 5
   },
   {
+    "iconFilename": "UI/VehicleIcons/EmplacedAircraftCIcon.png",
+    "itemName": "DAE 5b \"Zeal\"",
+    "itemCategory": "shipables",
+    "faction": [
+      "neutral",
+      "colonial"
+    ],
+    "cost": {
+      "rmat": 525
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
     "iconFilename": "UI/StructureIcons/HeavyArtilleryW.png",
     "itemName": "Huber Exalt 150mm",
     "itemCategory": "shipables",
@@ -589,6 +758,20 @@
     ],
     "cost": {
       "rmat": 105
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/EmplacedAircraftWIcon.png",
+    "itemName": "Leary AA-70 Bolas",
+    "itemCategory": "shipables",
+    "faction": [
+      "neutral",
+      "warden"
+    ],
+    "cost": {
+      "rmat": 525
     },
     "numberProduced": 3,
     "maxCrates": 5
@@ -632,6 +815,21 @@
     ],
     "cost": {
       "bmat": 300
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/ItemIcons/MaterialPlatformItemIcon.png",
+    "itemName": "Material pallet",
+    "itemCategory": "shipables",
+    "faction": [
+      "neutral",
+      "colonial",
+      "warden"
+    ],
+    "cost": {
+      "bmat": 75
     },
     "numberProduced": 3,
     "maxCrates": 5
@@ -779,6 +977,21 @@
     ],
     "cost": {
       "bmat": 40
+    },
+    "numberProduced": 40,
+    "maxCrates": 9
+  },
+  {
+    "iconFilename": "UI/ItemIcons/SubMachineGunAmmoIcon.png",
+    "itemName": "9mm",
+    "itemCategory": "small_arms",
+    "faction": [
+      "neutral",
+      "colonial",
+      "warden"
+    ],
+    "cost": {
+      "bmat": 80
     },
     "numberProduced": 40,
     "maxCrates": 9
@@ -1099,6 +1312,20 @@
     "maxCrates": 9
   },
   {
+    "iconFilename": "UI/ItemIcons/SMGHeavyWItemIcon.png",
+    "itemName": "No.1 \"The Liar\" Submachine Gun",
+    "itemCategory": "small_arms",
+    "faction": [
+      "neutral",
+      "warden"
+    ],
+    "cost": {
+      "bmat": 120
+    },
+    "numberProduced": 20,
+    "maxCrates": 9
+  },
+  {
     "iconFilename": "UI/ItemIcons/RifleW.png",
     "itemName": "No.2 Loughcaster",
     "itemCategory": "small_arms",
@@ -1219,6 +1446,20 @@
     "faction": [
       "neutral",
       "colonial"
+    ],
+    "cost": {
+      "bmat": 100
+    },
+    "numberProduced": 15,
+    "maxCrates": 9
+  },
+  {
+    "iconFilename": "UI/ItemIcons/Uniforms/NavalUniformW.png",
+    "itemName": "Gentleman's Peacoat",
+    "itemCategory": "uniforms",
+    "faction": [
+      "neutral",
+      "warden"
     ],
     "cost": {
       "bmat": 100
@@ -1381,6 +1622,20 @@
     "maxCrates": 9
   },
   {
+    "iconFilename": "UI/ItemIcons/Uniforms/NavalUniformC.png",
+    "itemName": "Remex Garb",
+    "itemCategory": "uniforms",
+    "faction": [
+      "neutral",
+      "colonial"
+    ],
+    "cost": {
+      "bmat": 100
+    },
+    "numberProduced": 15,
+    "maxCrates": 9
+  },
+  {
     "iconFilename": "UI/ItemIcons/Uniforms/EngineerUniformWIcon.png",
     "itemName": "Sapper Gear",
     "itemCategory": "uniforms",
@@ -1465,6 +1720,62 @@
     "maxCrates": 5
   },
   {
+    "iconFilename": "UI/VehicleIcons/FieldMortarCIcon.png",
+    "itemName": "30-250 \"Tisiphone\" Field Cannon",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "colonial"
+    ],
+    "cost": {
+      "rmat": 105
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/LightBoatInfantryWVehicleIcon.png",
+    "itemName": "68A-4 Ronan Fathomer",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "warden"
+    ],
+    "cost": {
+      "bmat": 750
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/GunboatWIcon.png",
+    "itemName": "74b-1 Ronan Gunship",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "warden"
+    ],
+    "cost": {
+      "rmat": 420
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/Gunboat2WIcon.png",
+    "itemName": "81f-f Ronan Blackguard",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "warden"
+    ],
+    "cost": {
+      "rmat": 300
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
     "iconFilename": "UI/VehicleIcons/MortarTankVehicleIcon.png",
     "itemName": "85K-b \"Falchion\"",
     "itemCategory": "vehicles",
@@ -1480,7 +1791,7 @@
     "maxCrates": 5
   },
   {
-    "iconFilename": "UI/VehicleIcons/HalfTrackColVehicleIcon.png",
+    "iconFilename": "UI/VehicleIcons/MediumTank2CIcon.png",
     "itemName": "86K-a \"Bardiche\"",
     "itemCategory": "vehicles",
     "faction": [
@@ -1494,8 +1805,36 @@
     "maxCrates": 5
   },
   {
+    "iconFilename": "UI/VehicleIcons/MediumTank3CItemIcon.png",
+    "itemName": "90T-v \"Nemesis\"",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "colonial"
+    ],
+    "cost": {
+      "rmat": 450
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
     "iconFilename": "UI/VehicleIcons/TruckOffensiveVehicleIcon.png",
     "itemName": "AA-2 Battering Ram",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "colonial"
+    ],
+    "cost": {
+      "rmat": 60
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/LandingCraftVehicleIcon.png",
+    "itemName": "AB-8 \"Acheron\"",
     "itemCategory": "vehicles",
     "faction": [
       "neutral",
@@ -1531,6 +1870,21 @@
     ],
     "cost": {
       "rmat": 60
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/MineboatIcon.png",
+    "itemName": "Bellweather by VAC",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "colonial",
+      "warden"
+    ],
+    "cost": {
+      "bmat": 450
     },
     "numberProduced": 3,
     "maxCrates": 5
@@ -1596,6 +1950,21 @@
     "maxCrates": 5
   },
   {
+    "iconFilename": "UI/VehicleIcons/ConstructionVehicleIcon.png",
+    "itemName": "BMS - Universal Assembly Rig",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "colonial",
+      "warden"
+    ],
+    "cost": {
+      "bmat": 300
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
     "iconFilename": "UI/VehicleIcons/FieldAntiTankWarVehicleIcon.png",
     "itemName": "Collins Cannon 68mm",
     "itemCategory": "vehicles",
@@ -1605,6 +1974,21 @@
     ],
     "cost": {
       "rmat": 60
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/LightFreighterVehicleIcon.png",
+    "itemName": "Das Krokodil by VAC",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "colonial",
+      "warden"
+    ],
+    "cost": {
+      "bmat": 300
     },
     "numberProduced": 3,
     "maxCrates": 5
@@ -1624,7 +2008,7 @@
     "maxCrates": 5
   },
   {
-    "iconFilename": "UI/VehicleIcons/ArmoredCarOffensiveWVehicleIcon.png",
+    "iconFilename": "UI/VehicleIcons/ScoutVehicleWarVehicleIcon.png",
     "itemName": "Drummond 100a",
     "itemCategory": "vehicles",
     "faction": [
@@ -1638,7 +2022,7 @@
     "maxCrates": 5
   },
   {
-    "iconFilename": "UI/VehicleIcons/TruckUtilityWarVehicleIcon.png",
+    "iconFilename": "UI/VehicleIcons/BusWarIcon.png",
     "itemName": "Dunne Caravaner 2F",
     "itemCategory": "vehicles",
     "faction": [
@@ -1652,7 +2036,7 @@
     "maxCrates": 5
   },
   {
-    "iconFilename": "UI/VehicleIcons/TruckDefensiveWIcon.png",
+    "iconFilename": "UI/VehicleIcons/OilTankerWarIcon.png",
     "itemName": "Dunne Fuelrunner 2d",
     "itemCategory": "vehicles",
     "faction": [
@@ -1666,7 +2050,7 @@
     "maxCrates": 5
   },
   {
-    "iconFilename": "UI/VehicleIcons/TruckMobilityWarVehicleIcon.png",
+    "iconFilename": "UI/VehicleIcons/TruckUtilityWarVehicleIcon.png",
     "itemName": "Dunne Loadlugger 3c",
     "itemCategory": "vehicles",
     "faction": [
@@ -1722,6 +2106,34 @@
     "maxCrates": 5
   },
   {
+    "iconFilename": "UI/VehicleIcons/MediumTank2WIcon.png",
+    "itemName": "Gallagher Brigand Mk. I",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "warden"
+    ],
+    "cost": {
+      "rmat": 450
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/LightTankColVehicleIcon.png",
+    "itemName": "H-5 \"Hatchet\"",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "colonial"
+    ],
+    "cost": {
+      "rmat": 345
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
     "iconFilename": "UI/VehicleIcons/LightTankFlameCIcon.png",
     "itemName": "HC-2 \"Scorpion\"",
     "itemCategory": "vehicles",
@@ -1731,6 +2143,34 @@
     ],
     "cost": {
       "rmat": 300
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/HalfTrackColVehicleIcon.png",
+    "itemName": "HH-a \"Javelin\"",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "colonial"
+    ],
+    "cost": {
+      "rmat": 165
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/LightBoatInfantryCIcon.png",
+    "itemName": "K-81e \"Sombre\"",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "colonial"
+    ],
+    "cost": {
+      "bmat": 600
     },
     "numberProduced": 3,
     "maxCrates": 5
@@ -1764,7 +2204,35 @@
     "maxCrates": 5
   },
   {
-    "iconFilename": "UI/VehicleIcons/MediumTankSiegeWVehicleIcon.png",
+    "iconFilename": "UI/VehicleIcons/LandingCraftWarVehicleIcon.png",
+    "itemName": "Mulloy LPC",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "warden"
+    ],
+    "cost": {
+      "rmat": 60
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/HalfTrackWarVehicleIcon.png",
+    "itemName": "Niska Mk. I Gun Motor Carriage",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "warden"
+    ],
+    "cost": {
+      "rmat": 180
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/DestroyerTankWVehicleIcon.png",
     "itemName": "Noble Widow MK. XIV",
     "itemCategory": "vehicles",
     "faction": [
@@ -1773,6 +2241,34 @@
     ],
     "cost": {
       "rmat": 480
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/ArmoredCarWarVehicleIcon.png",
+    "itemName": "O'Brien v.110",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "warden"
+    ],
+    "cost": {
+      "rmat": 75
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/ArmoredCarTwinWIcon.png",
+    "itemName": "O'Brien v.190 Knave",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "warden"
+    ],
+    "cost": {
+      "rmat": 120
     },
     "numberProduced": 3,
     "maxCrates": 5
@@ -1787,6 +2283,20 @@
     ],
     "cost": {
       "bmat": 300
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/Ambulance.png",
+    "itemName": "r-12 - \"Salus\" Ambulance",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "colonial"
+    ],
+    "cost": {
+      "bmat": 450
     },
     "numberProduced": 3,
     "maxCrates": 5
@@ -1815,6 +2325,77 @@
     ],
     "cost": {
       "bmat": 360
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/MediumBoatWVehicleIcon.png",
+    "itemName": "Rinnspeir Ornitier-Class Gunship",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "warden"
+    ],
+    "cost": {
+      "bmat": 1350
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/ResourceTrailerIcon.png",
+    "itemName": "Rooster - Junkwagon",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "colonial",
+      "warden"
+    ],
+    "cost": {
+      "rmat": 30
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/OilTankerIcon.png",
+    "itemName": "RR-3 \"Stolon\" Tanker.",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "colonial"
+    ],
+    "cost": {
+      "bmat": 300
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/WardenMediumTankIcon.png",
+    "itemName": "Silverhand - Mk. IV",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "warden"
+    ],
+    "cost": {
+      "rmat": 465
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/MediumBoatCIcon.png",
+    "itemName": "Strider",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "colonial"
+    ],
+    "cost": {
+      "bmat": 1500
     },
     "numberProduced": 3,
     "maxCrates": 5
@@ -1862,7 +2443,21 @@
     "maxCrates": 5
   },
   {
-    "iconFilename": "UI/VehicleIcons/GunboatWIcon.png",
+    "iconFilename": "UI/VehicleIcons/GunBoat2CVehicleIcon.png",
+    "itemName": "Type B - \"Lucian\"",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "colonial"
+    ],
+    "cost": {
+      "rmat": 300
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/GunBoatCHullIcon.png",
     "itemName": "Type C - \"Charon\"",
     "itemCategory": "vehicles",
     "faction": [
@@ -1871,6 +2466,20 @@
     ],
     "cost": {
       "rmat": 420
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/ScoutVehicleMobilityVehicleIcon.png",
+    "itemName": "UV-05a \"Argonaut\"",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "colonial"
+    ],
+    "cost": {
+      "rmat": 30
     },
     "numberProduced": 3,
     "maxCrates": 5

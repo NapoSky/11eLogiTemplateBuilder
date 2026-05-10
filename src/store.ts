@@ -285,14 +285,18 @@ class Store {
     this.emit();
   }
 
-  /** Returns true if added, false if rejected (item not MPF craftable). */
-  addTodoListItemFromIcon(iconFilename: string): boolean {
+  /** Returns 'added' on success, 'not-mpf' if not craftable, 'wrong-faction' if blocked by current faction filter. */
+  addTodoListItemFromIcon(iconFilename: string): 'added' | 'not-mpf' | 'wrong-faction' {
     const entry = this.mpfData.find(e => e.iconFilename === iconFilename);
-    if (!entry) return false;
+    if (!entry) return 'not-mpf';
+    const f = this.todolist.faction;
+    if (f !== 'all' && !entry.faction.includes(f)) {
+      return 'wrong-faction';
+    }
     const existing = this.todolist.items.find(i => i.iconFilename === iconFilename);
     if (existing) {
       this.setTodoListOrderCount(existing.id, existing.orderCount + 1);
-      return true;
+      return 'added';
     }
     const item: TodoListItem = {
       id: generateId(),
@@ -304,12 +308,13 @@ class Store {
       maxCrates: entry.maxCrates,
       numberProduced: entry.numberProduced,
       crateBonus: entry.crateBonus,
+      subtypeFilename: entry.subtypeFilename,
       orderCount: 1,
     };
     this.todolist = { ...this.todolist, items: [...this.todolist.items, item] };
     this.saveTodoList();
     this.emit();
-    return true;
+    return 'added';
   }
 
   setTodoListOrderCount(itemId: string, count: number): void {
@@ -415,6 +420,17 @@ class Store {
         i.displayName.toLowerCase().includes(q) ||
         i.filename.toLowerCase().includes(q)
       );
+    }
+
+    // In todolist mode, restrict to MPF-craftable icons. Apply faction filter on top.
+    if (this.viewMode === 'todolist') {
+      const f = this.todolist.faction;
+      filtered = filtered.filter(i => {
+        const entry = this.mpfData.find(e => e.iconFilename === i.filename);
+        if (!entry) return false;
+        if (f === 'all') return true;
+        return entry.faction.includes(f);
+      });
     }
     
     return filtered;

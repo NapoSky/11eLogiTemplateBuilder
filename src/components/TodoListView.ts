@@ -209,9 +209,15 @@ export class TodoListView {
     return `
       <li class="flex items-center gap-3 px-3 py-2 hover:bg-gray-700/30" data-item-id="${item.id}">
         <span class="text-lg select-none w-7 text-center">${letter}</span>
-        <img src="${BASE_URL}assets/icons/${item.iconFilename}" alt=""
-             class="w-8 h-8 object-contain shrink-0"
-             onerror="this.style.visibility='hidden'" />
+        <div class="relative w-8 h-8 shrink-0">
+          <img src="${BASE_URL}assets/icons/${item.iconFilename}" alt=""
+               class="w-8 h-8 object-contain"
+               onerror="this.style.visibility='hidden'" />
+          ${item.subtypeFilename
+            ? `<img src="${BASE_URL}assets/icons/subtypes/${item.subtypeFilename}" alt=""
+                    class="absolute bottom-0 right-0 w-4 h-4 object-contain pointer-events-none" />`
+            : ''}
+        </div>
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2">
             <span class="font-medium text-sm truncate">${escapeHtml(item.itemName)}</span>
@@ -386,9 +392,11 @@ export class TodoListView {
         try {
           const payload = JSON.parse(data) as { filename?: string; displayName?: string };
           if (!payload.filename) return;
-          const ok = store.addTodoListItemFromIcon(payload.filename);
-          if (!ok) {
+          const result = store.addTodoListItemFromIcon(payload.filename);
+          if (result === 'not-mpf') {
             showToast(`"${payload.displayName ?? payload.filename}" n'est pas craftable au MPF.`);
+          } else if (result === 'wrong-faction') {
+            showToast(`"${payload.displayName ?? payload.filename}" appartient à la faction adverse.`);
           }
         } catch (err) {
           console.error('drop parse failed:', err);
