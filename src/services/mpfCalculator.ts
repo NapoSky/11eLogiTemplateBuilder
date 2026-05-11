@@ -21,9 +21,10 @@ import { TodoListItem, MPF_CATEGORY_LABELS } from '../types';
  * The user's `orderCount` is presentational only (rendered as the `(xN)` suffix);
  * it does NOT multiply the displayed cost.
  */
-function discountForCrateIndex(i: number): number {
+/** Returns the discount as an integer number of tenths (1 = 10%, 5 = 50%). */
+function discountTenthsForCrateIndex(i: number): number {
   // i is 0-indexed: crate 1 = i=0 (10% off), crate 5+ capped at 50%.
-  return Math.min(0.5, 0.1 * (i + 1));
+  return Math.min(5, i + 1);
 }
 
 /** Cost for one full MPF order (all crates). */
@@ -33,11 +34,13 @@ export function fullOrderCost(
 ): { bmat: number; rmat: number; emat: number; hemat: number } {
   const totals = { bmat: 0, rmat: 0, emat: 0, hemat: 0 };
   for (let i = 0; i < maxCrates; i++) {
-    const factor = 1 - discountForCrateIndex(i);
-    totals.bmat += Math.floor((baseCost.bmat ?? 0) * factor);
-    totals.rmat += Math.floor((baseCost.rmat ?? 0) * factor);
-    totals.emat += Math.floor((baseCost.emat ?? 0) * factor);
-    totals.hemat += Math.floor((baseCost.hemat ?? 0) * factor);
+    // Use integer arithmetic (×numerator then ÷10) to avoid floating-point
+    // precision errors (e.g. 0.1 * 3 = 0.30000000000000004 in JS).
+    const numerator = 10 - discountTenthsForCrateIndex(i);
+    totals.bmat += Math.floor((baseCost.bmat ?? 0) * numerator / 10);
+    totals.rmat += Math.floor((baseCost.rmat ?? 0) * numerator / 10);
+    totals.emat += Math.floor((baseCost.emat ?? 0) * numerator / 10);
+    totals.hemat += Math.floor((baseCost.hemat ?? 0) * numerator / 10);
   }
   return totals;
 }
