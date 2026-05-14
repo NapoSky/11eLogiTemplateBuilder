@@ -6,13 +6,23 @@ export class PreviewPanel {
   private isOpen: boolean = false;
   private unsubscribe: (() => void) | null = null;
   private debounceTimer: number | null = null;
+  private lastViewMode: string | null = null;
 
   mount(container: HTMLElement): void {
     this.container = container;
+    // Ensure this container takes zero height in the flex-col layout so it never
+    // steals pixels from <main> and doesn't affect Canvas.applyFitScale().
+    this.container.style.height = '0';
     this.render();
     
     // Subscribe to store changes for live preview
-    this.unsubscribe = store.subscribe(() => this.updatePreview());
+    this.unsubscribe = store.subscribe(() => {
+      if (store.viewMode !== this.lastViewMode) {
+        this.updateVisibility();
+      }
+      this.updatePreview();
+    });
+    this.updateVisibility();
   }
 
   private render(): void {
@@ -62,6 +72,27 @@ export class PreviewPanel {
     
     if (this.isOpen) {
       this.updatePreview();
+    }
+  }
+
+  private updateVisibility(): void {
+    this.lastViewMode = store.viewMode;
+    const button = this.container?.querySelector<HTMLElement>('#preview-toggle');
+    if (!button) return;
+
+    if (store.viewMode === 'todolist') {
+      if (this.isOpen) {
+        this.isOpen = false;
+        const content = this.container?.querySelector<HTMLElement>('#preview-content');
+        const arrow = this.container?.querySelector<HTMLElement>('#preview-arrow');
+        if (content) content.style.width = '0';
+        if (arrow) arrow.style.transform = '';
+      }
+      button.style.visibility = 'hidden';
+      button.style.pointerEvents = 'none';
+    } else {
+      button.style.visibility = '';
+      button.style.pointerEvents = '';
     }
   }
 

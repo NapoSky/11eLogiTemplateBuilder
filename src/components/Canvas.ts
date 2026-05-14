@@ -60,11 +60,12 @@ export class Canvas {
     this.canvas.addEventListener('dblclick', (e) => {
       if (e.target === this.canvas) {
         const rect = this.canvas!.getBoundingClientRect();
-        // rect inclut déjà le scale CSS : on divise par currentScale pour obtenir
+        // rect inclut déjà le scale CSS : on divise par scaleX/scaleY pour obtenir
         // des coordonnées logiques dans le repère 1920x1080.
-        const scale = this.currentScale || 1;
-        const x = (e.clientX - rect.left) / scale;
-        const y = (e.clientY - rect.top) / scale;
+        const scaleX = parseFloat(this.canvas!.dataset.scaleX || '1') || 1;
+        const scaleY = parseFloat(this.canvas!.dataset.scaleY || '1') || 1;
+        const x = (e.clientX - rect.left) / scaleX;
+        const y = (e.clientY - rect.top) / scaleY;
         window.dispatchEvent(new CustomEvent('open-section-modal', { detail: { x, y } }));
       }
     });
@@ -80,12 +81,18 @@ export class Canvas {
     const availW = this.container.clientWidth;
     const availH = this.container.clientHeight;
     if (availW <= 0 || availH <= 0) return;
-    const scale = Math.min(availW / CANVAS_LOGICAL_WIDTH, availH / CANVAS_LOGICAL_HEIGHT);
-    this.currentScale = scale;
-    this.canvas.style.transform = `scale(${scale})`;
-    // Exposer le scale courant via dataset pour que les composants enfants
-    // (drag/resize via interact.js) puissent compenser leurs deltas pixel.
-    this.canvas.dataset.scale = String(scale);
+    // Scale non-uniforme : on remplit toute la place dispo (largeur ET hauteur).
+    // L'export PNG via html2canvas force 1920x1080 sur un clone avec transform:none,
+    // donc l'aperçu à l'écran peut être légèrement déformé sans affecter l'export.
+    const scaleX = availW / CANVAS_LOGICAL_WIDTH;
+    const scaleY = availH / CANVAS_LOGICAL_HEIGHT;
+    // currentScale est utilisé par les enfants (drag/resize) pour compenser les
+    // deltas pixel : on expose la moyenne géométrique comme approximation.
+    this.currentScale = Math.sqrt(scaleX * scaleY);
+    this.canvas.style.transform = `scale(${scaleX}, ${scaleY})`;
+    this.canvas.dataset.scale = String(this.currentScale);
+    this.canvas.dataset.scaleX = String(scaleX);
+    this.canvas.dataset.scaleY = String(scaleY);
   }
 
   private renderSections(): void {

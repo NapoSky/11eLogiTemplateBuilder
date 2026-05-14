@@ -281,12 +281,12 @@ export class SectionComponent {
         ],
         listeners: {
           move: (event: InteractMoveEvent) => {
-            // event.dx/dy sont en pixels écran. Le canvas parent a un transform: scale(s)
+            // event.dx/dy sont en pixels écran. Le canvas parent a un transform: scale(sx, sy)
             // appliqué pour le fit-to-screen ; on convertit donc les deltas écran en
-            // deltas logiques (repère 1920x1080) en divisant par le scale courant.
+            // deltas logiques (repère 1920x1080) en divisant par les scales courants.
             const scale = this.getCanvasScale();
-            const x = this.section.x + event.dx / scale;
-            const y = this.section.y + event.dy / scale;
+            const x = this.section.x + event.dx / scale.x;
+            const y = this.section.y + event.dy / scale.y;
             
             this.section.x = x;
             this.section.y = y;
@@ -312,8 +312,8 @@ export class SectionComponent {
           move: (event: InteractMoveEvent) => {
             // Idem : event.rect est en pixels écran ; on reconvertit en logique.
             const scale = this.getCanvasScale();
-            const w = event.rect.width / scale;
-            const h = event.rect.height / scale;
+            const w = event.rect.width / scale.x;
+            const h = event.rect.height / scale.y;
             this.section.width = w;
             this.section.height = h;
             this.element.style.width = `${w}px`;
@@ -332,11 +332,17 @@ export class SectionComponent {
       });
   }
 
-  private getCanvasScale(): number {
+  private getCanvasScale(): { x: number; y: number } {
     const canvas = document.getElementById('template-canvas');
-    const s = canvas?.dataset.scale;
-    const n = s ? parseFloat(s) : 1;
-    return n > 0 ? n : 1;
+    const sx = canvas?.dataset.scaleX;
+    const sy = canvas?.dataset.scaleY;
+    const fallback = canvas?.dataset.scale;
+    const fx = sx ? parseFloat(sx) : (fallback ? parseFloat(fallback) : 1);
+    const fy = sy ? parseFloat(sy) : (fallback ? parseFloat(fallback) : 1);
+    return {
+      x: fx > 0 ? fx : 1,
+      y: fy > 0 ? fy : 1,
+    };
   }
 
   private setupDropZone(): void {
@@ -376,8 +382,8 @@ export class SectionComponent {
             // rect est en pixels écran : on convertit en pixels logiques pour
             // pouvoir comparer à cellSize qui reste dans le repère canonique.
             const scale = this.getCanvasScale();
-            const x = (e.clientX - rect.left) / scale;
-            const y = (e.clientY - rect.top) / scale;
+            const x = (e.clientX - rect.left) / scale.x;
+            const y = (e.clientY - rect.top) / scale.y;
             const col = Math.max(0, Math.floor(x / cellSize));
             const row = Math.max(0, Math.floor(y / cellSize));
             
