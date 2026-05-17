@@ -38,6 +38,10 @@ class Store {
   viewMode: ViewMode = 'template';
   mpfData: MpfDataEntry[] = [];
   todolist: TodoList = defaultTodoList();
+
+  // Stockpile template source (shared with Toolbar for active state rendering)
+  stockpileTplSource: 'current' | 'official' | 'file' = 'current';
+  stockpileTplFileName: string | null = null;
   
   // Subscribe to changes
   subscribe(listener: Listener): () => void {
@@ -285,6 +289,12 @@ class Store {
     this.emit();
   }
 
+  setStockpileTplSource(source: 'current' | 'official' | 'file', fileName: string | null = null): void {
+    this.stockpileTplSource = source;
+    this.stockpileTplFileName = fileName;
+    this.emit();
+  }
+
   setMpfData(data: MpfDataEntry[]): void {
     this.mpfData = data;
     this.emit();
@@ -437,7 +447,7 @@ class Store {
         };
       }
       const savedMode = localStorage.getItem('viewMode');
-      if (savedMode === 'template' || savedMode === 'todolist') {
+      if (savedMode === 'template' || savedMode === 'todolist' || savedMode === 'stockpile') {
         this.viewMode = savedMode;
       }
     } catch (e) {

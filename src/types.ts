@@ -137,7 +137,7 @@ export const CATEGORIES: IconCategory[] = [
 // TodoList builder (mode #2)
 // =====================================================================
 
-export type ViewMode = 'template' | 'todolist';
+export type ViewMode = 'template' | 'todolist' | 'stockpile';
 
 export type Faction = 'neutral' | 'colonial' | 'warden';
 export type FactionFilter = 'all' | 'colonial' | 'warden';

@@ -20,6 +20,8 @@ A stockpile template generator for the game Foxhole, designed for the 11eRC-FL r
 - **Quantity management**: Click to edit the quantity of each item
 - **PNG export**: High-quality 1920×1080 image ready to use
 - **JSON save**: Save and reload your templates
+- **MPF TodoList**: Generate a Discord-ready shortage order list from your template
+- **Stockpile comparison**: Compare a Foxhole CSV export against a template to spot gaps
 - **Keyboard shortcuts**: Quick navigation with Ctrl+S, Ctrl+O, Ctrl+E
 - **Help menu**: `?` button to view all shortcuts
 
@@ -46,6 +48,51 @@ npm run build
 4. **Reorder** icons by dragging them within the grid
 5. **Click** an icon to edit its quantity
 6. **Export** as PNG or save as JSON
+
+## 📋 MPF TodoList
+
+The **MPF TodoList** mode lets you build a shortage order list to share on Discord.
+
+### Workflow
+
+1. Switch to **📋 MPF TodoList** mode in the toolbar
+2. **Drag** any MPF-craftable icon from the sidebar into the list
+3. Set the **order count** for each item using the counter field
+4. Use **+ Text** to insert free-text blocks (Discord Markdown supported)
+5. Filter by **faction** (Warden / Colonial / Neutral) to hide irrelevant items
+6. Click **📋 Copy** or **⬇️ .txt** to export the formatted list for Discord
+
+> The list title auto-inserts the current date when **Auto-date** is enabled.
+
+---
+
+## 📦 Stockpile
+
+The **Stockpile** mode compares a Foxhole stockpile CSV export against a template to surface shortages.
+
+### Workflow
+
+1. Switch to **📦 Stockpile** mode in the toolbar
+2. Click **Load Stockpile CSV** (or drag & drop a `.csv` file) to import a Foxhole export
+3. Choose a **Template** source in the toolbar:
+   - **Current** — use the template open in the editor
+   - **Official** — use the bundled reference template
+   - **Load file** — load any `.json` template file
+4. Use the **filters** (Missing / Partial / OK), **Sort by gap**, and **Search** to focus on shortages
+5. Click **Generate Todolist** to produce a Discord-ready MPF order list from the missing items
+
+### Status indicators
+
+| Status | Meaning |
+|--------|---------|
+| ✓ OK | Stockpile meets or exceeds target quantity |
+| ⚠ Partial | Some stock exists but below target |
+| ✗ Missing | No stock found for this item |
+| — | Item not found in icon mapping |
+
+> The CSV is persisted in `localStorage` and restored on reload. Use **Clear CSV** to reset.
+
+---
 
 ## ⌨️ Keyboard shortcuts
 

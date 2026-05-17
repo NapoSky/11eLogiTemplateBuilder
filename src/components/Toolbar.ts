@@ -11,9 +11,13 @@ export class Toolbar {
 
     // Re-render on store changes (mostly viewMode), then re-update scale buttons
     let prevMode = store.viewMode;
+    let prevTplSource = store.stockpileTplSource;
     store.subscribe(() => {
-      if (store.viewMode !== prevMode) {
+      const modeChanged = store.viewMode !== prevMode;
+      const tplSourceChanged = store.stockpileTplSource !== prevTplSource;
+      if (modeChanged || tplSourceChanged) {
         prevMode = store.viewMode;
+        prevTplSource = store.stockpileTplSource;
         this.render();
       } else {
         this.updateScaleButtons();
@@ -28,10 +32,15 @@ export class Toolbar {
     if (!this.container) return;
 
     const isTemplate = store.viewMode === 'template';
-    const tplActive = isTemplate
-      ? 'bg-blue-600 text-white'
-      : 'bg-gray-700 hover:bg-gray-600 text-gray-300';
-    const todoActive = !isTemplate
+    const isTodolist = store.viewMode === 'todolist';
+    const isStockpile = store.viewMode === 'stockpile';
+
+    const tplSource = store.stockpileTplSource;
+    const tplFileName = store.stockpileTplFileName;
+    const activeTplBtn = (src: typeof tplSource) =>
+      tplSource === src ? 'bg-blue-600 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300';
+
+    const activeTab = (active: boolean) => active
       ? 'bg-blue-600 text-white'
       : 'bg-gray-700 hover:bg-gray-600 text-gray-300';
 
@@ -45,8 +54,9 @@ export class Toolbar {
 
         <!-- Mode toggle -->
         <div class="flex items-center rounded overflow-hidden border border-gray-600">
-          <button id="btn-mode-template" class="px-3 py-1.5 text-xs ${tplActive} transition-colors">🎨 Template</button>
-          <button id="btn-mode-todolist" class="px-3 py-1.5 text-xs ${todoActive} transition-colors">📋 MPF TodoList</button>
+          <button id="btn-mode-template" class="px-3 py-1.5 text-xs ${activeTab(isTemplate)} transition-colors">🎨 Template</button>
+          <button id="btn-mode-todolist" class="px-3 py-1.5 text-xs ${activeTab(isTodolist)} transition-colors">📋 MPF TodoList</button>
+          <button id="btn-mode-stockpile" class="px-3 py-1.5 text-xs ${activeTab(isStockpile)} transition-colors">📦 Stockpile</button>
         </div>
 
         ${isTemplate ? `
@@ -73,14 +83,41 @@ export class Toolbar {
           </svg>
           Background
         </button>
-        ` : `
+        ` : isTodolist ? `
         <button id="btn-add-text" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm flex items-center gap-1" title="Add text block">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>
           Text
         </button>
-        `}
+        ` : isStockpile ? `
+        <label class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm cursor-pointer flex items-center gap-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+          </svg>
+          Load Stockpile CSV
+          <input type="file" accept=".csv,.txt" id="csv-upload-toolbar" class="hidden" />
+        </label>
+        <div class="flex items-center gap-2 border-l border-gray-600 pl-3">
+          <span class="text-xs text-gray-400">Template:</span>
+          <div class="flex rounded overflow-hidden border border-gray-600">
+            <button id="btn-tpl-current" class="px-2 py-1 text-xs transition-colors ${activeTplBtn('current')}">Current</button>
+            <button id="btn-tpl-official" class="px-2 py-1 text-xs transition-colors border-l border-gray-600 ${activeTplBtn('official')}">Official</button>
+            <label class="px-2 py-1 text-xs cursor-pointer transition-colors border-l border-gray-600 ${activeTplBtn('file')}">
+              Load file
+              <input type="file" accept=".json" id="tpl-upload-toolbar" class="hidden" />
+            </label>
+          </div>
+          ${tplSource === 'official'
+            ? '<span class="text-xs text-green-400">✓ official</span>'
+            : tplSource === 'file' && tplFileName
+              ? `<span class="text-xs text-green-400">✓ <span class="text-gray-400">(${tplFileName})</span></span>`
+              : tplSource === 'file'
+                ? '<span class="text-xs text-green-400">✓ file loaded</span>'
+                : ''
+          }
+        </div>
+        ` : ''}
       </div>
 
       <div class="flex items-center gap-2">
@@ -115,7 +152,7 @@ export class Toolbar {
           <input type="file" accept=".json" id="import-json" class="hidden" />
         </label>
         ` : ''}
-        ${!isTemplate ? `
+        ${isTodolist ? `
         <button id="btn-tl-load" class="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 rounded text-sm flex items-center gap-1" title="Import a Discord todolist">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
@@ -123,9 +160,18 @@ export class Toolbar {
           Load
         </button>
         ` : ''}
+        ${!isStockpile ? `
         <button id="btn-clear" class="px-3 py-1.5 bg-red-600/50 hover:bg-red-600 rounded text-sm">
           Clear
         </button>
+        ` : `
+        <button id="btn-clear-tpl" class="px-3 py-1.5 bg-red-600/50 hover:bg-red-600 rounded text-sm">
+          Clear template
+        </button>
+        <button id="btn-clear-csv" class="px-3 py-1.5 bg-red-600/50 hover:bg-red-600 rounded text-sm">
+          Clear CSV
+        </button>
+        `}
       </div>
 
       <!-- Help Modal -->
@@ -226,6 +272,16 @@ export class Toolbar {
         </div>
 
         <div>
+          <h3 class="text-sm font-semibold text-gray-300 mb-2">📦 ${fr ? 'Mode Stockpile' : 'Stockpile Mode'}</h3>
+          <ul class="text-sm text-gray-400 space-y-1">
+            <li>• <span class="text-gray-300">Load Stockpile CSV</span> ${fr ? '→ Importer un export CSV Foxhole' : '→ Import a Foxhole stockpile CSV export'}</li>
+            <li>• <span class="text-gray-300">${fr ? 'Glisser-déposer' : 'Drag & drop'}</span> ${fr ? 'un fichier CSV → Chargement rapide' : 'a CSV file → Quick load'}</li>
+            <li>• <span class="text-gray-300">Template</span> ${fr ? ': Current / Official / Load file → Source du template de référence' : ': Current / Official / Load file → Reference template source'}</li>
+            <li>• <span class="text-gray-300">Generate Todolist</span> ${fr ? '→ Générer une liste Discord des items manquants (MPF)' : '→ Generate a Discord list of missing items (MPF)'}</li>
+          </ul>
+        </div>
+
+        <div>
           <h3 class="text-sm font-semibold text-gray-300 mb-2">📐 ${fr ? 'Taille des icônes' : 'Icon Size'}</h3>
           <p class="text-sm text-gray-400">${fr ? "Utilisez les boutons" : 'Use the'} <kbd class="px-1.5 py-0.5 bg-gray-700 rounded text-xs">S</kbd> <kbd class="px-1.5 py-0.5 bg-gray-700 rounded text-xs">M</kbd> <kbd class="px-1.5 py-0.5 bg-gray-700 rounded text-xs">L</kbd> ${fr ? "dans la barre d'outils pour ajuster la taille globale des icônes." : 'buttons in the toolbar to adjust the global icon size.'}</p>
         </div>
@@ -256,6 +312,9 @@ export class Toolbar {
     this.container.querySelector('#btn-mode-todolist')?.addEventListener('click', () => {
       store.setViewMode('todolist');
     });
+    this.container.querySelector('#btn-mode-stockpile')?.addEventListener('click', () => {
+      store.setViewMode('stockpile');
+    });
 
     // New section
     this.container.querySelector('#btn-new-section')?.addEventListener('click', () => {
@@ -266,6 +325,42 @@ export class Toolbar {
     this.container.querySelector('#btn-add-text')?.addEventListener('click', () => {
       const id = store.addTextBlock({ kind: 'top' });
       window.dispatchEvent(new CustomEvent('focus-text-block', { detail: { id } }));
+    });
+
+    // Stockpile CSV upload
+    this.container.querySelector('#csv-upload-toolbar')?.addEventListener('change', (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      window.dispatchEvent(new CustomEvent('stockpile:load-csv', { detail: { file } }));
+      (e.target as HTMLInputElement).value = '';
+    });
+
+    // Stockpile CSV clear
+    this.container.querySelector('#btn-clear-csv')?.addEventListener('click', () => {
+      if (confirm('Clear the loaded stockpile CSV?')) {
+        window.dispatchEvent(new CustomEvent('stockpile:clear-csv'));
+      }
+    });
+
+    // Stockpile template source
+    this.container.querySelector('#btn-tpl-current')?.addEventListener('click', () => {
+      window.dispatchEvent(new CustomEvent('stockpile:set-tpl-current'));
+    });
+    this.container.querySelector('#btn-tpl-official')?.addEventListener('click', () => {
+      window.dispatchEvent(new CustomEvent('stockpile:set-tpl-official'));
+    });
+    this.container.querySelector('#tpl-upload-toolbar')?.addEventListener('change', (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      window.dispatchEvent(new CustomEvent('stockpile:load-tpl', { detail: { file } }));
+      (e.target as HTMLInputElement).value = '';
+    });
+
+    // Stockpile clear template
+    this.container.querySelector('#btn-clear-tpl')?.addEventListener('click', () => {
+      if (confirm('Clear the loaded template file?')) {
+        window.dispatchEvent(new CustomEvent('stockpile:set-tpl-current'));
+      }
     });
 
     // Icon scale buttons
@@ -330,7 +425,7 @@ export class Toolbar {
         if (confirm('Clear the entire todolist?')) {
           store.clearTodoList();
         }
-      } else {
+      } else if (store.viewMode === 'template') {
         if (confirm('Clear the entire template?')) {
           store.sections.forEach(s => store.deleteSection(s.id));
         }

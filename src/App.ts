@@ -8,27 +8,31 @@ import { PreviewPanel } from './components/PreviewPanel';
 import { TodoListView } from './components/TodoListView';
 import { TodoListLoadModal } from './components/TodoListLoadModal';
 import { BackgroundModal } from './components/BackgroundModal';
+import { StockpileView } from './components/StockpileView';
 import { loadIcons, loadSubtypes } from './services/iconLoader';
 import { loadMpfData } from './services/mpfDataLoader';
 import { loadBackgroundPresets } from './services/backgroundLoader';
+import { ViewMode } from './types';
 
 export class App {
   private container: HTMLElement | null = null;
   private sidebar: IconSidebar;
   private canvas: Canvas;
   private todolistView: TodoListView;
+  private stockpileView: StockpileView;
   private toolbar: Toolbar;
   private modal: SectionModal;
   private todolistLoadModal: TodoListLoadModal;
   private backgroundModal: BackgroundModal;
   private contextMenu: IconContextMenu;
   private previewPanel: PreviewPanel;
-  private currentMode: 'template' | 'todolist' = 'template';
+  private currentMode: ViewMode = 'template';
 
   constructor() {
     this.sidebar = new IconSidebar();
     this.canvas = new Canvas();
     this.todolistView = new TodoListView();
+    this.stockpileView = new StockpileView();
     this.toolbar = new Toolbar();
     this.modal = new SectionModal();
     this.todolistLoadModal = new TodoListLoadModal();
@@ -93,8 +97,9 @@ export class App {
     });
   }
 
-  private mountView(previous: 'template' | 'todolist' | null): void {
+  private mountView(previous: ViewMode | null): void {
     const mainView = this.container?.querySelector('#main-view') as HTMLElement | null;
+    const sidebar  = this.container?.querySelector('#sidebar')   as HTMLElement | null;
     if (!mainView) return;
 
     // Unmount previous view cleanly
@@ -102,12 +107,21 @@ export class App {
       this.todolistView.unmount();
     } else if (previous === 'template') {
       this.canvas.destroy();
+    } else if (previous === 'stockpile') {
+      this.stockpileView.unmount();
     }
 
     mainView.innerHTML = '';
 
+    // Sidebar is only useful in template / todolist modes
+    if (sidebar) {
+      sidebar.style.display = store.viewMode === 'stockpile' ? 'none' : '';
+    }
+
     if (store.viewMode === 'todolist') {
       this.todolistView.mount(mainView);
+    } else if (store.viewMode === 'stockpile') {
+      this.stockpileView.mount(mainView);
     } else {
       this.canvas.mount(mainView);
     }
