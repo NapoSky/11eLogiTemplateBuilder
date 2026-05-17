@@ -8,6 +8,7 @@ import { PreviewPanel } from './components/PreviewPanel';
 import { TodoListView } from './components/TodoListView';
 import { TodoListLoadModal } from './components/TodoListLoadModal';
 import { BackgroundModal } from './components/BackgroundModal';
+import { TemplateLoadModal } from './components/TemplateLoadModal';
 import { StockpileView } from './components/StockpileView';
 import { loadIcons, loadSubtypes } from './services/iconLoader';
 import { loadMpfData } from './services/mpfDataLoader';
@@ -24,6 +25,7 @@ export class App {
   private modal: SectionModal;
   private todolistLoadModal: TodoListLoadModal;
   private backgroundModal: BackgroundModal;
+  private templateLoadModal: TemplateLoadModal;
   private contextMenu: IconContextMenu;
   private previewPanel: PreviewPanel;
   private currentMode: ViewMode = 'template';
@@ -37,6 +39,7 @@ export class App {
     this.modal = new SectionModal();
     this.todolistLoadModal = new TodoListLoadModal();
     this.backgroundModal = new BackgroundModal();
+    this.templateLoadModal = new TemplateLoadModal();
     this.contextMenu = new IconContextMenu();
     this.previewPanel = new PreviewPanel();
   }
@@ -70,6 +73,7 @@ export class App {
       <div id="modal-container"></div>
       <div id="tl-load-modal-container"></div>
       <div id="bg-modal-container"></div>
+      <div id="tpl-load-modal-container"></div>
       <div id="context-menu-container"></div>
       <div id="preview-panel-container"></div>
     `;
@@ -80,6 +84,7 @@ export class App {
     this.modal.mount(this.container.querySelector('#modal-container')!);
     this.todolistLoadModal.mount(this.container.querySelector('#tl-load-modal-container')!);
     this.backgroundModal.mount(this.container.querySelector('#bg-modal-container')!);
+    this.templateLoadModal.mount(this.container.querySelector('#tpl-load-modal-container')!);
     this.contextMenu.mount(this.container.querySelector('#context-menu-container')!);
     this.previewPanel.mount(this.container.querySelector('#preview-panel-container')!);
 

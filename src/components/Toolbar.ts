@@ -144,13 +144,12 @@ export class Toolbar {
           </svg>
           Save
         </button>
-        <label class="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 rounded text-sm cursor-pointer flex items-center gap-1" title="Ctrl+O">
+        <button id="btn-load-template" class="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 rounded text-sm flex items-center gap-1" title="Ctrl+O">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
           </svg>
           Load
-          <input type="file" accept=".json" id="import-json" class="hidden" />
-        </label>
+        </button>
         ` : ''}
         ${isTodolist ? `
         <button id="btn-tl-load" class="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 rounded text-sm flex items-center gap-1" title="Import a Discord todolist">
@@ -406,17 +405,9 @@ export class Toolbar {
     // Export JSON
     this.container.querySelector('#btn-export-json')?.addEventListener('click', () => this.exportJson());
 
-    // Import JSON
-    this.container.querySelector('#import-json')?.addEventListener('change', (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      
-      const reader = new FileReader();
-      reader.onload = () => {
-        store.importJSON(reader.result as string);
-      };
-      reader.readAsText(file);
-      (e.target as HTMLInputElement).value = '';
+    // Load template (open modal)
+    this.container.querySelector('#btn-load-template')?.addEventListener('click', () => {
+      window.dispatchEvent(new CustomEvent('open-template-load-modal'));
     });
 
     // Clear
@@ -500,10 +491,7 @@ export class Toolbar {
   }
   
   private triggerImport(): void {
-    const importInput = this.container?.querySelector('#import-json') as HTMLInputElement;
-    if (importInput) {
-      importInput.click();
-    }
+    window.dispatchEvent(new CustomEvent('open-template-load-modal'));
   }
 
   private async exportPng(): Promise<void> {
@@ -558,7 +546,11 @@ export class Toolbar {
     const json = store.exportJSON();
     const blob = new Blob([json], { type: 'application/json' });
     const link = document.createElement('a');
-    link.download = 'template.json';
+    const now = new Date();
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const yyyy = now.getFullYear();
+    link.download = `template_${dd}${mm}${yyyy}.json`;
     link.href = URL.createObjectURL(blob);
     link.click();
     URL.revokeObjectURL(link.href);

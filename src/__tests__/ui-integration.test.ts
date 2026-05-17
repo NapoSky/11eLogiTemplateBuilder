@@ -626,14 +626,13 @@ describe('Toolbar - Composant réel', () => {
     expect(mediumBtn).toBeTruthy();
   });
 
-  test('import JSON input existe', () => {
+  test('btn-load-template existe', () => {
     const toolbar = new Toolbar();
     toolbar.mount(container);
 
-    const importInput = container.querySelector('#import-json') as HTMLInputElement;
-    expect(importInput).toBeTruthy();
-    expect(importInput.type).toBe('file');
-    expect(importInput.accept).toBe('.json');
+    const btn = container.querySelector('#btn-load-template');
+    expect(btn).toBeTruthy();
+    expect(btn!.tagName).toBe('BUTTON');
   });
 
   test('btn-clear existe', () => {
