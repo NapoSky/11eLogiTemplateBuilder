@@ -30,6 +30,13 @@ interface ComparisonResult {
   surplus: Array<{ itemName: string; qty: number; isCrate: boolean }>;
 }
 
+interface CsvEntry {
+  id: string;
+  header: StockpileHeader | null;
+  items: Map<string, number>;
+  label: string;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function escapeHtml(s: string): string {
@@ -179,9 +186,7 @@ export function buildComparison(
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const CSV_ITEMS_KEY    = 'stockpile_csv_items';
-const CSV_HEADER_KEY   = 'stockpile_csv_header';
-const CSV_FILENAME_KEY = 'stockpile_csv_filename';
+const CSV_ENTRIES_KEY  = 'stockpile_csv_entries';
 const TPL_FILE_KEY     = 'stockpile_tpl_file';
 const TPL_FILENAME_KEY = 'stockpile_tpl_filename';
 
@@ -191,9 +196,7 @@ export class StockpileView {
   private mappingLoaded = false;
 
   // CSV state
-  private csvItems: Map<string, number> = new Map();
-  private csvHeader: StockpileHeader | null = null;
-  private csvFileName: string | null = null;
+  private csvEntries: CsvEntry[] = [];
   private result: ComparisonResult | null = null;
 
   // UI state
@@ -202,21 +205,26 @@ export class StockpileView {
   private useReferenceTemplate = true;
   private externalTemplateFileName: string | null = null;
   private collapsedSections: Set<string> = new Set();
+  private loadedStockpilesCollapsed = false;
   private sortByGap = true;
   private hideOk = true;
   private searchQuery = '';
 
   // Bound window listeners (for cleanup)
-  private onLoadCsv     = (e: Event) => { this.handleLoadCsv((e as CustomEvent).detail.file as File); };
-  private onClearCsv    = () => { this.handleClearCsv(); };
+  private onLoadCsv      = (e: Event) => { this.handleLoadCsv((e as CustomEvent).detail.file as File); };
+  private onPasteCsv     = (e: Event) => { this.handlePasteCsv((e as CustomEvent).detail.text as string); };
+  private onClearCsv     = () => { this.handleClearCsv(); };
+  private onOpenLoadModal = () => { this.showLoadCsvModal(); };
   private onSetTplCurrent  = () => { this.handleSetTplCurrent(); };
   private onSetTplOfficial = () => { this.handleSetTplOfficial(); };
-  private onLoadTpl     = (e: Event) => { this.handleLoadTpl((e as CustomEvent).detail.file as File); };
+  private onLoadTpl      = (e: Event) => { this.handleLoadTpl((e as CustomEvent).detail.file as File); };
 
   mount(container: HTMLElement): void {
     this.container = container;
-    window.addEventListener('stockpile:load-csv',      this.onLoadCsv);
-    window.addEventListener('stockpile:clear-csv',     this.onClearCsv);
+    window.addEventListener('stockpile:load-csv',       this.onLoadCsv);
+    window.addEventListener('stockpile:paste-csv',      this.onPasteCsv);
+    window.addEventListener('stockpile:clear-csv',      this.onClearCsv);
+    window.addEventListener('stockpile:open-load-modal', this.onOpenLoadModal);
     window.addEventListener('stockpile:set-tpl-current',  this.onSetTplCurrent);
     window.addEventListener('stockpile:set-tpl-official', this.onSetTplOfficial);
     window.addEventListener('stockpile:load-tpl',      this.onLoadTpl);
@@ -252,15 +260,16 @@ export class StockpileView {
   }
 
   unmount(): void {
-    window.removeEventListener('stockpile:load-csv',      this.onLoadCsv);
-    window.removeEventListener('stockpile:clear-csv',     this.onClearCsv);
+    window.removeEventListener('stockpile:load-csv',       this.onLoadCsv);
+    window.removeEventListener('stockpile:paste-csv',      this.onPasteCsv);
+    window.removeEventListener('stockpile:clear-csv',      this.onClearCsv);
+    window.removeEventListener('stockpile:open-load-modal', this.onOpenLoadModal);
     window.removeEventListener('stockpile:set-tpl-current',  this.onSetTplCurrent);
     window.removeEventListener('stockpile:set-tpl-official', this.onSetTplOfficial);
     window.removeEventListener('stockpile:load-tpl',      this.onLoadTpl);
     this.container = null;
     this.result = null;
-    this.csvItems = new Map();
-    this.csvFileName = null;
+    this.csvEntries = [];
     this.filterStatus = 'all';
     this.externalTemplate = null;
     this.useReferenceTemplate = false;
@@ -316,15 +325,13 @@ export class StockpileView {
 
   private saveCSV(): void {
     try {
-      const obj: Record<string, number> = {};
-      this.csvItems.forEach((qty, name) => { obj[name] = qty; });
-      localStorage.setItem(CSV_ITEMS_KEY, JSON.stringify(obj));
-      localStorage.setItem(CSV_HEADER_KEY, JSON.stringify(this.csvHeader));
-      if (this.csvFileName) {
-        localStorage.setItem(CSV_FILENAME_KEY, this.csvFileName);
-      } else {
-        localStorage.removeItem(CSV_FILENAME_KEY);
-      }
+      const raw = this.csvEntries.map(e => ({
+        id: e.id,
+        header: e.header,
+        items: Object.fromEntries(e.items),
+        label: e.label,
+      }));
+      localStorage.setItem(CSV_ENTRIES_KEY, JSON.stringify(raw));
     } catch (e) {
       console.warn('StockpileView: failed to persist CSV data', e);
     }
@@ -332,16 +339,43 @@ export class StockpileView {
 
   private restoreCSV(): void {
     try {
-      const rawItems  = localStorage.getItem(CSV_ITEMS_KEY);
-      const rawHeader = localStorage.getItem(CSV_HEADER_KEY);
-      if (!rawItems) return;
-      const obj = JSON.parse(rawItems) as Record<string, number>;
-      this.csvItems = new Map(Object.entries(obj));
-      this.csvHeader = rawHeader ? JSON.parse(rawHeader) as StockpileHeader : null;
-      this.csvFileName = localStorage.getItem(CSV_FILENAME_KEY);
-      this.result = buildComparison(this.getSections(), this.csvItems, this.iconMapping, this.csvHeader);
+      const raw = localStorage.getItem(CSV_ENTRIES_KEY);
+      if (!raw) {
+        this.migrateOldCSV();
+        return;
+      }
+      const entries = JSON.parse(raw) as Array<{ id: string; header: StockpileHeader | null; items: Record<string, number>; label: string }>;
+      this.csvEntries = entries.map(e => ({
+        id: e.id,
+        header: e.header,
+        items: new Map(Object.entries(e.items)),
+        label: e.label,
+      }));
+      if (this.csvEntries.length > 0) {
+        this.result = buildComparison(this.getSections(), this.aggregateItems(), this.iconMapping, null);
+      }
     } catch (e) {
       console.warn('StockpileView: failed to restore CSV data', e);
+    }
+  }
+
+  private migrateOldCSV(): void {
+    try {
+      const rawItems = localStorage.getItem('stockpile_csv_items');
+      const rawHeader = localStorage.getItem('stockpile_csv_header');
+      const fileName = localStorage.getItem('stockpile_csv_filename');
+      if (!rawItems) return;
+      const obj = JSON.parse(rawItems) as Record<string, number>;
+      const header = rawHeader ? JSON.parse(rawHeader) as StockpileHeader : null;
+      const label = header?.location ?? fileName ?? 'Stockpile 1';
+      this.csvEntries = [{ id: generateId(), header, items: new Map(Object.entries(obj)), label }];
+      this.saveCSV();
+      localStorage.removeItem('stockpile_csv_items');
+      localStorage.removeItem('stockpile_csv_header');
+      localStorage.removeItem('stockpile_csv_filename');
+      this.result = buildComparison(this.getSections(), this.aggregateItems(), this.iconMapping, null);
+    } catch (e) {
+      console.warn('StockpileView: failed to migrate old CSV data', e);
     }
   }
 
@@ -349,32 +383,54 @@ export class StockpileView {
     return this.externalTemplate?.sections ?? store.sections;
   }
 
+  private aggregateItems(): Map<string, number> {
+    const result = new Map<string, number>();
+    for (const entry of this.csvEntries) {
+      for (const [name, qty] of entry.items) {
+        result.set(name, (result.get(name) ?? 0) + qty);
+      }
+    }
+    return result;
+  }
+
   private rerunComparison(): void {
-    if (this.csvItems.size === 0) return;
-    this.result = buildComparison(this.getSections(), this.csvItems, this.iconMapping, this.csvHeader);
+    if (this.csvEntries.length === 0) return;
+    this.result = buildComparison(this.getSections(), this.aggregateItems(), this.iconMapping, null);
   }
 
   private async handleLoadCsv(file: File): Promise<void> {
     const buffer = await file.arrayBuffer();
     const text = decodeBuffer(buffer);
+    this.addCsvEntry(text, file.name);
+  }
+
+  private handlePasteCsv(text: string): void {
+    this.addCsvEntry(text, null);
+  }
+
+  private addCsvEntry(text: string, fileName: string | null): void {
     const { header, items } = parseCSV(text);
-    this.csvItems = items;
-    this.csvHeader = header;
-    this.csvFileName = file.name;
-    this.result = buildComparison(this.getSections(), items, this.iconMapping, header);
+    const label = header?.location ?? fileName ?? `Stockpile ${this.csvEntries.length + 1}`;
+    this.csvEntries.push({ id: generateId(), header, items, label });
+    this.result = buildComparison(this.getSections(), this.aggregateItems(), this.iconMapping, null);
     this.saveCSV();
     this.filterStatus = 'all';
     this.render();
   }
 
+  private handleRemoveEntry(id: string): void {
+    this.csvEntries = this.csvEntries.filter(e => e.id !== id);
+    this.result = this.csvEntries.length > 0
+      ? buildComparison(this.getSections(), this.aggregateItems(), this.iconMapping, null)
+      : null;
+    this.saveCSV();
+    this.render();
+  }
+
   private handleClearCsv(): void {
-    this.csvItems = new Map();
-    this.csvHeader = null;
-    this.csvFileName = null;
+    this.csvEntries = [];
     this.result = null;
-    localStorage.removeItem(CSV_ITEMS_KEY);
-    localStorage.removeItem(CSV_HEADER_KEY);
-    localStorage.removeItem(CSV_FILENAME_KEY);
+    localStorage.removeItem(CSV_ENTRIES_KEY);
     this.render();
   }
 
@@ -452,22 +508,9 @@ export class StockpileView {
         <!-- Controls bar -->
         <div class="shrink-0 flex flex-wrap items-center gap-3 px-4 py-2.5 bg-gray-800 border-b border-gray-700">
 
-          ${this.csvHeader ? `
-          <!-- CSV timestamp -->
-          <div class="flex items-center gap-1.5 text-xs text-gray-400">
-            <svg class="w-3 h-3 shrink-0 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
-            <span class="text-gray-300 font-medium">${escapeHtml(this.csvHeader.location)}</span>
-            <span class="text-gray-500">·</span>
-            <span class="text-gray-500">${escapeHtml(this.csvHeader.date)}</span>
-          </div>
-          ` : ''}
-
-          ${hasResult ? `
+          ${this.csvEntries.length > 0 ? `
           <!-- Filter -->
-          <div class="flex items-center gap-1 border-l border-gray-600 pl-3">
+          <div class="flex items-center gap-1">
             <span class="text-xs text-gray-400 mr-1">Show:</span>
             ${(['all', 'missing', 'partial', 'ok'] as FilterStatus[]).map(f => `
               <button data-filter="${f}" class="filter-btn px-2 py-1 text-xs rounded transition-colors ${this.filterStatus === f ? 'bg-blue-600 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}">
@@ -522,12 +565,13 @@ export class StockpileView {
 
         <!-- Content -->
         <div class="flex-1 overflow-y-auto p-4">
+          ${this.renderLoadedStockpiles()}
           <!-- Disclaimer -->
           <div class="mb-4 flex items-start gap-2 px-3 py-2 bg-gray-800/60 border border-gray-700 rounded-lg text-xs text-gray-400">
             <svg class="w-3.5 h-3.5 mt-0.5 shrink-0 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-            <p>This comparison is for <span class="text-gray-300 font-semibold">informational purposes only</span>. It provides a snapshot diff between a template and an exported stockpile — not a live tracking system. Quantities may be outdated the moment the CSV is exported.</p>
+            <p>This comparison is for <span class="text-gray-300 font-semibold">informational purposes only</span>. It provides a snapshot diff between a template and ${this.csvEntries.length > 1 ? `aggregated stockpiles` : `an exported stockpile`} — not a live tracking system. Quantities may be outdated the moment the CSV is exported.</p>
           </div>
           ${!hasResult ? this.renderEmpty() : this.renderTable()}
         </div>
@@ -561,6 +605,42 @@ export class StockpileView {
     `;
   }
 
+  private renderLoadedStockpiles(): string {
+    if (this.csvEntries.length === 0) return '';
+    const collapsed = this.loadedStockpilesCollapsed;
+    return `
+      <div class="mb-4 bg-gray-800/60 border border-gray-700 rounded-lg overflow-hidden">
+        <button id="btn-toggle-loaded-stockpiles" class="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-700/30 transition-colors text-left">
+          <span class="flex items-center gap-2 text-xs font-medium text-gray-400">
+            <svg class="w-3.5 h-3.5 shrink-0 text-gray-500 transition-transform ${collapsed ? '' : 'rotate-90'}"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+            Loaded stockpile${this.csvEntries.length > 1 ? 's' : ''}
+            <span class="px-1.5 py-0.5 bg-gray-700 rounded text-gray-300">${this.csvEntries.length}</span>
+          </span>
+          ${this.csvEntries.length > 1 ? `<span class="text-xs text-gray-500 italic">Aggregated quantities</span>` : ''}
+        </button>
+        <ul id="loaded-stockpiles-list" class="divide-y divide-gray-700/50 border-t border-gray-700/60 ${collapsed ? 'hidden' : ''}">
+          ${this.csvEntries.map(e => `
+            <li class="flex items-center gap-3 px-3 py-2 hover:bg-gray-700/20 transition-colors">
+              <svg class="w-3.5 h-3.5 shrink-0 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+              </svg>
+              <span class="text-xs text-gray-200 font-medium flex-1 truncate">${escapeHtml(e.label)}</span>
+              ${e.header ? `<span class="text-xs text-gray-500 shrink-0">${escapeHtml(e.header.date)}</span>` : ''}
+              <button class="remove-entry-btn shrink-0 p-1 rounded text-gray-600 hover:text-red-400 hover:bg-gray-700 transition-colors" data-entry-id="${escapeHtml(e.id)}" title="Remove this stockpile">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </li>
+          `).join('')}
+        </ul>
+      </div>
+    `;
+  }
+
   private renderEmpty(): string {
     return `
       <div class="flex flex-col items-center justify-center h-full text-center text-gray-500 gap-3">
@@ -572,7 +652,10 @@ export class StockpileView {
         </svg>
         <p class="text-base font-medium text-gray-400">No stockpile loaded</p>
         <p class="text-sm max-w-xs">
-          Upload or drag & drop a Foxhole stockpile CSV export to compare against the current template.
+          Load a file, drag &amp; drop, or paste from clipboard ("Paste") to compare against the active template.
+        </p>
+        <p class="text-xs text-gray-600 max-w-xs">
+          You can load multiple stockpiles — their quantities will be aggregated.
         </p>
       </div>
     `;
@@ -836,8 +919,9 @@ export class StockpileView {
     if (mpfRows.length === 0) return '*(nothing to order)*';
 
     const now = new Date();
-    const title = this.csvHeader
-      ? `TODOLIST ${this.csvHeader.location}`
+    const firstHeader = this.csvEntries[0]?.header;
+    const title = firstHeader
+      ? `TODOLIST ${firstHeader.location}`
       : 'TODOLIST';
 
     const items: TodoListItem[] = mpfRows.map(({ row, entry, orderCount }) => ({
@@ -863,6 +947,97 @@ export class StockpileView {
     };
 
     return renderTodoList(fakeTodoList, now);
+  }
+
+  private showLoadCsvModal(): void {
+    const modal = document.createElement('div');
+    modal.id = 'csv-load-modal';
+    modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+      <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-[520px] max-w-[95vw]">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="text-lg font-semibold text-white">Load Stockpile CSV</h2>
+          <button id="csv-modal-close" class="text-gray-400 hover:text-white transition-colors" title="Close">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <!-- Panels -->
+        <div class="grid grid-cols-2 gap-4">
+          <!-- Left: two stacked action cards -->
+          <div class="flex flex-col gap-4">
+            <label id="csv-modal-load-label" class="flex flex-col items-center justify-center gap-2 p-5 bg-gray-700/50 rounded-lg border border-gray-600 hover:border-blue-500 hover:bg-gray-700 cursor-pointer transition-colors group flex-1">
+              <svg class="w-8 h-8 text-blue-400 group-hover:text-blue-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+              </svg>
+              <p class="font-semibold text-sm text-white">Load file</p>
+              <p class="text-xs text-gray-400 text-center">.csv / .txt</p>
+              <input type="file" accept=".csv,.txt" id="csv-modal-file-input" class="hidden" />
+            </label>
+            <button id="csv-modal-paste" class="flex flex-col items-center justify-center gap-2 p-5 bg-gray-700/50 rounded-lg border border-gray-600 hover:border-blue-500 hover:bg-gray-700 cursor-pointer transition-colors group flex-1">
+              <svg class="w-8 h-8 text-gray-400 group-hover:text-blue-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+              </svg>
+              <p class="font-semibold text-sm text-white">Paste</p>
+              <p class="text-xs text-gray-400 text-center">From clipboard</p>
+            </button>
+          </div>
+          <!-- Right: drag & drop -->
+          <div id="csv-modal-dropzone" class="flex flex-col items-center justify-center gap-3 p-5 bg-gray-700/50 rounded-lg border border-dashed border-gray-600 hover:border-gray-400 transition-colors min-h-[180px]">
+            <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+            </svg>
+            <p class="font-semibold text-sm text-white">Drag &amp; drop</p>
+            <p class="text-xs text-gray-400 text-center">Drop a .csv file here</p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const close = () => modal.remove();
+
+    modal.querySelector('#csv-modal-close')!.addEventListener('click', close);
+    modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+
+    // Load file
+    modal.querySelector('#csv-modal-file-input')!.addEventListener('change', (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      close();
+      this.handleLoadCsv(file);
+    });
+
+    // Paste
+    modal.querySelector('#csv-modal-paste')!.addEventListener('click', async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (!text.trim()) { alert('Clipboard is empty.'); return; }
+        close();
+        this.handlePasteCsv(text);
+      } catch {
+        alert('Could not read clipboard. Make sure clipboard access is allowed.');
+      }
+    });
+
+    // Drag & drop
+    const dropzone = modal.querySelector('#csv-modal-dropzone') as HTMLElement;
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('border-blue-400', 'bg-gray-700');
+    });
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.classList.remove('border-blue-400', 'bg-gray-700');
+    });
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('border-blue-400', 'bg-gray-700');
+      const file = e.dataTransfer?.files[0];
+      if (file) { close(); this.handleLoadCsv(file); }
+    });
   }
 
   private showTodolistModal(): void {
@@ -955,6 +1130,24 @@ export class StockpileView {
   private attachEvents(): void {
     if (!this.container) return;
 
+    // Loaded stockpiles collapse toggle — in-place, no re-render
+    this.container.querySelector('#btn-toggle-loaded-stockpiles')?.addEventListener('click', () => {
+      this.loadedStockpilesCollapsed = !this.loadedStockpilesCollapsed;
+      const list  = this.container?.querySelector('#loaded-stockpiles-list');
+      const arrow = this.container?.querySelector('#btn-toggle-loaded-stockpiles svg') as SVGElement | null;
+      list?.classList.toggle('hidden');
+      arrow?.classList.toggle('rotate-90');
+    });
+
+    // Remove individual stockpile entry chips
+    this.container.querySelectorAll('.remove-entry-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = btn.getAttribute('data-entry-id');
+        if (id) this.handleRemoveEntry(id);
+      });
+    });
+
     // Status filter buttons
     this.container.querySelectorAll('.filter-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1009,15 +1202,5 @@ export class StockpileView {
       });
     });
 
-    // Drag-and-drop CSV upload
-    this.container.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
-    });
-    this.container.addEventListener('drop', (e) => {
-      e.preventDefault();
-      const file = e.dataTransfer?.files[0];
-      if (file) this.handleLoadCsv(file);
-    });
   }
 }

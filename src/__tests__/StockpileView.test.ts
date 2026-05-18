@@ -355,8 +355,7 @@ describe('StockpileView – événements window', () => {
     window.dispatchEvent(new CustomEvent('stockpile:clear-csv'));
     await flushPromises();
 
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith('stockpile_csv_items');
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith('stockpile_csv_header');
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('stockpile_csv_entries');
   });
 
   test('stockpile:set-tpl-current met à jour le store', async () => {
@@ -426,16 +425,12 @@ describe('StockpileView – persistance localStorage', () => {
     await flushPromises();
 
     expect(localStorageMock.setItem).toHaveBeenCalledWith(
-      'stockpile_csv_items',
+      'stockpile_csv_entries',
       expect.stringContaining('Argenti r.II Rifle')
     );
     expect(localStorageMock.setItem).toHaveBeenCalledWith(
-      'stockpile_csv_header',
+      'stockpile_csv_entries',
       expect.stringContaining('Bunker Noma')
-    );
-    expect(localStorageMock.setItem).toHaveBeenCalledWith(
-      'stockpile_csv_filename',
-      'stockpile.csv'
     );
 
     view.unmount();
