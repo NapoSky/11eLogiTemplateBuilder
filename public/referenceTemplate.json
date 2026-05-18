@@ -344,36 +344,6 @@
           "gridCol": 3
         },
         {
-          "id": "b9c10fb5-8337-47e1-8c5a-931c416300be",
-          "iconId": "MortarAmmoIcon.png",
-          "filename": "MortarAmmoIcon.png",
-          "path": "/assets/icons/UI/ItemIcons/MortarAmmoIcon.png",
-          "quantity": 60,
-          "gridRow": 1,
-          "gridCol": 4,
-          "subtype": "/assets/icons/subtypes/SubtypeFireIcon.png"
-        },
-        {
-          "id": "9af41c62-3c83-4ec1-ac6d-72728de2ab1f",
-          "iconId": "MortarAmmoIcon.png",
-          "filename": "MortarAmmoIcon.png",
-          "path": "/assets/icons/UI/ItemIcons/MortarAmmoIcon.png",
-          "quantity": 40,
-          "gridRow": 1,
-          "gridCol": 5,
-          "subtype": "/assets/icons/subtypes/SubtypeFLIcon.png"
-        },
-        {
-          "id": "865085f2-c102-4205-9326-85d4736ec541",
-          "iconId": "MortarAmmoIcon.png",
-          "filename": "MortarAmmoIcon.png",
-          "path": "/assets/icons/UI/ItemIcons/MortarAmmoIcon.png",
-          "quantity": 50,
-          "gridRow": 1,
-          "gridCol": 6,
-          "subtype": "/assets/icons/subtypes/SubtypeSHIcon.png"
-        },
-        {
           "id": "1a42336f-7a1e-4ef7-b319-b69c6b8f1a40",
           "iconId": "MortarAmmoIcon.png",
           "filename": "MortarAmmoIcon.png",
@@ -461,6 +431,36 @@
           "quantity": 20,
           "gridRow": 0,
           "gridCol": 0
+        },
+        {
+          "id": "6e9ae3ca-f7db-4d1a-aebc-6ab65b58352e",
+          "iconId": "UI/ItemIcons/MortarAmmoIconFlare.png",
+          "filename": "UI/ItemIcons/MortarAmmoIconFlare.png",
+          "path": "/assets/icons/UI/ItemIcons/MortarAmmoIconFlare.png",
+          "quantity": 40,
+          "gridRow": 1,
+          "gridCol": 5,
+          "subtype": "/assets/icons/subtypes/SubtypeFLIcon.png"
+        },
+        {
+          "id": "be30b621-04ed-4c09-a81b-84dba5bcb468",
+          "iconId": "UI/ItemIcons/MortarAmmoIconShrapnel.png",
+          "filename": "UI/ItemIcons/MortarAmmoIconShrapnel.png",
+          "path": "/assets/icons/UI/ItemIcons/MortarAmmoIconShrapnel.png",
+          "quantity": 40,
+          "gridRow": 1,
+          "gridCol": 6,
+          "subtype": "/assets/icons/subtypes/SubtypeSHIcon.png"
+        },
+        {
+          "id": "6e069158-09f1-4f03-9b5a-9f5b2f575be4",
+          "iconId": "UI/ItemIcons/MortarAmmoIconFire.png",
+          "filename": "UI/ItemIcons/MortarAmmoIconFire.png",
+          "path": "/assets/icons/UI/ItemIcons/MortarAmmoIconFire.png",
+          "quantity": 60,
+          "gridRow": 1,
+          "gridCol": 4,
+          "subtype": "/assets/icons/subtypes/SubtypeFireIcon.png"
         }
       ]
     },
