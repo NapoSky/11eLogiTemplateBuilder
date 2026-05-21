@@ -27,6 +27,14 @@ function openModal(): void {
 
 const VALID_TEMPLATE_JSON = JSON.stringify({ sections: [] });
 
+/** Wait for a condition to become true (polls every 5 ms, up to ~500 ms). */
+async function waitFor(predicate: () => boolean, attempts = 100): Promise<void> {
+  for (let i = 0; i < attempts; i++) {
+    if (predicate()) return;
+    await new Promise(r => setTimeout(r, 5));
+  }
+}
+
 // ─── mount & open ─────────────────────────────────────────────────────────────
 
 describe('TemplateLoadModal – mount & open', () => {
@@ -215,7 +223,7 @@ describe('TemplateLoadModal – custom file', () => {
     Object.defineProperty(input, 'files', { value: [file], configurable: true });
     input.dispatchEvent(new Event('change'));
 
-    await new Promise(r => setTimeout(r, 0));
+    await waitFor(() => importSpy.mock.calls.length > 0);
 
     expect(importSpy).toHaveBeenCalledWith(VALID_TEMPLATE_JSON);
     expect(container.innerHTML).toBe('');
@@ -275,7 +283,7 @@ describe('TemplateLoadModal – drag & drop', () => {
     Object.defineProperty(drop, 'dataTransfer', { value: { files: [file] } });
     dropzone.dispatchEvent(drop);
 
-    await new Promise(r => setTimeout(r, 0));
+    await waitFor(() => importSpy.mock.calls.length > 0);
 
     expect(importSpy).toHaveBeenCalledWith(VALID_TEMPLATE_JSON);
     expect(container.innerHTML).toBe('');

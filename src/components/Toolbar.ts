@@ -91,13 +91,12 @@ export class Toolbar {
           Text
         </button>
         ` : isStockpile ? `
-        <label class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm cursor-pointer flex items-center gap-1">
+        <button id="btn-load-stockpile" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm cursor-pointer flex items-center gap-1">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
           </svg>
           Load Stockpile CSV
-          <input type="file" accept=".csv,.txt" id="csv-upload-toolbar" class="hidden" />
-        </label>
+        </button>
         <div class="flex items-center gap-2 border-l border-gray-600 pl-3">
           <span class="text-xs text-gray-400">Template:</span>
           <div class="flex rounded overflow-hidden border border-gray-600">
@@ -326,12 +325,9 @@ export class Toolbar {
       window.dispatchEvent(new CustomEvent('focus-text-block', { detail: { id } }));
     });
 
-    // Stockpile CSV upload
-    this.container.querySelector('#csv-upload-toolbar')?.addEventListener('change', (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      window.dispatchEvent(new CustomEvent('stockpile:load-csv', { detail: { file } }));
-      (e.target as HTMLInputElement).value = '';
+    // Stockpile CSV upload — open the choice modal (drag&drop / paste / load file)
+    this.container.querySelector('#btn-load-stockpile')?.addEventListener('click', () => {
+      window.dispatchEvent(new CustomEvent('stockpile:open-load-modal'));
     });
 
     // Stockpile CSV clear

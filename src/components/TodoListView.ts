@@ -183,6 +183,7 @@ export class TodoListView {
           <!-- Drop hint -->
           <div class="bg-blue-900/20 border border-blue-700/40 rounded-lg p-3 text-sm text-blue-200">
             👉 Drag an MPF-craftable icon from the sidebar to add it to the todolist.
+            <div class="mt-1 text-xs text-blue-300/70">Each order is capped at <strong>9 crates</strong> — <strong>5</strong> for Vehicles &amp; Shippables. (e.g. ordering 2× Booker produces <strong>18 crates</strong>.)</div>
           </div>
 
           ${topBlocks.map(b => this.renderTextBlock(b)).join('')}
@@ -279,7 +280,6 @@ export class TodoListView {
             data-action="set-count"
             class="w-14 bg-gray-900 border border-gray-700 rounded px-1 py-0.5 text-sm" />
         </label>
-        <span class="text-xs text-gray-500 w-12 text-right">/${item.maxCrates}</span>
         <button data-action="delete" class="text-red-400 hover:text-red-300 text-sm" title="Delete">✕</button>
       </li>
     `;
