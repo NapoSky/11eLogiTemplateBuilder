@@ -254,7 +254,8 @@ export class TodoListView {
       : '';
 
     return `
-      <li class="flex items-center gap-3 px-3 py-2 hover:bg-gray-700/30" data-item-id="${item.id}">
+      <li class="flex items-center gap-3 px-3 py-2 hover:bg-gray-700/30" data-item-id="${item.id}" data-category="${item.category}" draggable="true">
+        <span class="cursor-grab text-gray-500 hover:text-gray-300 select-none text-base leading-none px-0.5" title="Drag to reorder">⠿</span>
         <span class="text-lg select-none w-7 text-center">${letter}</span>
         <div class="relative w-8 h-8 shrink-0">
           <img src="${BASE_URL}assets/icons/${item.iconFilename}" alt=""
@@ -417,9 +418,21 @@ export class TodoListView {
     const faction = this.container.querySelector('#tl-faction') as HTMLSelectElement | null;
     faction?.addEventListener('change', () => store.setTodoListFaction(faction.value as FactionFilter));
 
-    // Item rows: count + delete
+    // Item rows: count + delete + drag reorder
+    let dragSrcId: string | null = null;
+    let dragSrcCategory: string | null = null;
+
+    const clearDropIndicators = () => {
+      this.container?.querySelectorAll('li[data-item-id]').forEach(el => {
+        (el as HTMLElement).style.boxShadow = '';
+      });
+    };
+
     this.container.querySelectorAll('li[data-item-id]').forEach(li => {
-      const id = (li as HTMLElement).dataset.itemId!;
+      const liEl = li as HTMLElement;
+      const id = liEl.dataset.itemId!;
+      const category = liEl.dataset.category!;
+
       const countInput = li.querySelector('input[data-action="set-count"]') as HTMLInputElement | null;
       countInput?.addEventListener('change', () => {
         const v = parseInt(countInput.value, 10);
@@ -427,6 +440,63 @@ export class TodoListView {
       });
       li.querySelector('[data-action="delete"]')?.addEventListener('click', () => {
         store.removeTodoListItem(id);
+      });
+
+      // Drag to reorder within the same category
+      liEl.addEventListener('dragstart', (e) => {
+        dragSrcId = id;
+        dragSrcCategory = category;
+        e.dataTransfer!.setData('application/x-todolist-item', id);
+        e.dataTransfer!.effectAllowed = 'move';
+        liEl.classList.add('opacity-50');
+      });
+
+      liEl.addEventListener('dragend', () => {
+        liEl.classList.remove('opacity-50');
+        clearDropIndicators();
+        dragSrcId = null;
+        dragSrcCategory = null;
+      });
+
+      liEl.addEventListener('dragover', (e) => {
+        if (!e.dataTransfer?.types.includes('application/x-todolist-item')) return;
+        if (dragSrcId === id || dragSrcCategory !== category) return;
+        e.preventDefault();
+        e.stopPropagation();
+        clearDropIndicators();
+        const rect = liEl.getBoundingClientRect();
+        const insertBefore = e.clientY < rect.top + rect.height / 2;
+        liEl.style.boxShadow = insertBefore
+          ? 'inset 0 2px 0 0 #60a5fa'
+          : 'inset 0 -2px 0 0 #60a5fa';
+      });
+
+      liEl.addEventListener('dragleave', (e) => {
+        if (!liEl.contains(e.relatedTarget as Node)) {
+          liEl.style.boxShadow = '';
+        }
+      });
+
+      liEl.addEventListener('drop', (e) => {
+        if (!e.dataTransfer?.types.includes('application/x-todolist-item')) return;
+        if (!dragSrcId || dragSrcCategory !== category) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const items = store.todolist.items.filter(i => i.category === category);
+        const orderedIds = items.map(i => i.id);
+        const srcIndex = orderedIds.indexOf(dragSrcId);
+        const dstIndex = orderedIds.indexOf(id);
+        if (srcIndex === -1 || dstIndex === -1 || srcIndex === dstIndex) {
+          clearDropIndicators();
+          return;
+        }
+        const rect = liEl.getBoundingClientRect();
+        const insertBefore = e.clientY < rect.top + rect.height / 2;
+        orderedIds.splice(srcIndex, 1);
+        const newDstIndex = orderedIds.indexOf(id);
+        orderedIds.splice(insertBefore ? newDstIndex : newDstIndex + 1, 0, dragSrcId);
+        store.reorderTodoListItems(category, orderedIds);
+        clearDropIndicators();
       });
     });
 

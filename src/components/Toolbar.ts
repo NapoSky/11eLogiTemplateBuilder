@@ -91,12 +91,13 @@ export class Toolbar {
           Text
         </button>
         ` : isStockpile ? `
-        <button id="btn-open-csv-modal" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm flex items-center gap-1">
+        <label class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm cursor-pointer flex items-center gap-1">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
           </svg>
           Load Stockpile CSV
-        </button>
+          <input type="file" accept=".csv,.txt" id="csv-upload-toolbar" class="hidden" />
+        </label>
         <div class="flex items-center gap-2 border-l border-gray-600 pl-3">
           <span class="text-xs text-gray-400">Template:</span>
           <div class="flex rounded overflow-hidden border border-gray-600">
@@ -272,7 +273,8 @@ export class Toolbar {
         <div>
           <h3 class="text-sm font-semibold text-gray-300 mb-2">📦 ${fr ? 'Mode Stockpile' : 'Stockpile Mode'}</h3>
           <ul class="text-sm text-gray-400 space-y-1">
-            <li>• <span class="text-gray-300">Load Stockpile CSV</span> ${fr ? '→ Ouvre une modale pour importer un CSV Foxhole (fichier ou presse-papier)' : '→ Opens a modal to import a Foxhole CSV (file or clipboard paste)'}</li>
+            <li>• <span class="text-gray-300">Load Stockpile CSV</span> ${fr ? '→ Importer un export CSV Foxhole' : '→ Import a Foxhole stockpile CSV export'}</li>
+            <li>• <span class="text-gray-300">${fr ? 'Glisser-déposer' : 'Drag & drop'}</span> ${fr ? 'un fichier CSV → Chargement rapide' : 'a CSV file → Quick load'}</li>
             <li>• <span class="text-gray-300">Template</span> ${fr ? ': Current / Official / Load file → Source du template de référence' : ': Current / Official / Load file → Reference template source'}</li>
             <li>• <span class="text-gray-300">Generate Todolist</span> ${fr ? '→ Générer une liste Discord des items manquants (MPF)' : '→ Generate a Discord list of missing items (MPF)'}</li>
           </ul>
@@ -325,8 +327,11 @@ export class Toolbar {
     });
 
     // Stockpile CSV upload
-    this.container.querySelector('#btn-open-csv-modal')?.addEventListener('click', () => {
-      window.dispatchEvent(new CustomEvent('stockpile:open-load-modal'));
+    this.container.querySelector('#csv-upload-toolbar')?.addEventListener('change', (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      window.dispatchEvent(new CustomEvent('stockpile:load-csv', { detail: { file } }));
+      (e.target as HTMLInputElement).value = '';
     });
 
     // Stockpile CSV clear
