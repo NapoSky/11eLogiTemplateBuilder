@@ -425,29 +425,6 @@
   {
     "faction": [
       "neutral",
-      "colonial"
-    ],
-    "imgName": "KRR3_792_Auger.png",
-    "itemName": "KRR3-792 Auger",
-    "itemDesc": "A Kraunian rifle modified for long-range engagements. It doesn't have the range or stopping power of other marksman rifles but more than makes up for it with unmatched reliability in a range of environments and a superior effective rate of fire.",
-    "itemCategory": "small_arms",
-    "itemClass": "Sniper Rifle",
-    "ammoUsed": "7.62mm",
-    "numberProduced": 5,
-    "isTeched": true,
-    "isMpfCraftable": true,
-    "craftLocation": [
-      "factory",
-      "mpf"
-    ],
-    "cost": {
-      "bmat": 250,
-      "rmat": 30
-    }
-  },
-  {
-    "faction": [
-      "neutral",
       "warden"
     ],
     "imgName": "Sampo_Auto_Rifle_77.png",
@@ -517,7 +494,7 @@
       "warden"
     ],
     "imgName": "No_2B_Hawthorne.png",
-    "itemName": "No.2B Hawthorne",
+    "itemName": "No. 2B Hawthorne",
     "itemDesc": "Initially a field-modified Loughcaster, the Hawthorne sports a sawed-off barrel and a much lower profile than its ancestor. While sacrificing accuracy, its lightweight frame opens up the Hawthorne to a much higher degree of flexibility in battle and can be carried alongside a heavier primary firearm.",
     "itemCategory": "small_arms",
     "itemClass": "Rifle",
@@ -553,29 +530,6 @@
     ],
     "cost": {
       "bmat": 100
-    }
-  },
-  {
-    "faction": [
-      "neutral",
-      "warden"
-    ],
-    "imgName": "Clancy_Raca_M4.png",
-    "itemName": "Clancy-Raca M4",
-    "itemDesc": "A heavy-duty, long-range marksman rifle. The Clancy-Raca has one hell of a kick but is fitted with a powerful scope, allowing infantry to survey the battlefield and provide support from a safe location.",
-    "itemCategory": "small_arms",
-    "itemClass": "Sniper Rifle",
-    "ammoUsed": "7.62mm",
-    "numberProduced": 3,
-    "isTeched": true,
-    "isMpfCraftable": true,
-    "craftLocation": [
-      "factory",
-      "mpf"
-    ],
-    "cost": {
-      "bmat": 250,
-      "rmat": 25
     }
   },
   {
@@ -671,7 +625,7 @@
       "neutral",
       "warden"
     ],
-    "imgName": "No_1_The_Liar_Submachine_Gun.png",
+    "imgName": "SMGHeavyWItemIcon.png",
     "itemName": "No.1 \"The Liar\" Submachine Gun",
     "itemDesc": "This unique, heavy-duty submachine gun is not very useful on the run, but with careful aim and adequate cover, becomes a razorblade in the night.",
     "itemCategory": "small_arms",
@@ -760,7 +714,7 @@
       "colonial",
       "warden"
     ],
-    "imgName": "9mm_SMG.png",
+    "imgName": "SubMachineGunAmmoIcon.png",
     "itemName": "9mm",
     "itemDesc": "Standard ammunition for submachine guns.",
     "itemCategory": "small_arms",
@@ -873,7 +827,7 @@
       "neutral",
       "warden"
     ],
-    "imgName": "135_Neville_Anti_Tank_Rifle.png",
+    "imgName": "ATRifleItemIcon.png",
     "itemName": "Neville Anti-Tank Rifle",
     "itemDesc": "The Neville is unmatched in its versatility as a portable, magazine-based anti-armor firearm.",
     "itemCategory": "heavy_arms",
@@ -1657,7 +1611,7 @@
       "colonial",
       "warden"
     ],
-    "imgName": "Shatter_Missile.png",
+    "imgName": "DemolitionRocketAmmoIcon.png",
     "itemName": "Shatter Missile",
     "itemDesc": "Short-range rockets that specialize in breaching bunker and devastating enemy structures.",
     "itemCategory": "heavy_ammunition",
@@ -1705,6 +1659,30 @@
       "colonial",
       "warden"
     ],
+    "imgName": "Absol_Anti_Aircraft_Rounds.png",
+    "itemName": "Absol Anti-Aircraft Rounds",
+    "itemDesc": "Anti-aircraft shells designed for use with mobile AA vehicles.",
+    "itemCategory": "heavy_ammunition",
+    "numberProduced": 5,
+    "isTeched": false,
+    "isMpfCraftable": true,
+    "craftLocation": [
+      "factory",
+      "mpf"
+    ],
+    "cost": {
+      "bmat": 150,
+      "emat": 160
+    },
+    "damageType": "Deals Shrapnel damage",
+    "damageDesc": "Always causes target to bleed"
+  },
+  {
+    "faction": [
+      "neutral",
+      "colonial",
+      "warden"
+    ],
     "imgName": "120mm.png",
     "itemName": "120mm",
     "itemDesc": "Payload for light artillery weapons.",
@@ -1726,6 +1704,7 @@
   {
     "faction": [
       "neutral",
+      "colonial",
       "warden"
     ],
     "imgName": "Quillback_Torpedo.png",
@@ -3017,6 +2996,26 @@
       "neutral",
       "warden"
     ],
+    "imgName": "Sharkey_Devitt_Birdeater_Mk_1.png",
+    "itemName": "Sharkey-Devitt Birdeater Mk. I",
+    "itemDesc": "This modern refitting of the stock Devitt model features an updated turret sporting a twin-barreled anti-air cannon. While it may resemble older models, the Birdeater Mk. I is an effective mobile anti-air platform. Its innards have been shifted around to accommodate specialized shells.",
+    "itemCategory": "vehicles",
+    "itemClass": "Light Tank",
+    "numberProduced": 3,
+    "isTeched": true,
+    "isMpfCraftable": true,
+    "craftLocation": [
+      "mpf"
+    ],
+    "cost": {
+      "rmat": 375
+    }
+  },
+  {
+    "faction": [
+      "neutral",
+      "warden"
+    ],
     "imgName": "Devitt_Mk_III.png",
     "itemName": "Devitt Mk. III",
     "itemDesc": "A highly maneuverable lightweight tank. Designed for urban environments, the Devitt is fitted with a 40mm cannon.",
@@ -3157,6 +3156,26 @@
       "neutral",
       "colonial"
     ],
+    "imgName": "HA_1_Sagaris.png",
+    "itemName": "HA-1 \"Sagaris\"",
+    "itemDesc": "The \"Sagaris\" light tank specializes in anti-air operations. Fitted with a unique twin-barreled AA cannon, enemy aircraft never last long when an HA-1 is deployed.",
+    "itemCategory": "vehicles",
+    "itemClass": "Light Tank",
+    "numberProduced": 3,
+    "isTeched": true,
+    "isMpfCraftable": true,
+    "craftLocation": [
+      "mpf"
+    ],
+    "cost": {
+      "rmat": 375
+    }
+  },
+  {
+    "faction": [
+      "neutral",
+      "colonial"
+    ],
     "imgName": "H5_Hatchet.png",
     "itemName": "H-5 \"Hatchet\"",
     "itemDesc": "A highly maneuverable lightweight tank. Designed for urban environments, the \"Hatchet\" is fitted with a 40mm cannon.",
@@ -3259,7 +3278,7 @@
       "warden"
     ],
     "imgName": "BMS_Universal_Assemly_Rig.png",
-    "itemName": "BMS - Universal Assembly Rig",
+    "itemName": "BMS - Universal Assembly Rig (Construction Vehicle)",
     "itemDesc": "A specialized vehicle designed by the Basset Motor Society used in the construction of large structures.",
     "itemCategory": "vehicles",
     "itemClass": "Construction Vehicle",
@@ -3604,6 +3623,48 @@
       "colonial",
       "warden"
     ],
+    "imgName": "Rooster_Lamploader.png",
+    "itemName": "Rooster - Lamploader",
+    "itemDesc": "A simple towable trailer that holds various fuel sources and can be used to refuel vehicles.",
+    "itemCategory": "vehicles",
+    "itemClass": "Trailer",
+    "numberProduced": 3,
+    "isTeched": true,
+    "isMpfCraftable": true,
+    "craftLocation": [
+      "mpf"
+    ],
+    "cost": {
+      "bmat": 300
+    }
+  },
+  {
+    "faction": [
+      "neutral",
+      "colonial",
+      "warden"
+    ],
+    "imgName": "Rooster_Tumblebox.png",
+    "itemName": "Rooster - Tumblebox",
+    "itemDesc": "A simple towable trailer that holds heavier building materials.",
+    "itemCategory": "vehicles",
+    "itemClass": "Trailer",
+    "numberProduced": 3,
+    "isTeched": true,
+    "isMpfCraftable": true,
+    "craftLocation": [
+      "mpf"
+    ],
+    "cost": {
+      "bmat": 300
+    }
+  },
+  {
+    "faction": [
+      "neutral",
+      "colonial",
+      "warden"
+    ],
     "imgName": "Rooster_Junkwagon.png",
     "itemName": "Rooster - Junkwagon",
     "itemDesc": "A simple towable trailer that holds common building resources.",
@@ -3616,7 +3677,7 @@
       "mpf"
     ],
     "cost": {
-      "rmat": 30
+      "bmat": 300
     }
   },
   {

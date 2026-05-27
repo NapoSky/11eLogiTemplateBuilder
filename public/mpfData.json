@@ -127,6 +127,22 @@
     "maxCrates": 9
   },
   {
+    "iconFilename": "UI/VehicleIcons/LightAAAmmoIcon.png",
+    "itemName": "Absol Anti-Aircraft Rounds",
+    "itemCategory": "heavy_ammunition",
+    "faction": [
+      "neutral",
+      "colonial",
+      "warden"
+    ],
+    "cost": {
+      "bmat": 150,
+      "emat": 160
+    },
+    "numberProduced": 5,
+    "maxCrates": 9
+  },
+  {
     "iconFilename": "UI/ItemIcons/SurfaceMineIcon.png",
     "itemName": "E681-B Hullbreaker Mine",
     "itemCategory": "heavy_ammunition",
@@ -148,6 +164,7 @@
     "itemCategory": "heavy_ammunition",
     "faction": [
       "neutral",
+      "colonial",
       "warden"
     ],
     "cost": {
@@ -1154,21 +1171,6 @@
     "maxCrates": 9
   },
   {
-    "iconFilename": "UI/ItemIcons/SniperRifleItemIcon.png",
-    "itemName": "Clancy-Raca M4",
-    "itemCategory": "small_arms",
-    "faction": [
-      "neutral",
-      "warden"
-    ],
-    "cost": {
-      "bmat": 250,
-      "rmat": 25
-    },
-    "numberProduced": 3,
-    "maxCrates": 9
-  },
-  {
     "iconFilename": "UI/ItemIcons/RevolverItemIcon.png",
     "itemName": "Cometa T2-9",
     "itemCategory": "small_arms",
@@ -1269,21 +1271,6 @@
     "maxCrates": 9
   },
   {
-    "iconFilename": "UI/ItemIcons/SniperRifleCItemIcon.png",
-    "itemName": "KRR3-792 Auger",
-    "itemCategory": "small_arms",
-    "faction": [
-      "neutral",
-      "colonial"
-    ],
-    "cost": {
-      "bmat": 250,
-      "rmat": 30
-    },
-    "numberProduced": 5,
-    "maxCrates": 9
-  },
-  {
     "iconFilename": "UI/ItemIcons/MGWItemIcon.png",
     "itemName": "Malone MK.2",
     "itemCategory": "small_arms",
@@ -1299,7 +1286,7 @@
   },
   {
     "iconFilename": "UI/ItemIcons/RifleShortWIcon.png",
-    "itemName": "No.2B Hawthorne",
+    "itemName": "No. 2B Hawthorne",
     "itemCategory": "small_arms",
     "faction": [
       "neutral",
@@ -1951,7 +1938,7 @@
   },
   {
     "iconFilename": "UI/VehicleIcons/ConstructionVehicleIcon.png",
-    "itemName": "BMS - Universal Assembly Rig",
+    "itemName": "BMS - Universal Assembly Rig (Construction Vehicle)",
     "itemCategory": "vehicles",
     "faction": [
       "neutral",
@@ -2129,6 +2116,20 @@
     ],
     "cost": {
       "rmat": 345
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/LightTank3CVehicleIcon.png",
+    "itemName": "HA-1 \"Sagaris\"",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "colonial"
+    ],
+    "cost": {
+      "rmat": 375
     },
     "numberProduced": 3,
     "maxCrates": 5
@@ -2353,7 +2354,37 @@
       "warden"
     ],
     "cost": {
-      "rmat": 30
+      "bmat": 300
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/FuelTrailerIcon.png",
+    "itemName": "Rooster - Lamploader",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "colonial",
+      "warden"
+    ],
+    "cost": {
+      "bmat": 300
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/MaterialTrailerIcon.png",
+    "itemName": "Rooster - Tumblebox",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "colonial",
+      "warden"
+    ],
+    "cost": {
+      "bmat": 300
     },
     "numberProduced": 3,
     "maxCrates": 5
@@ -2368,6 +2399,20 @@
     ],
     "cost": {
       "bmat": 300
+    },
+    "numberProduced": 3,
+    "maxCrates": 5
+  },
+  {
+    "iconFilename": "UI/VehicleIcons/LightTank3WVehicleIcon.png",
+    "itemName": "Sharkey-Devitt Birdeater Mk. I",
+    "itemCategory": "vehicles",
+    "faction": [
+      "neutral",
+      "warden"
+    ],
+    "cost": {
+      "rmat": 375
     },
     "numberProduced": 3,
     "maxCrates": 5
