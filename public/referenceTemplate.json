@@ -468,10 +468,10 @@
       "id": "3deb0b6c-c68d-4d88-bf4a-4de9ef9dc5b2",
       "title": "Heavy Ammo (Factory)",
       "color": "#8b3538",
-      "x": 29,
-      "y": 99,
-      "width": 482,
-      "height": 152,
+      "x": 4.406360424028274,
+      "y": 94.6204379562044,
+      "width": 560.0010697327739,
+      "height": 151.99999287180657,
       "icons": [
         {
           "id": "aeffb653-86d6-4ac1-8c3e-bb7e488c5a7c",
@@ -517,6 +517,15 @@
           "quantity": 100,
           "gridRow": 0,
           "gridCol": 4
+        },
+        {
+          "id": "a60a34ca-8bdf-4e8f-a69a-3450ef5f416f",
+          "iconId": "UI/VehicleIcons/LightAAAmmoIcon.png",
+          "filename": "UI/VehicleIcons/LightAAAmmoIcon.png",
+          "path": "/assets/icons/UI/VehicleIcons/LightAAAmmoIcon.png",
+          "quantity": 30,
+          "gridRow": 0,
+          "gridCol": 5
         }
       ]
     },
@@ -609,6 +618,33 @@
           "quantity": 200,
           "gridRow": 2,
           "gridCol": 1
+        },
+        {
+          "id": "ebdb84f5-69c5-4da7-a8a6-deda89e45575",
+          "iconId": "UI/ItemIcons/AircraftTorpedoAmmoIcon.png",
+          "filename": "UI/ItemIcons/AircraftTorpedoAmmoIcon.png",
+          "path": "/assets/icons/UI/ItemIcons/AircraftTorpedoAmmoIcon.png",
+          "quantity": 50,
+          "gridRow": 3,
+          "gridCol": 0
+        },
+        {
+          "id": "b0470fe2-32de-4aaf-8e76-0db9da0ee7ad",
+          "iconId": "UI/VehicleIcons/AircraftAmmoIcon.png",
+          "filename": "UI/VehicleIcons/AircraftAmmoIcon.png",
+          "path": "/assets/icons/UI/VehicleIcons/AircraftAmmoIcon.png",
+          "quantity": 50,
+          "gridRow": 3,
+          "gridCol": 1
+        },
+        {
+          "id": "203bb5e1-23a4-4f6f-baee-0ad032826b9c",
+          "iconId": "UI/ItemIcons/MiniTorpedoAmmoIcon.png",
+          "filename": "UI/ItemIcons/MiniTorpedoAmmoIcon.png",
+          "path": "/assets/icons/UI/ItemIcons/MiniTorpedoAmmoIcon.png",
+          "quantity": 50,
+          "gridRow": 3,
+          "gridCol": 2
         }
       ]
     },
@@ -846,6 +882,15 @@
           "quantity": 50,
           "gridRow": 3,
           "gridCol": 4
+        },
+        {
+          "id": "1e849bae-8c5f-4d6e-b7c8-1cf546a000d0",
+          "iconId": "UI/ItemIcons/SeaMineIcon.png",
+          "filename": "UI/ItemIcons/SeaMineIcon.png",
+          "path": "/assets/icons/UI/ItemIcons/SeaMineIcon.png",
+          "quantity": 0,
+          "gridRow": 3,
+          "gridCol": 5
         }
       ]
     },
