@@ -153,6 +153,9 @@ export class TodoListView {
 
     const exportText = renderTodoList(tl);
 
+    // Sauvegarder la position de scroll du wrapper interne avant de re-rendre
+    const prevScrollTop = (this.container.firstElementChild as HTMLElement | null)?.scrollTop ?? 0;
+
     // Wrapper interne : ne jamais toucher this.container.className (partagé avec Canvas)
     this.container.innerHTML = `<div class="h-full overflow-auto p-6 bg-gray-900 text-gray-100">
       <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
@@ -237,6 +240,12 @@ export class TodoListView {
       </div>
     </div>
     `;
+
+    // Restaurer la position de scroll après le re-rendu
+    if (prevScrollTop > 0) {
+      const scrollEl = this.container.firstElementChild as HTMLElement | null;
+      if (scrollEl) scrollEl.scrollTop = prevScrollTop;
+    }
 
     this.attachEvents();
   }
