@@ -203,7 +203,13 @@ export class TodoListView {
               <section class="bg-gray-800 rounded-lg border border-gray-700">
                 <header class="px-4 py-2 border-b border-gray-700 font-semibold text-gray-200">
                   ${MPF_CATEGORY_LABELS[cat]}
-                  <span class="text-xs text-gray-500 ml-2">(${items.length})</span>
+                  ${(() => {
+                    const assetCount = items.length;
+                    const lineCount = items.reduce((s, i) => s + i.orderCount, 0);
+                    const assetLabel = assetCount !== 1 ? 'assets' : 'asset';
+                    const lineLabel = lineCount !== 1 ? 'lines' : 'line';
+                    return `<span class="text-xs text-gray-500 ml-2">(${assetCount} ${assetLabel}, ${lineCount} ${lineLabel})</span>`;
+                  })()}
                 </header>
                 ${catBlocks.length > 0 ? `<div class="p-3 space-y-3 border-b border-gray-700/60">${catBlocks.map(b => this.renderTextBlock(b)).join('')}</div>` : ''}
                 ${items.length > 0 ? `
@@ -230,11 +236,15 @@ export class TodoListView {
             </header>
             <pre id="tl-preview" data-raw="${escapeHtml(exportText)}" class="p-4 text-xs whitespace-pre-wrap font-mono text-gray-200 max-h-[70vh] overflow-auto">${renderPreviewHtml(exportText)}</pre>
           </div>
-          <div class="text-xs text-gray-500">
-            ${tl.items.length} item(s), total = ${this.computeGrandTotal()}.
-          </div>
-          <div class="text-xs text-gray-500 mt-1">
-            ${this.computeCratesSummary()}
+          <div class="text-xs text-gray-500 space-y-2">
+            ${(() => {
+              const totalAssets = tl.items.length;
+              const totalLines = tl.items.reduce((s, i) => s + i.orderCount, 0);
+              const assetLabel = totalAssets !== 1 ? 'assets' : 'asset';
+              const lineLabel = totalLines !== 1 ? 'lines' : 'line';
+              return `<div>${totalAssets} ${assetLabel}, ${totalLines} ${lineLabel} — total = ${this.computeGrandTotal()}.</div>`;
+            })()}
+            <div>${this.computeCratesSummary()}</div>
           </div>
         </div>
       </div>

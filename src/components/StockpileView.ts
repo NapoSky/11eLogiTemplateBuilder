@@ -139,9 +139,16 @@ export function buildComparison(
 
       let stockpileQty = 0;
       if (itemName) {
-        const csvKey = isCrateTarget ? `${itemName} (Crate)` : itemName;
-        stockpileQty = csvItems.get(csvKey) ?? 0;
-        matchedCsvKeys.add(csvKey);
+        // Côté Stockpile, on considère que tout est en crate par défaut.
+        // Pour les Shippables et Vehicles, l'export peut contenir les deux formes
+        // (crate ET assemblé/non-crate) → on somme les deux.
+        const crateKey = `${itemName} (Crate)`;
+        const plainKey = itemName;
+        const crateQty = csvItems.get(crateKey) ?? 0;
+        const plainQty = csvItems.get(plainKey) ?? 0;
+        stockpileQty = crateQty + plainQty;
+        if (crateQty > 0 || csvItems.has(crateKey)) matchedCsvKeys.add(crateKey);
+        if (plainQty > 0 || csvItems.has(plainKey)) matchedCsvKeys.add(plainKey);
       }
 
       let status: RowStatus;
