@@ -27,7 +27,7 @@
     "tailwindcss": "^4.3.0",
     "ts-jest": "^29.4.9",
     "typescript": "^6.0.3",
-    "vite": "^8.0.13"
+    "vite": "^8.0.16"
   },
   "dependencies": {
     "html2canvas-pro": "^1.6.7",
