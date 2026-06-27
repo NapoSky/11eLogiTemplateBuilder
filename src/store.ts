@@ -39,6 +39,9 @@ class Store {
   mpfData: MpfDataEntry[] = [];
   todolist: TodoList = defaultTodoList();
 
+  // Template faction filter (persisted)
+  templateFaction: FactionFilter = 'all';
+
   // Stockpile template source (shared with Toolbar for active state rendering)
   stockpileTplSource: 'current' | 'official' | 'file' = 'current';
   stockpileTplFileName: string | null = null;
@@ -318,6 +321,12 @@ class Store {
     this.emit();
   }
 
+  setTemplateFaction(faction: FactionFilter): void {
+    this.templateFaction = faction;
+    localStorage.setItem('templateFaction', faction);
+    this.emit();
+  }
+
   /** Returns 'added' on success, 'not-mpf' if not craftable, 'wrong-faction' if blocked by current faction filter. */
   addTodoListItemFromIcon(iconFilename: string): 'added' | 'not-mpf' | 'wrong-faction' {
     const entry = this.mpfData.find(e => e.iconFilename === iconFilename);
@@ -481,6 +490,17 @@ class Store {
         return entry.faction.includes(f);
       });
     }
+
+    // In template mode, hide icons that don't belong to the selected faction.
+    // Same logic as todolist faction filter but icons absent from mpfData are always shown.
+    if (this.viewMode === 'template' && this.templateFaction !== 'all') {
+      const f = this.templateFaction;
+      filtered = filtered.filter(i => {
+        const entry = this.mpfData.find(e => e.iconFilename === i.filename);
+        if (!entry) return true; // no mpfData → always show
+        return entry.faction.includes(f);
+      });
+    }
     
     return filtered;
   }
@@ -513,6 +533,11 @@ class Store {
         }
       }
       
+      const savedTemplateFaction = localStorage.getItem('templateFaction') as FactionFilter | null;
+      if (savedTemplateFaction === 'all' || savedTemplateFaction === 'warden' || savedTemplateFaction === 'colonial') {
+        this.templateFaction = savedTemplateFaction;
+      }
+
       const data = localStorage.getItem('template');
       if (data) {
         const template: Template = JSON.parse(data);

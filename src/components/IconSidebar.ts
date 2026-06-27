@@ -22,7 +22,10 @@ export class IconSidebar {
     const existingGrid = this.container.querySelector('#icon-grid');
     const existingSearchInput = this.container.querySelector('#search-input') as HTMLInputElement;
     
-    if (existingGrid && existingSearchInput) {
+    // If the faction block presence doesn't match the current viewMode, force a full rebuild.
+    const existingFactionBlock = this.container.querySelector('[data-faction]');
+    const factionBlockShouldExist = store.viewMode === 'template';
+    if (existingGrid && existingSearchInput && (!!existingFactionBlock === factionBlockShouldExist)) {
       // Just update the icon grid and category buttons without touching the search input
       existingGrid.innerHTML = store.filteredIcons.map(icon => this.renderIcon(icon)).join('');
       
@@ -35,6 +38,14 @@ export class IconSidebar {
           btn.className = 'px-2 py-1 text-xs rounded bg-gray-700 hover:bg-gray-600';
         }
       });
+
+      // Update faction button states (template mode only)
+      if (store.viewMode === 'template') {
+        this.container.querySelectorAll('[data-faction]').forEach(btn => {
+          const f = btn.getAttribute('data-faction');
+          (btn as HTMLElement).className = this.factionButtonClass(f === store.templateFaction);
+        });
+      }
       
       // Re-attach drag events for new icons
       this.attachIconDragEvents();
@@ -51,6 +62,13 @@ export class IconSidebar {
           class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm focus:outline-none focus:border-blue-500"
         />
       </div>
+
+      ${store.viewMode === 'template' ? `
+      <div class="px-2 pt-2 pb-1 border-b border-gray-700 flex gap-1">
+        <button data-faction="all"      class="${this.factionButtonClass(store.templateFaction === 'all')}">Toutes</button>
+        <button data-faction="warden"   class="${this.factionButtonClass(store.templateFaction === 'warden')}">Warden</button>
+        <button data-faction="colonial" class="${this.factionButtonClass(store.templateFaction === 'colonial')}">Colonial</button>
+      </div>` : ''}
       
       <div class="p-2 border-b border-gray-700 flex flex-wrap gap-1">
         <button
@@ -73,6 +91,10 @@ export class IconSidebar {
     `;
 
     this.attachEvents();
+  }
+
+  private factionButtonClass(active: boolean): string {
+    return `px-2 py-1 text-xs rounded flex-1 ${active ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`;
   }
 
   private renderIcon(icon: Icon): string {
@@ -130,6 +152,14 @@ export class IconSidebar {
       btn.addEventListener('click', () => {
         const cat = btn.getAttribute('data-category') as IconCategory | 'Toutes';
         store.setCategory(cat);
+      });
+    });
+
+    // Faction buttons (template mode only)
+    this.container.querySelectorAll('[data-faction]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const f = btn.getAttribute('data-faction') as 'all' | 'warden' | 'colonial';
+        store.setTemplateFaction(f);
       });
     });
 
