@@ -1,4 +1,5 @@
 import { store } from '../store';
+import { bustBackgroundImageCache, inlineCrossOriginBackgrounds, neutralizeTaintingFilters } from '../services/html2canvasBgFix';
 
 export class PreviewPanel {
   private container: HTMLElement | null = null;
@@ -130,10 +131,27 @@ export class PreviewPanel {
         (el as HTMLElement).style.display = 'none';
       });
 
+      // Inline cross-origin backgrounds to data URLs so the preview canvas is not
+      // tainted and the background renders consistently.
+      await inlineCrossOriginBackgrounds(clone);
+      // Drop-shadow filters taint the canvas in html2canvas-pro; neutralize them.
+      neutralizeTaintingFilters(clone);
+      // Workaround html2canvas-pro v2.x: re-arm background-image registration on the clone.
+      bustBackgroundImageCache(clone);
+
       // html2canvas-pro supports oklab/oklch natively - no color conversion needed!
       // width/height/windowWidth/windowHeight forcés pour rendre la preview déterministe
       // (sinon html2canvas utilise window.innerWidth/Height -> dépend de la résolution).
       const { default: html2canvas } = await import('html2canvas-pro');
+      // html2canvas-pro plafonne son cache d'images à 100 entrées (LRU). Au-delà,
+      // les premières icônes parsées sont évincées et n'apparaissent pas dans le rendu.
+      // On dimensionne le cache au nombre réel d'images du template (+ marge).
+      const maxCacheSize = Math.max(
+        clone.querySelectorAll('img').length +
+          clone.querySelectorAll('[style*="background-image"]').length +
+          50,
+        256
+      );
       const result = await html2canvas(clone, {
         backgroundColor: null,
         useCORS: true,
@@ -142,6 +160,7 @@ export class PreviewPanel {
         height: 1080,
         windowWidth: 1920,
         windowHeight: 1080,
+        maxCacheSize,
         logging: false
       });
       

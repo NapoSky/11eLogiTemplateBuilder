@@ -1,4 +1,5 @@
 import { store, IconScale, ICON_SCALES } from '../store';
+import { bustBackgroundImageCache, inlineCrossOriginBackgrounds, neutralizeTaintingFilters } from '../services/html2canvasBgFix';
 
 export class Toolbar {
   private container: HTMLElement | null = null;
@@ -510,10 +511,27 @@ export class Toolbar {
         (el as HTMLElement).style.display = 'none';
       });
 
+      // Inline cross-origin backgrounds to data URLs so the output canvas is not
+      // tainted (otherwise toDataURL throws SecurityError).
+      await inlineCrossOriginBackgrounds(clone);
+      // Drop-shadow filters taint the canvas in html2canvas-pro; neutralize them.
+      neutralizeTaintingFilters(clone);
+      // Workaround html2canvas-pro v2.x: re-arm background-image registration on the clone.
+      bustBackgroundImageCache(clone);
+
       // html2canvas-pro supports oklab/oklch natively - no color conversion needed!
       // width/height/windowWidth/windowHeight forcés à 1920x1080 pour garantir un export
       // déterministe indépendant de la résolution écran et de la taille de la fenêtre.
       const { default: html2canvas } = await import('html2canvas-pro');
+      // html2canvas-pro plafonne son cache d'images à 100 entrées (LRU). Au-delà,
+      // les premières icônes parsées sont évincées et n'apparaissent pas dans l'export.
+      // On dimensionne le cache au nombre réel d'images du template (+ marge).
+      const maxCacheSize = Math.max(
+        clone.querySelectorAll('img').length +
+          clone.querySelectorAll('[style*="background-image"]').length +
+          50,
+        256
+      );
       const result = await html2canvas(clone, {
         backgroundColor: null,
         useCORS: true,
@@ -522,6 +540,7 @@ export class Toolbar {
         height: 1080,
         windowWidth: 1920,
         windowHeight: 1080,
+        maxCacheSize,
         logging: false
       });
       
@@ -534,7 +553,14 @@ export class Toolbar {
       link.click();
     } catch (err) {
       console.error('Export PNG failed:', err);
-      alert('PNG export failed');
+      if (err instanceof DOMException && err.name === 'SecurityError') {
+        alert(
+          "PNG export failed: the background image is hosted on another site that "
+          + "blocks cross-origin access (CORS). Use a preset or upload the image instead."
+        );
+      } else {
+        alert('PNG export failed');
+      }
     }
   }
 

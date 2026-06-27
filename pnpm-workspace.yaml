@@ -1,2 +1,4 @@
 allowBuilds:
   unrs-resolver: true
+patchedDependencies:
+  html2canvas-pro@2.2.0: patches/html2canvas-pro@2.2.0.patch

@@ -4,13 +4,16 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  html2canvas-pro@2.2.0: b30e512bd3538f8724dcd4cea9d936df65957fc400d172af357dd3df61a342a6
+
 importers:
 
   .:
     dependencies:
       html2canvas-pro:
         specifier: ^2.2.0
-        version: 2.2.0
+        version: 2.2.0(patch_hash=b30e512bd3538f8724dcd4cea9d936df65957fc400d172af357dd3df61a342a6)
       interactjs:
         specifier: ^1.10.27
         version: 1.10.27
@@ -3299,7 +3302,7 @@ snapshots:
 
   html-escaper@2.0.2: {}
 
-  html2canvas-pro@2.2.0:
+  html2canvas-pro@2.2.0(patch_hash=b30e512bd3538f8724dcd4cea9d936df65957fc400d172af357dd3df61a342a6):
     dependencies:
       css-line-break: 2.1.0
       text-segmentation: 1.0.3

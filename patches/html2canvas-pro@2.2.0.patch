@@ -1,0 +1,42 @@
+diff --git a/dist/html2canvas-pro.esm.js b/dist/html2canvas-pro.esm.js
+index 31fa750f028a3de67c5b20799a42aea1aa9b5e4c..7ad3ea9733d56facc6fcbb6fae1578fbb9133544 100644
+--- a/dist/html2canvas-pro.esm.js
++++ b/dist/html2canvas-pro.esm.js
+@@ -10714,7 +10714,8 @@ const renderElement = async (element, opts, config) => {
+ 		imageTimeout: opts.imageTimeout ?? 15e3,
+ 		proxy: opts.proxy,
+ 		useCORS: opts.useCORS ?? false,
+-		customIsSameOrigin: opts.customIsSameOrigin
++		customIsSameOrigin: opts.customIsSameOrigin,
++		maxCacheSize: opts.maxCacheSize
+ 	};
+ 	const contextOptions = {
+ 		logging: opts.logging ?? true,
+diff --git a/dist/html2canvas-pro.js b/dist/html2canvas-pro.js
+index 366439e0cc5fc70475bcfc6c7420cc2b657af00e..3f5f26ba97294c397c9bcc01dee472946e1b86ca 100644
+--- a/dist/html2canvas-pro.js
++++ b/dist/html2canvas-pro.js
+@@ -10721,7 +10721,8 @@
+ 			imageTimeout: opts.imageTimeout ?? 15e3,
+ 			proxy: opts.proxy,
+ 			useCORS: opts.useCORS ?? false,
+-			customIsSameOrigin: opts.customIsSameOrigin
++			customIsSameOrigin: opts.customIsSameOrigin,
++			maxCacheSize: opts.maxCacheSize
+ 		};
+ 		const contextOptions = {
+ 			logging: opts.logging ?? true,
+diff --git a/dist/lib/core/render-element.js b/dist/lib/core/render-element.js
+index 5c5822d2b3348617c61cf731bf672ed9cf4b16ee..f19d7607e06457f31a53f8f7d7cd585137e00667 100644
+--- a/dist/lib/core/render-element.js
++++ b/dist/lib/core/render-element.js
+@@ -64,7 +64,8 @@ const renderElement = async (element, opts, config) => {
+         imageTimeout: opts.imageTimeout ?? 15000,
+         proxy: opts.proxy,
+         useCORS: opts.useCORS ?? false,
+-        customIsSameOrigin: opts.customIsSameOrigin
++        customIsSameOrigin: opts.customIsSameOrigin,
++        maxCacheSize: opts.maxCacheSize
+     };
+     const contextOptions = {
+         logging: opts.logging ?? true,
