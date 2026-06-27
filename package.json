@@ -1,10 +1,11 @@
 {
   "name": "11e-template-builder",
   "version": "2.0.0",
+  "packageManager": "pnpm@11.5.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run build:mpf && tsc && vite build",
+    "build": "pnpm run build:mpf && tsc && vite build",
     "build:mpf": "node --experimental-strip-types scripts/buildMpfData.ts",
     "preview": "vite preview",
     "test": "NODE_OPTIONS='--experimental-vm-modules' jest --silent",
@@ -14,23 +15,23 @@
   },
   "devDependencies": {
     "@interactjs/types": "^1.10.27",
-    "@tailwindcss/vite": "^4.3.0",
+    "@tailwindcss/vite": "^4.3.1",
     "@types/jest": "^30.0.0",
-    "@types/node": "^25.8.0",
+    "@types/node": "^26.0.1",
     "@types/sortablejs": "^1.15.9",
-    "autoprefixer": "^10.5.0",
+    "autoprefixer": "^10.5.2",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
     "jest-junit": "^17.0.0",
     "jsdom": "^29.1.1",
-    "postcss": "^8.5.14",
-    "tailwindcss": "^4.3.0",
-    "ts-jest": "^29.4.9",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^4.3.1",
+    "ts-jest": "^29.4.11",
     "typescript": "^6.0.3",
-    "vite": "^8.0.13"
+    "vite": "^8.1.0"
   },
   "dependencies": {
-    "html2canvas-pro": "^1.6.7",
+    "html2canvas-pro": "^2.2.0",
     "interactjs": "^1.10.27",
     "sortablejs": "^1.15.7"
   }
