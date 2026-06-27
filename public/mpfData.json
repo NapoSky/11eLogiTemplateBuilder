@@ -883,7 +883,7 @@
   },
   {
     "iconFilename": "UI/ItemIcons/RevolverAmmoItemIcon.png",
-    "itemName": ".44",
+    "itemName": ".44 Mag",
     "itemCategory": "small_arms",
     "faction": [
       "neutral",
