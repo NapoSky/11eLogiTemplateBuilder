@@ -277,7 +277,7 @@ export class TodoListView {
       <li class="flex items-center gap-3 px-3 py-2 hover:bg-gray-700/30" data-item-id="${item.id}" data-category="${item.category}" draggable="true">
         <span class="cursor-grab text-gray-500 hover:text-gray-300 select-none text-base leading-none px-0.5" title="Drag to reorder">⠿</span>
         <span class="text-lg select-none w-7 text-center">${letter}</span>
-        <div class="relative w-8 h-8 shrink-0">
+        <div class="relative w-8 h-8 shrink-0" title="${item.numberProduced} items/crate">
           <img src="${BASE_URL}assets/icons/${item.iconFilename}" alt=""
                class="w-8 h-8 object-contain"
                onerror="this.style.visibility='hidden'" />

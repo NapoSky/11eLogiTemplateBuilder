@@ -1,5 +1,5 @@
 import { store } from '../store';
-import { CATEGORIES, IconCategory, Icon } from '../types';
+import { CATEGORIES, IconCategory, Icon, MpfDataEntry } from '../types';
 
 export class IconSidebar {
   private container: HTMLElement | null = null;
@@ -76,6 +76,12 @@ export class IconSidebar {
   }
 
   private renderIcon(icon: Icon): string {
+    const mpfEntry: MpfDataEntry | undefined = store.viewMode === 'todolist'
+      ? store.mpfData.find(e => e.iconFilename === icon.filename)
+      : undefined;
+    const tooltipTitle = mpfEntry
+      ? `${icon.displayName} — ${mpfEntry.numberProduced} items/crate`
+      : icon.displayName;
     return `
       <div
         class="sidebar-icon aspect-square bg-gray-800 rounded p-1 cursor-grab hover:bg-gray-700 flex items-center justify-center"
@@ -84,7 +90,7 @@ export class IconSidebar {
         data-icon-filename="${icon.filename}"
         data-icon-path="${icon.path}"
         data-icon-name="${icon.displayName}"
-        title="${icon.displayName}"
+        title="${tooltipTitle}"
       >
         <img src="${icon.path}" alt="${icon.displayName}" class="w-full h-full object-contain" loading="lazy" />
       </div>
