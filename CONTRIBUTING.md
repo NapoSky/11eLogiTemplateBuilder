@@ -18,7 +18,7 @@ Thank you for your interest in the project! This guide explains how to propose c
 ## Prerequisites
 
 - A [GitHub](https://github.com) account
-- Node.js ≥ 24 and npm
+- Node.js ≥ 24 and pnpm
 - Basic Git knowledge (fork, branch, commit, push)
 
 ---
@@ -33,10 +33,10 @@ git clone https://github.com/<your-username>/11eLogiTemplateBuilder.git
 cd 11eLogiTemplateBuilder
 
 # 3. Install dependencies
-npm install
+pnpm install
 
 # 4. Start the development server
-npm run dev
+pnpm run dev
 # The app is available at http://localhost:5173
 
 # 5. Create a dedicated branch for your contribution
@@ -74,7 +74,7 @@ Template backgrounds are located in **`public/assets/backgrounds/`** and declare
 }
 ```
 
-3. Start the app (`npm run dev`) and verify the preset appears correctly in the **Background → Preset** modal.
+3. Start the app (`pnpm run dev`) and verify the preset appears correctly in the **Background → Preset** modal.
 4. Commit your image **and** the updated `manifest.json`.
 
 ---
@@ -115,7 +115,7 @@ Faction-specific icons carry a `C` (Colonial) or `W` (Warden) suffix.
 1. Add your PNG file to the correct subfolder of `public/assets/icons/`.
 2. Declare the icon in `public/iconMapping.json` (see next section).
 3. Assign it a category in `public/categoryMapping.json` (see next section).
-4. Run `npm run dev` and verify the icon appears in the sidebar, in the correct category.
+4. Run `pnpm run dev` and verify the icon appears in the sidebar, in the correct category.
 
 ---
 
@@ -175,10 +175,10 @@ Once your changes are ready and tested locally:
 
 ```bash
 # TypeScript check (no errors expected)
-npx tsc --noEmit
+pnpm exec tsc --noEmit
 
 # Test suite (all must pass)
-npm test
+pnpm test
 
 # Commit and push
 git add .

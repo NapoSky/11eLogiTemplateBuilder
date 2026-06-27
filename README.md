@@ -31,13 +31,13 @@ A stockpile template generator for the game Foxhole, designed for the 11eRC-FL r
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Start the development server
-npm run dev
+pnpm run dev
 
 # Production build
-npm run build
+pnpm run build
 ```
 
 ### Workflow
@@ -158,6 +158,7 @@ Use the **S** / **M** / **L** buttons in the toolbar to adjust the global icon s
 ## 🛠️ Tech stack
 
 - **TypeScript**: Static typing
+- **pnpm**: Fast, disk-efficient package manager
 - **Vite**: Fast build and HMR
 - **Tailwind CSS v4**: Utility-first styles
 - **interact.js**: Section drag & resize
