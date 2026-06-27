@@ -128,6 +128,45 @@ describe('parseCSV', () => {
     const { items } = parseCSV(csv);
     expect(items.get('Argenti r.II Rifle')).toBe(7);
   });
+
+  // ── Support des exports CSV en français ──────────────────────────────────
+
+  test('traduit (Caisse) en (Crate)', () => {
+    const csv = `Morgen's Crossing,2024.01.15-12.30.00\nNo.2 Loughcaster (Caisse),100\n`;
+    const { items } = parseCSV(csv);
+    expect(items.get('No.2 Loughcaster (Crate)')).toBe(100);
+    expect(items.has('No.2 Loughcaster (Caisse)')).toBe(false);
+  });
+
+  test('traduit les noms français en noms anglais', () => {
+    const csv = `Base FR,2024.01.15-12.30.00\nFusil Auto Sampo 77 (Caisse),92\n7 92 mm (Caisse),100\nObus de Mortier à Fragmentation (Caisse),6\nChevrotines (Caisse),38\n`;
+    const { items } = parseCSV(csv);
+    expect(items.get('Sampo Auto-Rifle 77 (Crate)')).toBe(92);
+    expect(items.get('7.92mm (Crate)')).toBe(100);
+    expect(items.get('Shrapnel Mortar Shell (Crate)')).toBe(6);
+    expect(items.get('Buckshot (Crate)')).toBe(38);
+  });
+
+  test('les noms identiques FR/EN ne sont pas altérés', () => {
+    const csv = `Base,2024.01.01-00.00.00\nBonesaw MK.3 (Caisse),3\nKRN886-127 Gast Machine Gun (Caisse),5\n`;
+    const { items } = parseCSV(csv);
+    expect(items.get('Bonesaw MK.3 (Crate)')).toBe(3);
+    expect(items.get('KRN886-127 Gast Machine Gun (Crate)')).toBe(5);
+  });
+
+  test('traduit les véhicules en français', () => {
+    const csv = `Base,2024.01.01-00.00.00\nSemi-chenillé Niska Mk. I (Caisse),9\nGrue Mobile BMS de Classe 2 (Caisse),1\n`;
+    const { items } = parseCSV(csv);
+    expect(items.get('Niska Mk. I Gun Motor Carriage (Crate)')).toBe(9);
+    expect(items.get('BMS - Class 2 Mobile Auto-Crane (Crate)')).toBe(1);
+  });
+
+  test('traduit les uniformes en français', () => {
+    const csv = `Base,2024.01.01-00.00.00\nManteau de Spécialiste (Caisse),0\nParka Caoivienne (Caisse),60\n`;
+    const { items } = parseCSV(csv);
+    expect(items.get("Specialist's Overcoat (Crate)")).toBe(0);
+    expect(items.get('Caoivish Parka (Crate)')).toBe(60);
+  });
 });
 
 // ─── isCrateSubtype ───────────────────────────────────────────────────────────

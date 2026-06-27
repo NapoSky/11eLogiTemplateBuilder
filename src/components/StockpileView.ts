@@ -2,6 +2,7 @@ import { store } from '../store';
 import { Template, Section, SectionIcon, MpfDataEntry, TodoListItem, TodoList, MpfCategory, generateId } from '../types';
 import { getBaseUrl } from '../config';
 import { renderTodoList } from '../services/todoListExporter';
+import { translateFrenchItemName } from '../services/frenchItemNames';
 
 // ─── Local types ──────────────────────────────────────────────────────────────
 
@@ -79,11 +80,12 @@ function decodeBuffer(buffer: ArrayBuffer): string {
  *   Lines 2+: "Item Name,quantity"  (quantity = integer, 0 if empty)
  *   Empty lines: ignored (they separate item categories in the export)
  */
-export function parseCSV(text: string): { header: StockpileHeader | null; items: Map<string, number> } {
+export function parseCSV(text: string): { header: StockpileHeader | null; items: Map<string, number>; frenchDetected: boolean } {
   const lines = text.split(/\r?\n/);
   const items = new Map<string, number>();
   let header: StockpileHeader | null = null;
   let firstDataLine = true;
+  let frenchDetected = false;
 
   for (const raw of lines) {
     const line = raw.trim();
@@ -110,13 +112,17 @@ export function parseCSV(text: string): { header: StockpileHeader | null; items:
 
     // Normalize typographic quotes/apostrophes to ASCII equivalents so that
     // Foxhole CSV exports (which use U+2019, U+201C, U+201D) match iconMapping.json
-    const normalizedName = name
+    const afterQuoteNorm = name
       .replace(/[\u2018\u2019]/g, "'")
       .replace(/[\u201C\u201D]/g, '"');
+    const normalizedName = translateFrenchItemName(afterQuoteNorm);
+    // "(Caisse)" is the unambiguous French indicator — English exports always
+    // use "(Crate)", so this check never fires on an English CSV.
+    if (/\(Caisse\)/i.test(afterQuoteNorm)) frenchDetected = true;
     items.set(normalizedName, qty);
   }
 
-  return { header, items };
+  return { header, items, frenchDetected };
 }
 
 /**
@@ -196,6 +202,54 @@ export function buildComparison(
 const CSV_ENTRIES_KEY  = 'stockpile_csv_entries';
 const TPL_FILE_KEY     = 'stockpile_tpl_file';
 const TPL_FILENAME_KEY = 'stockpile_tpl_filename';
+
+function showFrenchWarningToast(): void {
+  // Remove any existing French warning before showing a new one
+  document.getElementById('french-warning-toast')?.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'french-warning-toast';
+  toast.style.cssText = [
+    'position:fixed',
+    'bottom:1.5rem',
+    'left:50%',
+    'transform:translateX(-50%)',
+    'z-index:9999',
+    'max-width:30rem',
+    'width:calc(100% - 2rem)',
+    'background:#78350f',
+    'border:1px solid #d97706',
+    'border-radius:0.5rem',
+    'padding:0.875rem 1rem',
+    'box-shadow:0 4px 12px rgba(0,0,0,0.5)',
+    'display:flex',
+    'align-items:flex-start',
+    'gap:0.625rem',
+    'opacity:1',
+    'transition:opacity 0.3s ease',
+  ].join(';');
+
+  toast.innerHTML = `
+    <span style="font-size:1.1rem;flex-shrink:0;line-height:1.4">⚠️</span>
+    <div style="font-size:0.8rem;line-height:1.45;color:#fef3c7">
+      <strong style="display:block;margin-bottom:0.2rem;color:#fde68a">Stockpile chargée en français détectée</strong>
+      Les noms d'items ont été traduits automatiquement pour correspondre aux données anglaises du template.
+      Pour éviter toute confusion, nous recommandons de passer le jeu en <strong>anglais</strong>
+      (<em>Settings → Language → English</em>) — c'est la langue de référence de la communauté Foxhole.
+    </div>
+    <button style="flex-shrink:0;margin-left:auto;background:none;border:none;color:#fde68a;font-size:1rem;cursor:pointer;line-height:1;padding:0 0 0 0.25rem" aria-label="Fermer">✕</button>
+  `;
+
+  const closeBtn = toast.querySelector('button')!;
+  const dismiss = (): void => {
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 300);
+  };
+  closeBtn.addEventListener('click', dismiss);
+
+  document.body.appendChild(toast);
+  setTimeout(dismiss, 9000);
+}
 
 export class StockpileView {
   private container: HTMLElement | null = null;
@@ -416,13 +470,14 @@ export class StockpileView {
   }
 
   private addCsvEntry(text: string, fileName: string | null): void {
-    const { header, items } = parseCSV(text);
+    const { header, items, frenchDetected } = parseCSV(text);
     const label = header?.location ?? fileName ?? `Stockpile ${this.csvEntries.length + 1}`;
     this.csvEntries.push({ id: generateId(), header, items, label });
     this.result = buildComparison(this.getSections(), this.aggregateItems(), this.iconMapping, null);
     this.saveCSV();
     this.filterStatus = 'all';
     this.render();
+    if (frenchDetected) showFrenchWarningToast();
   }
 
   private handleRemoveEntry(id: string): void {
