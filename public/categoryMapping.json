@@ -116,7 +116,8 @@
       "UI/VehicleIcons/LightAAAmmoIcon.png",
       "UI/VehicleIcons/AerialBombsIcon.png",
       "UI/VehicleIcons/DiveBomberAmmoIcon.png",
-      "UI/VehicleIcons/AircraftAmmoIcon.png"
+      "UI/VehicleIcons/AircraftAmmoIcon.png",
+      "UI/ItemIcons/WaterWallItemIcon.png"
     ]
   },
   
@@ -126,6 +127,8 @@
       "UI/ItemIcons/BinocularsItemIcon.png",
       "UI/ItemIcons/RadioItemIcon.png",
       "UI/ItemIcons/RadioBackpackItemIcon.png",
+      "UI/ItemIcons/AirSirenTIcon.png",
+      "UI/ItemIcons/PilotMaskIcon.png",
       "UI/ItemIcons/SatchelChargeTIcon.png",
       "UI/ItemIcons/ExplosiveTripodIcon.png",
       "UI/ItemIcons/SandbagMaterialItemIcon.png",

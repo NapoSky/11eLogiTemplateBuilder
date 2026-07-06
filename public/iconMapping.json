@@ -1,5 +1,6 @@
 {
   "UI/ItemIcons/Uniforms/AmmoUniformWIcon.png": "Specialist's Overcoat",
+  "UI/ItemIcons/AirSirenTIcon.png": "Air Raid Siren",
   "UI/ItemIcons/AntiTankMineItemIcon.png": "Abisme AT-99",
   "UI/ItemIcons/Uniforms/ArmourUniformC.png": "Velian Flak Vest",
   "UI/ItemIcons/Uniforms/ArmourUniformW.png": "Gunner's Breastplate",
@@ -112,6 +113,7 @@
   "UI/ItemIcons/Uniforms/OfficerUniformWIcon.png": "Officer's Regalia",
   "UI/ItemIcons/Uniforms/ParatrooperUniformWIcon.png": "Cloudrunner's Vesture",
   "UI/ItemIcons/Uniforms/PilotUniformWIcon.png": "Airship Pilot's Flight Suit",
+  "UI/ItemIcons/PilotMaskIcon.png": "Flight Mask",
   "UI/ItemIcons/PistolAmmoItemIcon.png": "8mm",
   "UI/ItemIcons/PistolItemIcon.png": "Ferro 879",
   "UI/ItemIcons/PistolLightWItemIcon.png": "Cascadier 873",
@@ -179,6 +181,7 @@
   "UI/ItemIcons/TraumaKitItemIcon.png": "Trauma Kit",
   "UI/ItemIcons/TrenchMaceWIcon.png": "Falias Raiding Club",
   "UI/ItemIcons/WaterIcon.png": "Water",
+  "UI/ItemIcons/WaterWallItemIcon.png": "Naval Buoy",
   "UI/ItemIcons/WindsockItemIcon.png": "Wind Sock",
   "UI/ItemIcons/WorkWrench.png": "Wrench",
   "UI/Menus/BangaloreItemIcon.png": "Hydra's Whisper",
