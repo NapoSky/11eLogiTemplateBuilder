@@ -130,24 +130,3 @@ export async function inlineCrossOriginBackgrounds(root: HTMLElement): Promise<b
   }
   return allSafe;
 }
-
-/**
- * Neutralize CSS `filter: drop-shadow()` on the export/preview clone.
- *
- * html2canvas-pro renders `drop-shadow` filters through an inline SVG `<filter>`
- * that is drawn back onto the canvas, which **taints** the output canvas even
- * when every image is same-origin. A tainted canvas makes `toDataURL()` throw
- * `SecurityError: Tainted canvases may not be exported`.
- *
- * The drop-shadow is purely decorative, so we drop it on the throwaway clone to
- * keep the export taint-free. The on-screen canvas is untouched.
- */
-export function neutralizeTaintingFilters(root: HTMLElement): void {
-  const elements = [root, ...root.querySelectorAll<HTMLElement>('*')];
-  for (const el of elements) {
-    const filter = el.style.filter || window.getComputedStyle(el).filter;
-    if (filter && filter !== 'none' && filter.includes('drop-shadow')) {
-      el.style.filter = 'none';
-    }
-  }
-}

@@ -1,5 +1,5 @@
 import { store } from '../store';
-import { bustBackgroundImageCache, inlineCrossOriginBackgrounds, neutralizeTaintingFilters } from '../services/html2canvasBgFix';
+import { bustBackgroundImageCache, inlineCrossOriginBackgrounds } from '../services/html2canvasBgFix';
 
 export class PreviewPanel {
   private container: HTMLElement | null = null;
@@ -131,12 +131,11 @@ export class PreviewPanel {
         (el as HTMLElement).style.display = 'none';
       });
 
-      // Inline cross-origin backgrounds to data URLs so the preview canvas is not
-      // tainted and the background renders consistently.
+      // html2canvas-pro 2.2.1 corrige #215 (maxCacheSize) et #216 (drop-shadow taint,
+      // désormais stripé nativement avant la pose de ctx.filter) mais PAS #214
+      // (parseCache renvoie la valeur mémoïsée sans relancer addImage() -> le fond
+      // disparaît au 2e rendu avec la même URL). Contournement toujours nécessaire :
       await inlineCrossOriginBackgrounds(clone);
-      // Drop-shadow filters taint the canvas in html2canvas-pro; neutralize them.
-      neutralizeTaintingFilters(clone);
-      // Workaround html2canvas-pro v2.x: re-arm background-image registration on the clone.
       bustBackgroundImageCache(clone);
 
       // html2canvas-pro supports oklab/oklch natively - no color conversion needed!
