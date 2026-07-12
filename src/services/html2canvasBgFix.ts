@@ -130,3 +130,32 @@ export async function inlineCrossOriginBackgrounds(root: HTMLElement): Promise<b
   }
   return allSafe;
 }
+
+/**
+ * Workaround for an html2canvas-pro v2.x regression (upstream issue #216) where
+ * any element using CSS `filter: drop-shadow(...)` taints the output canvas,
+ * even when every rendered asset is same-origin. `canvas.toDataURL()` /
+ * `toBlob()` then throws `SecurityError: Tainted canvases may not be exported`.
+ *
+ * Confirmed still present as of html2canvas-pro 2.2.3 despite the upstream
+ * issue being marked "fixed" in v2.2.1/v2.2.2. The library's `EffectsRenderer`
+ * still taints the canvas when a `drop-shadow` filter is applied while drawing
+ * same-origin content (see `ctx.filter` / `ctx.shadowBlur` usage internally).
+ *
+ * This is easy to hit unintentionally via Tailwind utilities like
+ * `drop-shadow-sm` / `drop-shadow-md`, which compile to `filter: drop-shadow(...)`.
+ *
+ * Fix: on the throwaway export/preview clone, strip `drop-shadow(...)` from the
+ * `filter` of every element that has it (inline style or computed), just before
+ * calling html2canvas. This only affects the export; the on-screen DOM is
+ * untouched.
+ */
+export function neutralizeTaintingFilters(root: HTMLElement): void {
+  const elements = [root, ...root.querySelectorAll<HTMLElement>('*')];
+  for (const el of elements) {
+    const filter = getComputedStyle(el).filter;
+    if (filter && filter.includes('drop-shadow')) {
+      el.style.filter = 'none';
+    }
+  }
+}

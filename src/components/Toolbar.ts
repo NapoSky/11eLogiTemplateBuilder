@@ -1,5 +1,5 @@
 import { store, IconScale, ICON_SCALES } from '../store';
-import { bustBackgroundImageCache, inlineCrossOriginBackgrounds } from '../services/html2canvasBgFix';
+import { bustBackgroundImageCache, inlineCrossOriginBackgrounds, neutralizeTaintingFilters } from '../services/html2canvasBgFix';
 
 export class Toolbar {
   private container: HTMLElement | null = null;
@@ -511,11 +511,12 @@ export class Toolbar {
         (el as HTMLElement).style.display = 'none';
       });
 
-      // html2canvas-pro 2.2.1 corrige #215 (maxCacheSize) et #216 (drop-shadow taint,
-      // désormais stripé nativement avant la pose de ctx.filter) mais PAS #214
-      // (parseCache renvoie la valeur mémoïsée sans relancer addImage() -> le fond
-      // disparaît au 2e rendu avec la même URL). Contournement toujours nécessaire :
+      // html2canvas-pro 2.2.3 corrige #214 (parseCache) et #215 (maxCacheSize) mais
+      // PAS #216 (filter: drop-shadow() teinte le canvas -> SecurityError au
+      // toDataURL, même sur des assets same-origin). Contournements toujours
+      // nécessaires, dans cet ordre :
       await inlineCrossOriginBackgrounds(clone);
+      neutralizeTaintingFilters(clone);
       bustBackgroundImageCache(clone);
 
       // html2canvas-pro supports oklab/oklch natively - no color conversion needed!
