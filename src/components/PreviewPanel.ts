@@ -131,10 +131,13 @@ export class PreviewPanel {
         (el as HTMLElement).style.display = 'none';
       });
 
-      // html2canvas-pro 2.2.3 corrige #214 (parseCache) et #215 (maxCacheSize) mais
-      // PAS #216 (filter: drop-shadow() teinte le canvas -> SecurityError au
-      // toDataURL, même sur des assets same-origin). Contournements toujours
-      // nécessaires, dans cet ordre :
+// html2canvas-pro 2.2.3 corrige #214 (parseCache) et #215 (maxCacheSize).
+    // #216/#218 (filter: drop-shadow() teintait le canvas -> SecurityError au
+    // toDataURL) est corrigé nativement depuis 2.2.4 (parsing paren-balanced
+    // dans FilterEffect, vérifié empiriquement en 2.3.1 : plus de SecurityError).
+    // neutralizeTaintingFilters() est conservé en defense-in-depth (coût nul,
+    // ne change pas le rendu : la lib ne dessine de toute façon pas encore
+    // l'ombre visuellement malgré le shadowOffsetX/Blur/Color calculé).
       await inlineCrossOriginBackgrounds(clone);
       neutralizeTaintingFilters(clone);
       bustBackgroundImageCache(clone);
