@@ -393,10 +393,10 @@ export class TodoListView {
     const total = { bmat: 0, rmat: 0, emat: 0, hemat: 0 };
     for (const item of store.todolist.items) {
       const c = displayedCost(item);
-      total.bmat += c.bmat;
-      total.rmat += c.rmat;
-      total.emat += c.emat;
-      total.hemat += c.hemat;
+      total.bmat += c.bmat * item.orderCount;
+      total.rmat += c.rmat * item.orderCount;
+      total.emat += c.emat * item.orderCount;
+      total.hemat += c.hemat * item.orderCount;
     }
     const parts: string[] = [];
     if (total.bmat) parts.push(`${total.bmat} Bmats`);
@@ -410,10 +410,10 @@ export class TodoListView {
     const total = { bmat: 0, rmat: 0, emat: 0, hemat: 0 };
     for (const item of store.todolist.items) {
       const c = displayedCost(item);
-      total.bmat += c.bmat;
-      total.rmat += c.rmat;
-      total.emat += c.emat;
-      total.hemat += c.hemat;
+      total.bmat += c.bmat * item.orderCount;
+      total.rmat += c.rmat * item.orderCount;
+      total.emat += c.emat * item.orderCount;
+      total.hemat += c.hemat * item.orderCount;
     }
     const parts: string[] = [];
     if (total.bmat) parts.push(`${Math.ceil(total.bmat / 100)} Bmat crate(s)`);
