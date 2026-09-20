@@ -1870,7 +1870,6 @@ export class StockpileView {
     let destinationName = depots.find(depot => depot.role === 'intermediate' && depot.name !== sourceName)?.name
       ?? depots.find(depot => depot.name !== sourceName)!.name;
     let mode: TransportMode = 'freighter';
-    let tripCount = 1;
     let trainCars = 14;
     let globalNotes = '';
     let quantities = new Map<string, number>();
@@ -1919,8 +1918,10 @@ export class StockpileView {
         .filter(route => route.source === sourceName)
         .flatMap(route => route.missions)
         .reduce((total, mission) => {
+          // mission.cargo porte déjà la quantité totale (tous voyages confondus) : pas de
+          // multiplication par tripCount ici.
           const cargo = mission.cargo.find(candidate => cargoKey(candidate) === cargoKey(item));
-          return total + (cargo?.quantity ?? 0) * mission.tripCount;
+          return total + (cargo?.quantity ?? 0);
         }, 0);
       return { ...item, quantity: Math.max(0, item.quantity - plannedQuantity) };
     }).filter(item => item.quantity > 0);
@@ -1951,7 +1952,11 @@ export class StockpileView {
       return routes;
     };
     const renderLoadMeter = (mission: TransportMission): string => {
-      const capacity = transportSlotsPerTrip(mission);
+      const perTripCapacity = transportSlotsPerTrip(mission);
+      const tripCount = Math.max(1, mission.tripCount);
+      // mission.cargo est la quantité totale (tous véhicules confondus) : la jauge doit donc
+      // couvrir la capacité totale (capacité par véhicule x nombre de véhicules), pas juste un trajet.
+      const capacity = perTripCapacity * tripCount;
       const directItems = mission.cargo.filter(item => item.kind !== 'container-crate');
       const directSlots = directItems.reduce((total, item) => total + item.quantity, 0);
       // Un slot "direct" ne contient qu'une seule unité d'un seul item : on déplie la liste pour retrouver, par index, quel item occupe ce slot.
@@ -1984,10 +1989,17 @@ export class StockpileView {
         if (currentBin.length > 0) containerBins.push(currentBin);
       }
       const slots = Array.from({ length: capacity }, (_, index) => {
+        // Un véhicule au-delà du premier ne provient pas de la saisie manuelle mais de la mise à
+        // l'échelle automatique (quantité > capacité d'un seul véhicule) : on le distingue par une
+        // autre couleur (bleu) plutôt que d'afficher un simple conteneur "plein" classique.
+        const isUpscaledVehicle = Math.floor(index / perTripCapacity) > 0;
         if (index < directSlots) {
           const item = directSlotItems[index];
           const tooltip = item ? `${item.itemName} (${directKindLabel(item.kind as CargoKind)})` : '';
-          return `<span class="grid min-h-10 cursor-help place-items-center rounded border border-cyan-700 bg-cyan-950/50 px-1 text-center text-[10px] text-cyan-300" data-tooltip="${escapeHtml(tooltip)}">Shippable</span>`;
+          const colors = isUpscaledVehicle
+            ? 'border-blue-600 bg-blue-950/40 text-blue-300'
+            : 'border-cyan-700 bg-cyan-950/50 text-cyan-300';
+          return `<span class="grid min-h-10 cursor-help place-items-center rounded border ${colors} px-1 text-center text-[10px]" data-tooltip="${escapeHtml(tooltip)}">Shippable</span>`;
         }
         const containerIndex = index - directSlots;
         if (containerIndex < containerSlots) {
@@ -1995,19 +2007,25 @@ export class StockpileView {
           const quantity = isPartial ? partialCrates : 60;
           const bin = containerBins[containerIndex] ?? [];
           const tooltip = bin.map(entry => `${entry.quantity} ${entry.itemName}`).join('\n');
-          return `<span class="grid min-h-10 cursor-help place-items-center rounded border ${isPartial ? 'border-amber-600 bg-amber-950/40 text-amber-300' : 'border-green-700 bg-green-950/40 text-green-300'} px-1 text-center text-[10px]" data-tooltip="${escapeHtml(tooltip)}">${quantity}/60<br>crates</span>`;
+          const colors = isPartial
+            ? 'border-amber-600 bg-amber-950/40 text-amber-300'
+            : isUpscaledVehicle
+              ? 'border-blue-600 bg-blue-950/40 text-blue-300'
+              : 'border-green-700 bg-green-950/40 text-green-300';
+          return `<span class="grid min-h-10 cursor-help place-items-center rounded border ${colors} px-1 text-center text-[10px]" data-tooltip="${escapeHtml(tooltip)}">${quantity}/60<br>crates</span>`;
         }
         return '<span class="grid min-h-10 place-items-center rounded border border-gray-700 bg-gray-900/40 px-1 text-center text-[10px] text-gray-600">Empty</span>';
       }).join('');
       const warnings = [
         ...(partialCrates > 0 ? [`<span data-container-warning class="text-amber-400">Incomplete container: ${partialCrates}/60 crates.</span>`] : []),
+        ...(tripCount > 1 ? [`<span class="text-blue-400">Scaled up to ${tripCount} vehicles to carry the full quantity.</span>`] : []),
         ...(usedSlots > capacity ? [`<span class="text-red-400">Over capacity by ${usedSlots - capacity} slot${usedSlots - capacity !== 1 ? 's' : ''}.</span>`] : []),
       ].join(' ');
 
       return `
         <div class="flex items-center justify-between text-xs">
           <span class="text-gray-400">Transport slots</span>
-          <span class="${usedSlots > capacity ? 'text-red-400' : 'text-gray-300'} tabular-nums">${usedSlots}/${capacity} used · ${containerSlots} container${containerSlots !== 1 ? 's' : ''}</span>
+          <span class="${usedSlots > capacity ? 'text-red-400' : tripCount > 1 ? 'text-blue-400' : 'text-gray-300'} tabular-nums">${usedSlots}/${capacity} used · ${containerSlots} container${containerSlots !== 1 ? 's' : ''}${tripCount > 1 ? ` · x${tripCount}` : ''}</span>
         </div>
         <div class="mt-2 grid gap-1.5" style="grid-template-columns:repeat(${Math.min(capacity, 7)},minmax(0,1fr))">${slots}</div>
         ${warnings ? `<div class="mt-2 text-xs">${warnings}</div>` : ''}
@@ -2055,10 +2073,10 @@ export class StockpileView {
 
     const renderModal = (): void => {
       const available = getRemainingCargo();
-      // Largest quantity of `targetItem` that still fits alongside the other rows already filled in.
+      // Largest quantity of `targetItem` that fills this single trip to capacity alongside the
+      // other rows already filled in.
       const computeMaxQuantityFor = (targetItem: TransportCargoItem): number => {
         const targetKey = cargoKey(targetItem);
-        const maxAvailable = Math.floor(targetItem.quantity / tripCount);
         const otherCargo = available
           .filter(other => cargoKey(other) !== targetKey)
           .map(other => ({ ...other, quantity: quantities.get(cargoKey(other)) ?? 0 }))
@@ -2069,11 +2087,11 @@ export class StockpileView {
         const otherDirectSlots = otherCargo
           .filter(other => other.kind !== 'container-crate')
           .reduce((total, other) => total + other.quantity, 0);
-        const capacity = transportSlotsPerTrip({ mode, tripCount, trainCars, cargo: [] });
+        const capacity = transportSlotsPerTrip({ mode, tripCount: 1, trainCars, cargo: [] });
         const maxAddable = targetItem.kind === 'container-crate'
           ? Math.max(0, Math.max(0, capacity - otherDirectSlots) * 60 - otherContainerCrates)
           : Math.max(0, capacity - otherDirectSlots - Math.ceil(otherContainerCrates / 60));
-        return Math.max(0, Math.min(maxAvailable, maxAddable));
+        return Math.max(0, Math.min(targetItem.quantity, maxAddable));
       };
       const cargoKindLabel = (kind: CargoKind): string =>
         kind === 'container-crate' ? 'Crates in container' : kind === 'direct-crate' ? 'Crated shippable' : 'Assembled shippable';
@@ -2085,7 +2103,7 @@ export class StockpileView {
         return itemCategoryLookup.get(item.itemName.toLowerCase()) === category;
       };
       const renderCargoRow = (item: TransportCargoItem): string => {
-        const maxPerTrip = Math.floor(item.quantity / tripCount);
+        const maxPerTrip = item.quantity;
         return `<tr>
           <td class="wrap-break-word px-1.5 sm:px-3 py-2 text-gray-200">${escapeHtml(item.itemName)}</td>
           <td class="wrap-break-word px-1.5 sm:px-3 py-2 text-gray-500">${cargoKindLabel(item.kind)}</td>
@@ -2138,21 +2156,27 @@ export class StockpileView {
       const presentItemCategories = CATEGORIES.filter(category =>
         available.some(item => itemCategoryLookup.get(item.itemName.toLowerCase()) === category)
       );
-      const getDraftMission = (): TransportMission => ({
-        mode,
-        tripCount,
-        trainCars,
-        cargo: available
+      const getDraftMission = (): TransportMission => {
+        const rawCargo = available
           .map(item => ({ ...item, quantity: quantities.get(cargoKey(item)) ?? 0 }))
-          .filter(item => item.quantity > 0),
-      });
+          .filter(item => item.quantity > 0);
+        const capacity = transportSlotsPerTrip({ mode, tripCount: 1, trainCars, cargo: [] });
+        const neededSlots = usedTransportSlots({ mode, tripCount: 1, trainCars, cargo: rawCargo });
+        // Le nombre de véhicules se déduit de la quantité saisie : au-delà de la capacité d'un seul
+        // trajet, on "scale" automatiquement (facteur x{N}) plutôt que de bloquer sur un dépassement.
+        // cargo garde la quantité TOTALE demandée (pas de division) afin que la jauge affiche le
+        // remplissage réel (ex. 60 plein + 40 partiel), le facteur xN servant uniquement à couvrir
+        // la capacité totale nécessaire (capacité par voyage x nombre de voyages).
+        const requiredTrips = neededSlots > 0 ? Math.max(1, Math.ceil(neededSlots / capacity)) : 1;
+        return { mode, tripCount: requiredTrips, trainCars, cargo: rawCargo };
+      };
       const mission = getDraftMission();
       const selected = mission.cargo;
       const routes = buildRoutesWithDraft(mission);
       const allMissions = routes.flatMap(route => route.missions);
       const fits = allMissions.length > 0 && allMissions.every(missionFits);
       const slots = usedTransportSlots(mission);
-      const slotCapacity = mode === 'flatbed' ? 1 : mode === 'freighter' ? 5 : trainCars;
+      const slotCapacity = (mode === 'flatbed' ? 1 : mode === 'freighter' ? 5 : trainCars) * Math.max(1, mission.tripCount);
       const discordText = allMissions.length > 0 ? renderTransportList({
         date: new Date(),
         notes: globalNotes.split('\n').filter(Boolean),
@@ -2164,14 +2188,14 @@ export class StockpileView {
           <div class="flex items-center justify-between px-5 py-3 border-b border-gray-700">
             <div>
               <h2 class="font-semibold text-gray-100">Prepare transport</h2>
-              <p class="text-xs text-gray-500">Build one or more loads. Enter what one vehicle carries on each trip.</p>
+              <p class="text-xs text-gray-500">Build one or more loads. Enter the total to send; extra vehicles are added automatically.</p>
             </div>
             <button id="transport-close" class="p-1 text-gray-400 hover:text-white" aria-label="Close">✕</button>
           </div>
           <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.25fr)_minmax(22rem,0.75fr)] flex-1 min-h-0">
             <div class="flex min-h-0 flex-col border-r border-gray-700">
               <div class="min-h-0 flex-1 overflow-y-auto p-4 pb-2">
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
                 <label class="text-xs text-gray-400">Source
                   <select id="transport-source" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded px-2 py-1.5 text-gray-200">
                     ${depots.map(source => `<option value="${escapeHtml(source.name)}" ${source.name === sourceName ? 'selected' : ''}>${escapeHtml(source.name)} (${source.role})</option>`).join('')}
@@ -2186,9 +2210,6 @@ export class StockpileView {
                   <select id="transport-mode" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded px-2 py-1.5 text-gray-200">
                     ${(['flatbed', 'freighter', 'train'] as TransportMode[]).map(value => `<option value="${value}" ${value === mode ? 'selected' : ''}>${value[0].toUpperCase() + value.slice(1)}</option>`).join('')}
                   </select>
-                </label>
-                <label class="text-xs text-gray-400">Identical trips
-                  <input id="transport-trips" type="number" min="1" value="${tripCount}" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded px-2 py-1.5 text-gray-200" />
                 </label>
                 ${mode === 'train' ? `<label class="text-xs text-gray-400">Flatbed cars
                   <input id="transport-train-cars" type="number" min="1" max="14" value="${trainCars}" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded px-2 py-1.5 text-gray-200" />
@@ -2234,7 +2255,7 @@ export class StockpileView {
                           <span class="font-semibold text-blue-300">${letter}</span>
                           <span class="text-gray-400">${escapeHtml(route.source)} → ${escapeHtml(route.destination)}</span>
                           <span class="text-gray-300">${planned.mode === 'train' ? `Train (${planned.trainCars} cars)` : planned.mode[0].toUpperCase() + planned.mode.slice(1)}</span>
-                          <span class="text-gray-500">${usedTransportSlots(planned)}/${transportSlotsPerTrip(planned)} slots${planned.tripCount > 1 ? ` · x${planned.tripCount}` : ''}</span>
+                          <span class="${planned.tripCount > 1 ? 'text-blue-400' : 'text-gray-500'}">${usedTransportSlots(planned)}/${transportSlotsPerTrip(planned) * planned.tripCount} slots${planned.tripCount > 1 ? ` · x${planned.tripCount}` : ''}</span>
                           <span class="ml-auto text-gray-500">${planned.cargo.length} cargo type${planned.cargo.length !== 1 ? 's' : ''}</span>
                           <button class="transport-remove-line p-1 text-gray-500 hover:text-red-400" data-route-index="${routeIndex}" data-mission-index="${missionIndex}" aria-label="Remove transport line">✕</button>
                         </div>
@@ -2264,7 +2285,7 @@ export class StockpileView {
               </div>
               <div class="border border-gray-700 rounded overflow-hidden">
                 <table class="w-full table-fixed text-xs">
-                  <thead class="bg-gray-900 text-gray-500"><tr><th class="w-[28%] text-left px-1.5 sm:px-3 py-2">Item</th><th class="w-[32%] text-left px-1.5 sm:px-3 py-2">Storage</th><th class="w-[18%] text-right px-1.5 sm:px-3 py-2">Remaining</th><th class="w-[22%] text-right px-1.5 sm:px-3 py-2">Load / trip</th></tr></thead>
+                  <thead class="bg-gray-900 text-gray-500"><tr><th class="w-[28%] text-left px-1.5 sm:px-3 py-2">Item</th><th class="w-[32%] text-left px-1.5 sm:px-3 py-2">Storage</th><th class="w-[18%] text-right px-1.5 sm:px-3 py-2">Remaining</th><th class="w-[22%] text-right px-1.5 sm:px-3 py-2">Load</th></tr></thead>
                   <tbody id="transport-cargo-rows" class="divide-y divide-gray-700/60">
                     ${renderCargoRows(itemSearch, categoryFilter)}
                   </tbody>
@@ -2279,7 +2300,7 @@ export class StockpileView {
             <div class="p-4 flex flex-col min-h-0 bg-gray-900/40">
               <div class="flex items-center justify-between mb-3">
                 <span class="text-sm font-medium text-gray-200">11eForge preview</span>
-                <span id="transport-current-capacity" class="text-xs ${missionFits(mission) ? 'text-green-400' : 'text-red-400'}">Current load: ${slots}/${slotCapacity} slots</span>
+                <span id="transport-current-capacity" class="text-xs ${!missionFits(mission) ? 'text-red-400' : mission.tripCount > 1 ? 'text-blue-400' : 'text-green-400'}">Current load: ${slots}/${slotCapacity} slots${mission.tripCount > 1 ? ` · x${mission.tripCount}` : ''}</span>
               </div>
               <label class="text-xs text-gray-500 mb-2">Global notes
                 <textarea id="transport-global-notes" rows="2" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded p-2 text-gray-300 resize-none" placeholder=":exclamation: ...">${escapeHtml(globalNotes)}</textarea>
@@ -2289,7 +2310,7 @@ export class StockpileView {
               </label>
               <textarea id="transport-preview" readonly class="flex-1 min-h-56 bg-gray-950 border border-gray-700 rounded p-3 text-xs font-mono text-gray-300 resize-none">${escapeHtml(discordText)}</textarea>
               <div class="mt-3 flex items-center justify-between gap-3">
-                <span id="transport-summary" class="text-xs text-gray-500">${allMissions.reduce((total, item) => total + item.cargo.reduce((cargoTotal, cargo) => cargoTotal + cargo.quantity, 0) * item.tripCount, 0)} units planned across ${allMissions.reduce((total, item) => total + item.tripCount, 0)} action${allMissions.reduce((total, item) => total + item.tripCount, 0) !== 1 ? 's' : ''}</span>
+                <span id="transport-summary" class="text-xs text-gray-500">${allMissions.reduce((total, item) => total + item.cargo.reduce((cargoTotal, cargo) => cargoTotal + cargo.quantity, 0), 0)} units planned across ${allMissions.reduce((total, item) => total + item.tripCount, 0)} action${allMissions.reduce((total, item) => total + item.tripCount, 0) !== 1 ? 's' : ''}</span>
                 <button id="transport-copy" ${!fits ? 'disabled' : ''} class="px-3 py-1.5 rounded text-xs font-medium ${fits ? 'bg-emerald-700 hover:bg-emerald-600 text-white' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}">Copy list</button>
               </div>
             </div>
@@ -2303,14 +2324,14 @@ export class StockpileView {
         const currentMissions = currentRoutes.flatMap(route => route.missions);
         const currentFits = currentMissions.length > 0 && currentMissions.every(missionFits);
         const currentSlots = usedTransportSlots(currentMission);
-        const currentCapacity = transportSlotsPerTrip(currentMission);
+        const currentCapacity = transportSlotsPerTrip(currentMission) * Math.max(1, currentMission.tripCount);
         const currentDiscordText = currentMissions.length > 0 ? renderTransportList({
           date: new Date(),
           notes: globalNotes.split('\n').filter(Boolean),
           routes: currentRoutes,
         }) : '';
         const actions = currentMissions.reduce((total, item) => total + item.tripCount, 0);
-        const units = currentMissions.reduce((total, item) => total + item.cargo.reduce((cargoTotal, cargo) => cargoTotal + cargo.quantity, 0) * item.tripCount, 0);
+        const units = currentMissions.reduce((total, item) => total + item.cargo.reduce((cargoTotal, cargo) => cargoTotal + cargo.quantity, 0), 0);
         const loadFits = missionFits(currentMission) && currentMission.cargo.length > 0;
         const addButton = modal.querySelector<HTMLButtonElement>('#transport-add-line');
         const copyButton = modal.querySelector<HTMLButtonElement>('#transport-copy');
@@ -2320,8 +2341,9 @@ export class StockpileView {
         const summary = modal.querySelector<HTMLElement>('#transport-summary');
         if (meter) meter.innerHTML = renderLoadMeter(currentMission);
         if (capacityLabel) {
-          capacityLabel.textContent = `Current load: ${currentSlots}/${currentCapacity} slots`;
-          capacityLabel.className = `text-xs ${missionFits(currentMission) ? 'text-green-400' : 'text-red-400'}`;
+          const factor = currentMission.tripCount > 1 ? ` · x${currentMission.tripCount}` : '';
+          capacityLabel.textContent = `Current load: ${currentSlots}/${currentCapacity} slots${factor}`;
+          capacityLabel.className = `text-xs ${!missionFits(currentMission) ? 'text-red-400' : currentMission.tripCount > 1 ? 'text-blue-400' : 'text-green-400'}`;
         }
         if (addButton) {
           addButton.disabled = !loadFits;
@@ -2379,11 +2401,6 @@ export class StockpileView {
       });
       modal.querySelector('#transport-mode')?.addEventListener('change', event => {
         mode = (event.target as HTMLSelectElement).value as TransportMode;
-        quantities = new Map();
-        renderModal();
-      });
-      modal.querySelector('#transport-trips')?.addEventListener('change', event => {
-        tripCount = Math.max(1, Math.floor(Number((event.target as HTMLInputElement).value) || 1));
         quantities = new Map();
         renderModal();
       });

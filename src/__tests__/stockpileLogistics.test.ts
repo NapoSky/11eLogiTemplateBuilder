@@ -279,7 +279,7 @@ describe('capacités de transport', () => {
         mode: 'freighter',
         tripCount: 2,
         trainCars: undefined,
-        cargo: [{ itemName: '7.92mm', quantity: 300, kind: 'container-crate' }],
+        cargo: [{ itemName: '7.92mm', quantity: 600, kind: 'container-crate' }],
       },
       {
         mode: 'freighter',

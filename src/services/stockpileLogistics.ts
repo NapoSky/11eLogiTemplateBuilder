@@ -227,6 +227,18 @@ export function suggestCargoPerTrip(
   return result;
 }
 
+// Additionne deux cargaisons item par item (utilisé pour cumuler le total réel d'une mission
+// regroupant plusieurs voyages identiques).
+function mergeCargoTotals(base: TransportCargoItem[], addition: TransportCargoItem[]): TransportCargoItem[] {
+  const merged = base.map(item => ({ ...item }));
+  for (const item of addition) {
+    const existing = merged.find(candidate => candidate.itemName === item.itemName && candidate.kind === item.kind);
+    if (existing) existing.quantity += item.quantity;
+    else merged.push({ ...item });
+  }
+  return merged;
+}
+
 export function suggestTransportMissions(
   availableCargo: TransportCargoItem[],
   mode: TransportMode,
@@ -235,6 +247,10 @@ export function suggestTransportMissions(
   const remaining = availableCargo.map(item => ({ ...item }));
   const missions: TransportMission[] = [];
   const capacity = transportSlotsPerTrip({ mode, tripCount: 1, trainCars, cargo: [] });
+  // Référence du dernier voyage généré (une seule cargaison plafonnée à la capacité) : sert
+  // uniquement à détecter des voyages identiques consécutifs, indépendamment du cumul total
+  // stocké dans mission.cargo.
+  let previousTripCargo: TransportCargoItem[] | null = null;
 
   while (remaining.some(item => item.quantity > 0)) {
     let remainingSlots = capacity;
@@ -259,12 +275,14 @@ export function suggestTransportMissions(
 
     if (cargo.length === 0) break;
     const previous = missions.at(-1);
-    const sameAsPrevious = previous && JSON.stringify(previous.cargo) === JSON.stringify(cargo);
-    if (sameAsPrevious) {
+    const sameAsPrevious = previousTripCargo !== null && JSON.stringify(previousTripCargo) === JSON.stringify(cargo);
+    if (sameAsPrevious && previous) {
       previous.tripCount += 1;
+      previous.cargo = mergeCargoTotals(previous.cargo, cargo);
     } else {
-      missions.push({ mode, tripCount: 1, trainCars, cargo });
+      missions.push({ mode, tripCount: 1, trainCars, cargo: cargo.map(item => ({ ...item })) });
     }
+    previousTripCargo = cargo;
   }
 
   return missions;
@@ -287,7 +305,9 @@ export function usedTransportSlots(mission: TransportMission): number {
 }
 
 export function missionFits(mission: TransportMission): boolean {
-  return usedTransportSlots(mission) <= transportSlotsPerTrip(mission);
+  // mission.cargo représente le total (sur tous les voyages) : la capacité disponible se
+  // compare donc à la capacité d'un voyage multipliée par le nombre de voyages.
+  return usedTransportSlots(mission) <= transportSlotsPerTrip(mission) * Math.max(1, mission.tripCount);
 }
 
 function formatDate(date: Date): string {
