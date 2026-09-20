@@ -705,15 +705,30 @@ export class StockpileView {
     this.render();
   }
 
-  private handleDepotRoleChange(depotName: string, role: DepotRole): void {
+  private async handleDepotRoleChange(depotName: string, role: DepotRole): Promise<boolean> {
+    // Only one depot can hold the "Intermediate" role at a time (readiness/gap calculations
+    // elsewhere assume a single Intermediate depot) — ask before demoting the previous one
+    // instead of silently swapping it, so the user stays in control of where it ends up.
+    const previousIntermediate = role === 'intermediate'
+      ? this.getDepots().find(depot => depot.role === 'intermediate' && depot.name !== depotName)
+      : undefined;
+
+    if (previousIntermediate) {
+      const confirmed = await confirmDialog(
+        `"${previousIntermediate.name}" is currently the Intermediate depot. Only one depot can hold that role — it will be moved to Backline. Continue?`
+      );
+      if (!confirmed) return false;
+    }
+
     this.csvEntries = this.csvEntries.map(entry => {
       if (entry.depotName === depotName) return { ...entry, role };
-      if (role === 'intermediate' && entry.role === 'intermediate') return { ...entry, role: 'backline' };
+      if (previousIntermediate && entry.depotName === previousIntermediate.name) return { ...entry, role: 'backline' };
       return entry;
     });
     this.rerunComparison();
     this.saveCSV();
     this.render();
+    return true;
   }
 
   private handleClearCsv(): void {
@@ -2527,9 +2542,12 @@ export class StockpileView {
     });
 
     this.container.querySelectorAll<HTMLSelectElement>('.depot-role-select').forEach(select => {
-      select.addEventListener('change', () => {
+      select.addEventListener('change', async () => {
         const depotName = select.getAttribute('data-depot-name');
-        if (depotName) this.handleDepotRoleChange(depotName, select.value as DepotRole);
+        if (!depotName) return;
+        const previousRole = this.csvEntries.find(entry => entry.depotName === depotName)?.role;
+        const applied = await this.handleDepotRoleChange(depotName, select.value as DepotRole);
+        if (!applied && previousRole) select.value = previousRole;
       });
     });
 

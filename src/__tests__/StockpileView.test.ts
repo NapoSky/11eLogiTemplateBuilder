@@ -1140,12 +1140,40 @@ describe('StockpileView – dépôts et transport', () => {
     expect(document.querySelectorAll('.transport-remove-line')).toHaveLength(3);
   });
 
-  test('ne conserve qu’un seul dépôt intermédiaire', () => {
-    setDepotRole(container, 'Kirknell', 'intermediate');
+  test('demande confirmation avant de rétrograder l’ancien dépôt intermédiaire', async () => {
+    const tab = [...container.querySelectorAll<HTMLButtonElement>('.depot-tab-btn')]
+      .find(btn => btn.textContent === 'Kirknell');
+    tab?.click();
+    const select = container.querySelector('.depot-role-select[data-depot-name="Kirknell"]') as HTMLSelectElement;
+    select.value = 'intermediate';
+    select.dispatchEvent(new Event('change'));
+
+    const confirmDialogEl = document.querySelector('#confirm-dialog-ok') as HTMLButtonElement;
+    expect(confirmDialogEl).toBeTruthy();
+    confirmDialogEl.click();
+    await flushPromises();
 
     const intermediateRoles = [...container.querySelectorAll<HTMLSelectElement>('.depot-role-select')]
-      .filter(select => select.value === 'intermediate');
+      .filter(s => s.value === 'intermediate');
     expect(intermediateRoles).toHaveLength(1);
     expect(intermediateRoles[0].getAttribute('data-depot-name')).toBe('Kirknell');
+  });
+
+  test('annuler la confirmation ne modifie aucun rôle', async () => {
+    const tab = [...container.querySelectorAll<HTMLButtonElement>('.depot-tab-btn')]
+      .find(btn => btn.textContent === 'Kirknell');
+    tab?.click();
+    const select = container.querySelector('.depot-role-select[data-depot-name="Kirknell"]') as HTMLSelectElement;
+    select.value = 'intermediate';
+    select.dispatchEvent(new Event('change'));
+
+    (document.querySelector('#confirm-dialog-cancel') as HTMLButtonElement).click();
+    await flushPromises();
+
+    expect(select.value).toBe('backline');
+    const intermediateRoles = [...container.querySelectorAll<HTMLSelectElement>('.depot-role-select')]
+      .filter(s => s.value === 'intermediate');
+    expect(intermediateRoles).toHaveLength(1);
+    expect(intermediateRoles[0].getAttribute('data-depot-name')).toBe('Mercy');
   });
 });
