@@ -226,15 +226,15 @@ export class TodoListView {
             </header>
             <pre id="tl-preview" data-raw="${escapeHtml(exportText)}" class="p-4 text-xs whitespace-pre-wrap font-mono text-gray-200 max-h-[70vh] overflow-auto">${renderPreviewHtml(exportText)}</pre>
           </div>
-          <div class="text-xs text-gray-500 space-y-2">
+          <div class="bg-blue-900/20 border border-blue-700/40 rounded-lg p-3 text-sm text-blue-200">
             ${(() => {
               const totalAssets = tl.items.length;
               const totalLines = tl.items.reduce((s, i) => s + i.orderCount, 0);
               const assetLabel = totalAssets !== 1 ? 'assets' : 'asset';
               const lineLabel = totalLines !== 1 ? 'lines' : 'line';
-              return `<div>${totalAssets} ${assetLabel}, ${totalLines} ${lineLabel} — total = ${this.computeGrandTotal()}.</div>`;
+              return `📦 ${totalAssets} ${assetLabel}, ${totalLines} ${lineLabel} — total = <strong>${this.computeGrandTotal()}</strong>.`;
             })()}
-            <div>${this.computeCratesSummary()}</div>
+            <div class="mt-1 text-xs text-blue-300/70">${this.computeCratesSummary()}</div>
           </div>
         </div>
       </div>

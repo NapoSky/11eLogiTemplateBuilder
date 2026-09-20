@@ -234,9 +234,9 @@ function formatDate(date: Date): string {
 }
 
 function formatCargoItem(item: TransportCargoItem): string {
-  if (item.kind === 'assembled') return `${item.quantity} assembled ${item.itemName}`;
-  const crateLabel = item.quantity === 1 ? 'crate' : 'crates';
-  return `${item.quantity} ${crateLabel} of ${item.itemName}`;
+  // La volumétrie est déjà connue (chargement au maximum systématique) : on n'affiche que le nom
+  // de l'item, sauf pour les items assemblés qui suivent une procédure de chargement différente.
+  return item.kind === 'assembled' ? `assembled ${item.itemName}` : item.itemName;
 }
 
 function formatMission(mission: TransportMission): string {

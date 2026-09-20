@@ -143,7 +143,7 @@ describe('TodoListView – réactivité', () => {
     store.addTodoListItemFromIcon('UI/ItemIcons/RifleCItemIcon.png');
 
     // Trouver le div de résumé (sous la preview Discord) qui contient le total
-    const summaryDivs = Array.from(container.querySelectorAll('.text-xs.text-gray-500'));
+    const summaryDivs = Array.from(container.querySelectorAll('.text-sm.text-blue-200'));
     const summary = summaryDivs.find(el => el.textContent?.includes('asset') && el.textContent?.includes('total'));
     expect(summary?.textContent).toContain('Bmat');
   });

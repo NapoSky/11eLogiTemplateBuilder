@@ -204,7 +204,7 @@ describe('export Transport List 11eForge', () => {
       '__**TRANSPORT LIST -- 25/02**__\n\n' +
       ':exclamation: Weathering Halls = Main stockpile\n\n' +
       "__The King -> Bastard's Block AirDepot__\n" +
-      'A-One flatbed with 30 crates of Quillback Torpedo and 30 crates of 20mm (x3)\n'
+      'A-One flatbed with Quillback Torpedo and 20mm (x3)\n'
     );
   });
 
@@ -242,7 +242,7 @@ describe('export Transport List 11eForge', () => {
       }],
     });
 
-    expect(rendered).toContain('9 crates of .44 Mag, 9 crates of Dusk, 31 crates of Lionclaw and 3 crates of Pitch Gun');
+    expect(rendered).toContain('.44 Mag, Dusk, Lionclaw and Pitch Gun');
     expect(rendered.match(/ and /g)).toHaveLength(1);
   });
 });

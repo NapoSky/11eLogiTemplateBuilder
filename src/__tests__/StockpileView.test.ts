@@ -769,6 +769,26 @@ describe('StockpileView – dépôts et transport', () => {
     expect(localStorageMock.getItem('stockpile_deduct_backline')).toBe('0');
   });
 
+  test('affiche le total de ressources et de caisses nécessaires à la production', () => {
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Cinderwick - Seaport - 11e,now\nDunne Transport,1' },
+    }));
+    const frontRole = container.querySelector('[data-depot-name="Cinderwick"]') as HTMLSelectElement;
+    frontRole.value = 'front';
+    frontRole.dispatchEvent(new Event('change'));
+
+    (container.querySelector('#btn-generate-todolist') as HTMLButtonElement).click();
+    const deductToggle = document.querySelector<HTMLInputElement>('#deduct-backline-toggle');
+    if (deductToggle?.checked) {
+      deductToggle.checked = false;
+      deductToggle.dispatchEvent(new Event('change'));
+    }
+
+    // Dunne Transport : 100 Bmats/crate x 5 crates dégressifs (90+80+70+60+50) = 350 Bmats pour 1 ordre.
+    expect(document.querySelector('#shortage-modal')?.textContent).toContain('total = 350 Bmats');
+    expect(document.querySelector('#shortage-modal')?.textContent).toContain('≈ 4 Bmat crate(s)');
+  });
+
   test('ouvre le préparateur avec une backline et un intermédiaire', () => {
     (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
     (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
@@ -791,6 +811,100 @@ describe('StockpileView – dépôts et transport', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].textContent).toContain('5');
     expect(document.querySelector('#transport-modal')?.textContent).not.toContain('Container de ressources');
+  });
+
+  test('filtre les lignes de cargo avec le champ de recherche sans perdre les quantités déjà saisies', () => {
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+
+    const rowNames = () => [...document.querySelectorAll('#transport-cargo-rows tr')].map(row => row.textContent ?? '');
+    expect(rowNames().some(text => text.includes('Dunne Transport'))).toBe(true);
+    expect(rowNames().some(text => text.includes('Unlisted Cargo'))).toBe(true);
+
+    // "Dunne Transport" a deux lignes (caisse et assemblé) : on cible la caisse.
+    const dunneCrateRow = [...document.querySelectorAll('#transport-cargo-rows tr')]
+      .find(row => row.textContent?.includes('Dunne Transport') && row.textContent?.includes('Crated shippable'))!;
+    const dunneInput = dunneCrateRow.querySelector<HTMLInputElement>('.transport-qty')!;
+    dunneInput.value = '1';
+    dunneInput.dispatchEvent(new Event('input'));
+
+    const searchInput = document.querySelector<HTMLInputElement>('#transport-item-search')!;
+    searchInput.focus();
+    searchInput.value = 'Dunne';
+    searchInput.dispatchEvent(new Event('input'));
+
+    // Les deux lignes "Dunne Transport" (caisse + assemblé) restent visibles, "Unlisted Cargo" disparaît.
+    expect(rowNames()).toHaveLength(2);
+    expect(rowNames().every(text => text.includes('Dunne Transport'))).toBe(true);
+    expect(document.querySelector('#transport-summary')?.textContent).toContain('1 units planned');
+
+    // Le champ conserve son focus et sa valeur, la quantité déjà saisie n'est pas perdue.
+    expect(document.activeElement).toBe(searchInput);
+    const preservedInput = [...document.querySelectorAll('#transport-cargo-rows tr')]
+      .find(row => row.textContent?.includes('Crated shippable'))!
+      .querySelector<HTMLInputElement>('.transport-qty')!;
+    expect(preservedInput.value).toBe('1');
+
+    searchInput.value = 'nothing-matches-this';
+    searchInput.dispatchEvent(new Event('input'));
+    expect(document.querySelector('#transport-cargo-rows')?.textContent).toContain('No item matches "nothing-matches-this"');
+  });
+
+  test('filtre les lignes de cargo par catégorie pour privilégier un type de chargement', () => {
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+
+    const rowNames = () => [...document.querySelectorAll('#transport-cargo-rows tr')].map(row => row.textContent ?? '');
+    const categorySelect = document.querySelector<HTMLSelectElement>('#transport-category-filter')!;
+
+    categorySelect.value = 'assembled';
+    categorySelect.dispatchEvent(new Event('change'));
+    expect(rowNames()).toHaveLength(1);
+    expect(rowNames()[0]).toContain('Dunne Transport');
+    expect(rowNames()[0]).toContain('Assembled shippable');
+
+    categorySelect.value = 'container-crate';
+    categorySelect.dispatchEvent(new Event('change'));
+    expect(rowNames().some(text => text.includes('7.92mm'))).toBe(true);
+    expect(rowNames().some(text => text.includes('Unlisted Cargo'))).toBe(true);
+    expect(rowNames().every(text => !text.includes('Assembled shippable') && !text.includes('Crated shippable'))).toBe(true);
+
+    categorySelect.value = 'all';
+    categorySelect.dispatchEvent(new Event('change'));
+    expect(rowNames().some(text => text.includes('Dunne Transport'))).toBe(true);
+    expect(rowNames().some(text => text.includes('7.92mm'))).toBe(true);
+  });
+
+  test('propose une section de catégories Foxhole (Small Arms, Vehicles...) en plus du type de stockage', () => {
+    store.setIcons([
+      { id: 'ammo', filename: 'AmmoLightIcon.png', displayName: '7.92mm', category: 'Small Arms', path: '/x' },
+      { id: 'dunne', filename: 'TruckVehicleIcon.png', displayName: 'Dunne Transport', category: 'Vehicles', path: '/y' },
+    ]);
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+
+    const rowNames = () => [...document.querySelectorAll('#transport-cargo-rows tr')].map(row => row.textContent ?? '');
+    const categorySelect = document.querySelector<HTMLSelectElement>('#transport-category-filter')!;
+    const optionValues = [...categorySelect.querySelectorAll('option')].map(option => option.value);
+    expect(optionValues).toContain('Small Arms');
+    expect(optionValues).toContain('Vehicles');
+    // Les catégories de jeu sans stock correspondant ne sont pas proposées (évite les choix qui ne mènent nulle part).
+    expect(optionValues).not.toContain('Naval');
+
+    categorySelect.value = 'Small Arms';
+    categorySelect.dispatchEvent(new Event('change'));
+    expect(rowNames().every(text => text.includes('7.92mm'))).toBe(true);
+    expect(rowNames().some(text => text.includes('Dunne Transport'))).toBe(false);
+
+    categorySelect.value = 'Vehicles';
+    categorySelect.dispatchEvent(new Event('change'));
+    expect(rowNames().every(text => text.includes('Dunne Transport'))).toBe(true);
+    expect(rowNames().some(text => text.includes('7.92mm'))).toBe(false);
+
+    categorySelect.value = 'all';
+    categorySelect.dispatchEvent(new Event('change'));
+    expect(rowNames().some(text => text.includes('Dunne Transport'))).toBe(true);
+    expect(rowNames().some(text => text.includes('7.92mm'))).toBe(true);
   });
 
   test('applique et persiste les exclusions de transport personnalisées', () => {
@@ -817,6 +931,25 @@ describe('StockpileView – dépôts et transport', () => {
     expect(document.querySelector<HTMLInputElement>('.transport-exclusion-toggle[value="Basic Materials"]')!.checked).toBe(true);
   });
 
+  test('le bouton Max charge la quantité la plus haute possible sans dépasser la capacité du transport', () => {
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Kirknell - Storage Depot - 11e,now\nBasic Materials,400' },
+    }));
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+
+    const row = [...document.querySelectorAll('#transport-modal tbody tr')].find(candidate => candidate.textContent?.includes('Basic Materials'))!;
+    const maxButton = row.querySelector<HTMLButtonElement>('.transport-qty-max')!;
+    const input = row.querySelector<HTMLInputElement>('.transport-qty')!;
+
+    maxButton.click();
+
+    // 5 slots freighter x 60 caisses/slot = 300, malgré les 400 caisses disponibles en stock.
+    expect(input.value).toBe('300');
+    expect(document.querySelector('#transport-load-meter')?.textContent).toContain('5/5 used');
+    expect((document.querySelector('#transport-add-line') as HTMLButtonElement).disabled).toBe(false);
+  });
+
   test('planifie automatiquement tout le cargo sur plusieurs lignes', () => {
     (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
     (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
@@ -826,6 +959,31 @@ describe('StockpileView – dépôts et transport', () => {
     expect(document.querySelectorAll('.transport-remove-line')).toHaveLength(2);
     expect(preview).toMatch(/^A-One freighter/m);
     expect(preview).toMatch(/^B-One freighter/m);
+  });
+
+  test('propose d\'annuler le plan automatique en un clic, uniquement après avoir planifié automatiquement', () => {
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+
+    expect(document.querySelector('#transport-undo-auto-fill')).toBeNull();
+
+    (document.querySelector('#transport-auto-fill') as HTMLButtonElement).click();
+    expect(document.querySelectorAll('.transport-remove-line')).toHaveLength(2);
+    expect(document.querySelector('#transport-undo-auto-fill')).toBeTruthy();
+
+    (document.querySelector('#transport-undo-auto-fill') as HTMLButtonElement).click();
+    expect(document.querySelectorAll('.transport-remove-line')).toHaveLength(0);
+    expect(document.querySelector('#transport-undo-auto-fill')).toBeNull();
+  });
+
+  test('masque le bouton Undo dès qu\'une ligne est modifiée manuellement après le plan automatique', () => {
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+    (document.querySelector('#transport-auto-fill') as HTMLButtonElement).click();
+    expect(document.querySelector('#transport-undo-auto-fill')).toBeTruthy();
+
+    (document.querySelector('.transport-remove-line') as HTMLButtonElement).click();
+    expect(document.querySelector('#transport-undo-auto-fill')).toBeNull();
   });
 
   test('permet d’ajouter plusieurs lignes manuellement', () => {
@@ -858,6 +1016,47 @@ describe('StockpileView – dépôts et transport', () => {
     expect(document.querySelector('[data-container-warning]')?.textContent).toContain('Incomplete container: 1/60 crates.');
     expect((document.querySelector('#transport-add-line') as HTMLButtonElement).disabled).toBe(false);
     expect(document.querySelector('#transport-load-meter')?.previousElementSibling?.classList.contains('overflow-y-auto')).toBe(true);
+  });
+
+  test('affiche le contenu de chaque slot au survol via un tooltip custom (pas le title natif)', () => {
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+
+    const ammoRow = [...document.querySelectorAll('#transport-cargo-rows tr')].find(row => row.textContent?.includes('7.92mm'))!;
+    const ammoInput = ammoRow.querySelector<HTMLInputElement>('.transport-qty')!;
+    ammoInput.value = '61';
+    ammoInput.dispatchEvent(new Event('input'));
+
+    const dunneCrateRow = [...document.querySelectorAll('#transport-cargo-rows tr')]
+      .find(row => row.textContent?.includes('Dunne Transport') && row.textContent?.includes('Crated shippable'))!;
+    const dunneInput = dunneCrateRow.querySelector<HTMLInputElement>('.transport-qty')!;
+    dunneInput.value = '1';
+    dunneInput.dispatchEvent(new Event('input'));
+
+    // Aucun tooltip natif : les slots portent un data-attribute, pas un `title`.
+    const slotSpans = [...document.querySelectorAll<HTMLElement>('#transport-load-meter [data-tooltip]')];
+    expect(document.querySelectorAll('#transport-load-meter [title]')).toHaveLength(0);
+    const tooltip = document.querySelector<HTMLElement>('#transport-slot-tooltip')!;
+    expect(tooltip.classList.contains('hidden')).toBe(true);
+
+    const shippableSlot = slotSpans.find(span => span.textContent?.includes('Shippable'))!;
+    shippableSlot.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    expect(tooltip.classList.contains('hidden')).toBe(false);
+    expect(tooltip.textContent).toContain('Dunne Transport');
+
+    shippableSlot.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
+    expect(tooltip.classList.contains('hidden')).toBe(true);
+
+    const fullContainerSlot = slotSpans.find(span => span.textContent?.includes('60/60'))!;
+    fullContainerSlot.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    expect(tooltip.textContent).toContain('60 7.92mm');
+
+    const partialContainerSlot = slotSpans.find(span => span.textContent?.includes('1/60'))!;
+    partialContainerSlot.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    expect(tooltip.textContent).toContain('1 7.92mm');
+
+    (document.querySelector('#transport-close') as HTMLButtonElement).click();
+    expect(document.querySelector('#transport-slot-tooltip')).toBeNull();
   });
 
   test('cumule une route backline vers intermédiaire et une route intermédiaire vers front', () => {

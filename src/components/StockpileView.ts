@@ -1,11 +1,13 @@
 import { store } from '../store';
-import { Template, Section, SectionIcon, MpfDataEntry, TodoListItem, TodoList, MpfCategory, generateId } from '../types';
+import { Template, Section, SectionIcon, MpfDataEntry, TodoListItem, TodoList, MpfCategory, IconCategory, CATEGORIES, generateId } from '../types';
 import { getBaseUrl } from '../config';
 import { renderTodoList } from '../services/todoListExporter';
+import { fullOrderCost } from '../services/mpfCalculator';
 import { translateFrenchItemName } from '../services/frenchItemNames';
 import {
   aggregateStockpileItems,
   buildBacklineCargo,
+  CargoKind,
   DEFAULT_TRANSPORT_EXCLUSIONS,
   DepotRole,
   missionFits,
@@ -1401,6 +1403,37 @@ export class StockpileView {
     return renderTodoList(fakeTodoList, now);
   }
 
+  /** Same materials/crates summary as the native MPF Todolist view, computed from shortage rows instead of TodoListItems. */
+  private computeShortageTotals(
+    craftableRows: Array<{ entry: MpfDataEntry; orderCount: number }>,
+  ): { materialsText: string; cratesText: string } {
+    const total = { bmat: 0, rmat: 0, emat: 0, hemat: 0 };
+    for (const { entry, orderCount } of craftableRows) {
+      const cost = fullOrderCost(entry.cost, entry.maxCrates);
+      total.bmat += cost.bmat * orderCount;
+      total.rmat += cost.rmat * orderCount;
+      total.emat += cost.emat * orderCount;
+      total.hemat += cost.hemat * orderCount;
+    }
+
+    const matParts: string[] = [];
+    if (total.bmat) matParts.push(`${total.bmat} Bmats`);
+    if (total.rmat) matParts.push(`${total.rmat} Rmats`);
+    if (total.emat) matParts.push(`${total.emat} Emats`);
+    if (total.hemat) matParts.push(`${total.hemat} HEmats`);
+
+    const crateParts: string[] = [];
+    if (total.bmat) crateParts.push(`${Math.ceil(total.bmat / 100)} Bmat crate(s)`);
+    if (total.rmat) crateParts.push(`${Math.ceil(total.rmat / 20)} Rmat crate(s)`);
+    if (total.emat) crateParts.push(`${Math.ceil(total.emat / 40)} Emat crate(s)`);
+    if (total.hemat) crateParts.push(`${Math.ceil(total.hemat / 30)} HEmat crate(s)`);
+
+    return {
+      materialsText: matParts.length ? matParts.join(' / ') : '—',
+      cratesText: crateParts.length ? `≈ ${crateParts.join(' / ')}` : '',
+    };
+  }
+
   /**
    * Wires an Escape-key listener that triggers `close`, and returns a wrapped
    * close function that also removes the listener (call it from every close path:
@@ -1537,6 +1570,7 @@ export class StockpileView {
       const discordText = this.generateDiscordText(mpfRows);
       const craftableRows = mpfRows.filter(r => r.orderCount > 0);
       const backlineRows = mpfRows.filter(r => r.backlineAvailable > 0);
+      const { materialsText, cratesText } = this.computeShortageTotals(craftableRows);
       const includedDepots = new Set(this.csvEntries
         .filter(entry => includedRoles.has(entry.role))
         .map(entry => entry.depotName));
@@ -1591,6 +1625,12 @@ export class StockpileView {
                 </button>
               </div>
               <textarea id="discord-textarea" readonly class="flex-1 min-h-56 bg-gray-900 rounded border border-gray-700 p-3 text-xs text-gray-300 font-mono resize-none focus:outline-none focus:border-blue-500 leading-relaxed">${escapeHtml(discordText)}</textarea>
+              ${craftableRows.length > 0 ? `
+                <div class="mt-2 bg-blue-900/20 border border-blue-700/40 rounded-lg p-3 text-sm text-blue-200 shrink-0">
+                  📦 ${craftableRows.length} item${craftableRows.length !== 1 ? 's' : ''} to produce — total = <strong>${materialsText}</strong>.
+                  ${cratesText ? `<div class="mt-1 text-xs text-blue-300/70">${cratesText}</div>` : ''}
+                </div>
+              ` : ''}
             </div>
 
             <div class="w-full md:w-72 max-h-56 md:max-h-none shrink-0 flex flex-col p-4 overflow-hidden gap-3">
@@ -1683,9 +1723,20 @@ export class StockpileView {
     let trainCars = 14;
     let globalNotes = '';
     let quantities = new Map<string, number>();
+    let itemSearch = '';
+    let categoryFilter: CargoKind | IconCategory | 'all' = 'all';
     let plannedRoutes: TransportRoute[] = [];
+    // Snapshot pris juste avant un "Plan automatically", pour pouvoir tout annuler en un clic plutôt que ligne par ligne.
+    let preAutoFillSnapshot: TransportRoute[] | null = null;
     const routeNotes = new Map<string, string>();
     const directCargoNames = this.getDirectCargoNames();
+    // Classe chaque item par catégorie de jeu (Small Arms, Heavy Arms...) via le catalogue d'icônes déjà chargé.
+    const itemCategoryLookup = new Map<string, string>();
+    for (const icon of store.icons) {
+      itemCategoryLookup.set(icon.displayName.toLowerCase(), icon.category);
+    }
+    const isCargoKind = (value: string): value is CargoKind =>
+      value === 'container-crate' || value === 'direct-crate' || value === 'assembled';
     const exclusionOptions = [
       'Heavy Explosive Powder',
       'Refined Materials',
@@ -1750,24 +1801,50 @@ export class StockpileView {
     };
     const renderLoadMeter = (mission: TransportMission): string => {
       const capacity = transportSlotsPerTrip(mission);
-      const directSlots = mission.cargo
-        .filter(item => item.kind !== 'container-crate')
-        .reduce((total, item) => total + item.quantity, 0);
-      const crateQuantity = mission.cargo
-        .filter(item => item.kind === 'container-crate')
-        .reduce((total, item) => total + item.quantity, 0);
+      const directItems = mission.cargo.filter(item => item.kind !== 'container-crate');
+      const directSlots = directItems.reduce((total, item) => total + item.quantity, 0);
+      // Un slot "direct" ne contient qu'une seule unité d'un seul item : on déplie la liste pour retrouver, par index, quel item occupe ce slot.
+      const directSlotItems: TransportCargoItem[] = directItems.flatMap(item => Array(item.quantity).fill(item));
+      const directKindLabel = (kind: CargoKind): string => kind === 'direct-crate' ? 'Crated shippable' : 'Assembled shippable';
+      const crateItems = mission.cargo.filter(item => item.kind === 'container-crate');
+      const crateQuantity = crateItems.reduce((total, item) => total + item.quantity, 0);
       const containerSlots = Math.ceil(crateQuantity / 60);
       const partialCrates = crateQuantity % 60;
       const usedSlots = directSlots + containerSlots;
+      // Les caisses en conteneur partagent un même pool de 60 : on répartit chaque item, dans l'ordre, dans des conteneurs de 60 pour savoir ce que contient chaque conteneur.
+      const containerBins: Array<Array<{ itemName: string; quantity: number }>> = [];
+      {
+        let currentBin: Array<{ itemName: string; quantity: number }> = [];
+        let currentBinRemaining = 60;
+        for (const item of crateItems) {
+          let remaining = item.quantity;
+          while (remaining > 0) {
+            if (currentBinRemaining === 0) {
+              containerBins.push(currentBin);
+              currentBin = [];
+              currentBinRemaining = 60;
+            }
+            const take = Math.min(remaining, currentBinRemaining);
+            currentBin.push({ itemName: item.itemName, quantity: take });
+            currentBinRemaining -= take;
+            remaining -= take;
+          }
+        }
+        if (currentBin.length > 0) containerBins.push(currentBin);
+      }
       const slots = Array.from({ length: capacity }, (_, index) => {
         if (index < directSlots) {
-          return '<span class="grid min-h-10 place-items-center rounded border border-cyan-700 bg-cyan-950/50 px-1 text-center text-[10px] text-cyan-300">Shippable</span>';
+          const item = directSlotItems[index];
+          const tooltip = item ? `${item.itemName} (${directKindLabel(item.kind as CargoKind)})` : '';
+          return `<span class="grid min-h-10 cursor-help place-items-center rounded border border-cyan-700 bg-cyan-950/50 px-1 text-center text-[10px] text-cyan-300" data-tooltip="${escapeHtml(tooltip)}">Shippable</span>`;
         }
         const containerIndex = index - directSlots;
         if (containerIndex < containerSlots) {
           const isPartial = containerIndex === containerSlots - 1 && partialCrates > 0;
           const quantity = isPartial ? partialCrates : 60;
-          return `<span class="grid min-h-10 place-items-center rounded border ${isPartial ? 'border-amber-600 bg-amber-950/40 text-amber-300' : 'border-green-700 bg-green-950/40 text-green-300'} px-1 text-center text-[10px]">${quantity}/60<br>crates</span>`;
+          const bin = containerBins[containerIndex] ?? [];
+          const tooltip = bin.map(entry => `${entry.quantity} ${entry.itemName}`).join('\n');
+          return `<span class="grid min-h-10 cursor-help place-items-center rounded border ${isPartial ? 'border-amber-600 bg-amber-950/40 text-amber-300' : 'border-green-700 bg-green-950/40 text-green-300'} px-1 text-center text-[10px]" data-tooltip="${escapeHtml(tooltip)}">${quantity}/60<br>crates</span>`;
         }
         return '<span class="grid min-h-10 place-items-center rounded border border-gray-700 bg-gray-900/40 px-1 text-center text-[10px] text-gray-600">Empty</span>';
       }).join('');
@@ -1789,10 +1866,127 @@ export class StockpileView {
     modal.id = 'transport-modal';
     modal.className = 'fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4';
     document.body.appendChild(modal);
-    const close = this.attachEscapeClose(() => modal.remove());
+
+    // Tooltip custom (thème sombre, positionné dynamiquement) pour remplacer le tooltip natif du navigateur.
+    const tooltip = document.createElement('div');
+    tooltip.id = 'transport-slot-tooltip';
+    tooltip.className = 'pointer-events-none fixed z-[70] hidden max-w-xs whitespace-pre-line rounded border border-gray-600 bg-gray-950 px-2 py-1.5 text-[11px] leading-snug text-gray-100 shadow-2xl';
+    document.body.appendChild(tooltip);
+    const hideTooltip = (): void => tooltip.classList.add('hidden');
+    const showTooltipFor = (target: HTMLElement): void => {
+      const text = target.getAttribute('data-tooltip');
+      if (!text) return;
+      tooltip.textContent = text;
+      tooltip.classList.remove('hidden');
+      const anchorRect = target.getBoundingClientRect();
+      const tooltipRect = tooltip.getBoundingClientRect();
+      let left = anchorRect.left + anchorRect.width / 2 - tooltipRect.width / 2;
+      left = Math.min(Math.max(8, left), window.innerWidth - tooltipRect.width - 8);
+      let top = anchorRect.top - tooltipRect.height - 8;
+      if (top < 8) top = anchorRect.bottom + 8;
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${top}px`;
+    };
+    modal.addEventListener('mouseover', event => {
+      const target = (event.target as HTMLElement).closest<HTMLElement>('[data-tooltip]');
+      if (target) showTooltipFor(target);
+    });
+    modal.addEventListener('mouseout', event => {
+      const target = (event.target as HTMLElement).closest<HTMLElement>('[data-tooltip]');
+      const related = event.relatedTarget as Node | null;
+      if (target && !(related && target.contains(related))) hideTooltip();
+    });
+
+    const close = this.attachEscapeClose(() => {
+      tooltip.remove();
+      modal.remove();
+    });
 
     const renderModal = (): void => {
       const available = getRemainingCargo();
+      // Largest quantity of `targetItem` that still fits alongside the other rows already filled in.
+      const computeMaxQuantityFor = (targetItem: TransportCargoItem): number => {
+        const targetKey = cargoKey(targetItem);
+        const maxAvailable = Math.floor(targetItem.quantity / tripCount);
+        const otherCargo = available
+          .filter(other => cargoKey(other) !== targetKey)
+          .map(other => ({ ...other, quantity: quantities.get(cargoKey(other)) ?? 0 }))
+          .filter(other => other.quantity > 0);
+        const otherContainerCrates = otherCargo
+          .filter(other => other.kind === 'container-crate')
+          .reduce((total, other) => total + other.quantity, 0);
+        const otherDirectSlots = otherCargo
+          .filter(other => other.kind !== 'container-crate')
+          .reduce((total, other) => total + other.quantity, 0);
+        const capacity = transportSlotsPerTrip({ mode, tripCount, trainCars, cargo: [] });
+        const maxAddable = targetItem.kind === 'container-crate'
+          ? Math.max(0, Math.max(0, capacity - otherDirectSlots) * 60 - otherContainerCrates)
+          : Math.max(0, capacity - otherDirectSlots - Math.ceil(otherContainerCrates / 60));
+        return Math.max(0, Math.min(maxAvailable, maxAddable));
+      };
+      const cargoKindLabel = (kind: CargoKind): string =>
+        kind === 'container-crate' ? 'Crates in container' : kind === 'direct-crate' ? 'Crated shippable' : 'Assembled shippable';
+      const categoryLabel = (category: CargoKind | IconCategory): string =>
+        isCargoKind(category) ? cargoKindLabel(category) : category;
+      const itemMatchesCategory = (item: TransportCargoItem, category: CargoKind | IconCategory | 'all'): boolean => {
+        if (category === 'all') return true;
+        if (isCargoKind(category)) return item.kind === category;
+        return itemCategoryLookup.get(item.itemName.toLowerCase()) === category;
+      };
+      const renderCargoRow = (item: TransportCargoItem): string => {
+        const maxPerTrip = Math.floor(item.quantity / tripCount);
+        return `<tr>
+          <td class="wrap-break-word px-1.5 sm:px-3 py-2 text-gray-200">${escapeHtml(item.itemName)}</td>
+          <td class="wrap-break-word px-1.5 sm:px-3 py-2 text-gray-500">${cargoKindLabel(item.kind)}</td>
+          <td class="px-1.5 sm:px-3 py-2 text-right text-gray-400 tabular-nums">${item.quantity}</td>
+          <td class="px-1.5 sm:px-3 py-2 text-right">
+            <div class="flex items-center justify-end gap-1">
+              <input class="transport-qty w-full min-w-0 bg-gray-900 border border-gray-700 rounded px-1.5 sm:px-2 py-1 text-right text-gray-200" data-cargo-key="${escapeHtml(cargoKey(item))}" type="number" min="0" max="${maxPerTrip}" value="${quantities.get(cargoKey(item)) ?? 0}" />
+              <button class="transport-qty-max shrink-0 px-1.5 py-1 text-[10px] font-medium rounded bg-blue-700 hover:bg-blue-600 text-white" data-cargo-key="${escapeHtml(cargoKey(item))}" title="Load the most that still fits in this transport">Max</button>
+            </div>
+          </td>
+        </tr>`;
+      };
+      const renderCargoRows = (filterText: string, category: CargoKind | IconCategory | 'all'): string => {
+        if (available.length === 0) {
+          return '<tr><td colspan="4" class="px-3 py-6 text-center text-gray-500">No transportable stock in this backline.</td></tr>';
+        }
+        const term = filterText.trim().toLowerCase();
+        const filtered = available.filter(item =>
+          itemMatchesCategory(item, category) && (!term || item.itemName.toLowerCase().includes(term))
+        );
+        if (filtered.length === 0) {
+          const message = term ? `No item matches "${filterText.trim()}".` : `No item in category "${categoryLabel(category as CargoKind | IconCategory)}".`;
+          return `<tr><td colspan="4" class="px-3 py-6 text-center text-gray-500 italic">${escapeHtml(message)}</td></tr>`;
+        }
+        return filtered.map(renderCargoRow).join('');
+      };
+      const attachCargoRowListeners = (): void => {
+        modal.querySelectorAll<HTMLInputElement>('.transport-qty').forEach(input => {
+          input.addEventListener('input', () => {
+            const key = input.getAttribute('data-cargo-key');
+            const maximum = Number(input.max);
+            const quantity = Math.min(maximum, Math.max(0, Math.floor(Number(input.value) || 0)));
+            if (key) quantities.set(key, quantity);
+            updateDraftUi();
+          });
+        });
+        modal.querySelectorAll<HTMLButtonElement>('.transport-qty-max').forEach(button => {
+          button.addEventListener('click', () => {
+            const key = button.getAttribute('data-cargo-key');
+            const item = available.find(candidate => cargoKey(candidate) === key);
+            const input = button.previousElementSibling as HTMLInputElement | null;
+            if (!key || !item || !input) return;
+            const quantity = computeMaxQuantityFor(item);
+            quantities.set(key, quantity);
+            input.value = String(quantity);
+            updateDraftUi();
+          });
+        });
+      };
+      const presentItemCategories = CATEGORIES.filter(category =>
+        available.some(item => itemCategoryLookup.get(item.itemName.toLowerCase()) === category)
+      );
       const getDraftMission = (): TransportMission => ({
         mode,
         tripCount,
@@ -1815,7 +2009,7 @@ export class StockpileView {
       }) : '';
 
       modal.innerHTML = `
-        <div class="bg-gray-800 border border-gray-700 rounded-lg shadow-2xl flex flex-col w-full max-w-6xl overflow-hidden" style="max-height:92vh">
+        <div class="bg-gray-800 border border-gray-700 rounded-lg shadow-2xl flex flex-col w-full max-w-6xl overflow-hidden" style="height:92vh">
           <div class="flex items-center justify-between px-5 py-3 border-b border-gray-700">
             <div>
               <h2 class="font-semibold text-gray-100">Prepare transport</h2>
@@ -1873,7 +2067,10 @@ export class StockpileView {
 
               <div class="flex items-center justify-between mb-2">
                 <h3 class="text-sm font-medium text-gray-200">Planned loads</h3>
-                <button id="transport-auto-fill" class="px-2 py-1 text-xs bg-blue-700 hover:bg-blue-600 rounded">Plan this route automatically</button>
+                <div class="flex items-center gap-2">
+                  ${preAutoFillSnapshot ? `<button id="transport-undo-auto-fill" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded">Undo automatic plan</button>` : ''}
+                  <button id="transport-auto-fill" class="px-2 py-1 text-xs bg-blue-700 hover:bg-blue-600 text-white rounded">Plan this route automatically</button>
+                </div>
               </div>
               ${plannedRoutes.length > 0 ? `
                 <div class="mb-4 space-y-1">
@@ -1896,24 +2093,29 @@ export class StockpileView {
                 </div>
               ` : ''}
 
-              <div class="flex items-center justify-between mb-2">
-                <h3 class="text-sm font-medium text-gray-200">Load for this transport</h3>
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <h3 class="text-sm font-medium text-gray-200 whitespace-nowrap">Load for this transport</h3>
+                <select id="transport-category-filter" class="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-blue-500">
+                  <option value="all" ${categoryFilter === 'all' ? 'selected' : ''}>All categories</option>
+                  <optgroup label="Storage type">
+                    <option value="container-crate" ${categoryFilter === 'container-crate' ? 'selected' : ''}>${cargoKindLabel('container-crate')}</option>
+                    <option value="direct-crate" ${categoryFilter === 'direct-crate' ? 'selected' : ''}>${cargoKindLabel('direct-crate')}</option>
+                    <option value="assembled" ${categoryFilter === 'assembled' ? 'selected' : ''}>${cargoKindLabel('assembled')}</option>
+                  </optgroup>
+                  ${presentItemCategories.length > 0 ? `<optgroup label="Item type">
+                    ${presentItemCategories.map(category => `<option value="${escapeHtml(category)}" ${categoryFilter === category ? 'selected' : ''}>${escapeHtml(category)}</option>`).join('')}
+                  </optgroup>` : ''}
+                </select>
+                <input id="transport-item-search" type="text" value="${escapeHtml(itemSearch)}" placeholder="Search item..."
+                  class="flex-1 min-w-32 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-blue-500" />
                 <button id="transport-add-line" ${!missionFits(mission) || selected.length === 0 ? 'disabled' : ''}
-                  class="px-2 py-1 text-xs rounded ${missionFits(mission) && selected.length > 0 ? 'bg-emerald-700 hover:bg-emerald-600' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}">Add this load</button>
+                  class="px-2 py-1 text-xs rounded ${missionFits(mission) && selected.length > 0 ? 'bg-emerald-700 hover:bg-emerald-600 text-white' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}">Add this load</button>
               </div>
               <div class="border border-gray-700 rounded overflow-hidden">
                 <table class="w-full table-fixed text-xs">
                   <thead class="bg-gray-900 text-gray-500"><tr><th class="w-[28%] text-left px-1.5 sm:px-3 py-2">Item</th><th class="w-[32%] text-left px-1.5 sm:px-3 py-2">Storage</th><th class="w-[18%] text-right px-1.5 sm:px-3 py-2">Remaining</th><th class="w-[22%] text-right px-1.5 sm:px-3 py-2">Load / trip</th></tr></thead>
-                  <tbody class="divide-y divide-gray-700/60">
-                    ${available.map(item => {
-                      const maxPerTrip = Math.floor(item.quantity / tripCount);
-                      return `<tr>
-                        <td class="wrap-break-word px-1.5 sm:px-3 py-2 text-gray-200">${escapeHtml(item.itemName)}</td>
-                        <td class="wrap-break-word px-1.5 sm:px-3 py-2 text-gray-500">${item.kind === 'container-crate' ? 'Crates in container' : item.kind === 'direct-crate' ? 'Crated shippable' : 'Assembled shippable'}</td>
-                        <td class="px-1.5 sm:px-3 py-2 text-right text-gray-400 tabular-nums">${item.quantity}</td>
-                        <td class="px-1.5 sm:px-3 py-2 text-right"><input class="transport-qty w-full min-w-0 bg-gray-900 border border-gray-700 rounded px-1.5 sm:px-2 py-1 text-right text-gray-200" data-cargo-key="${escapeHtml(cargoKey(item))}" type="number" min="0" max="${maxPerTrip}" value="${quantities.get(cargoKey(item)) ?? 0}" /></td>
-                      </tr>`;
-                    }).join('') || '<tr><td colspan="4" class="px-3 py-6 text-center text-gray-500">No transportable stock in this backline.</td></tr>'}
+                  <tbody id="transport-cargo-rows" class="divide-y divide-gray-700/60">
+                    ${renderCargoRows(itemSearch, categoryFilter)}
                   </tbody>
                 </table>
               </div>
@@ -1937,7 +2139,7 @@ export class StockpileView {
               <textarea id="transport-preview" readonly class="flex-1 min-h-56 bg-gray-950 border border-gray-700 rounded p-3 text-xs font-mono text-gray-300 resize-none">${escapeHtml(discordText)}</textarea>
               <div class="mt-3 flex items-center justify-between gap-3">
                 <span id="transport-summary" class="text-xs text-gray-500">${allMissions.reduce((total, item) => total + item.cargo.reduce((cargoTotal, cargo) => cargoTotal + cargo.quantity, 0) * item.tripCount, 0)} units planned across ${allMissions.reduce((total, item) => total + item.tripCount, 0)} action${allMissions.reduce((total, item) => total + item.tripCount, 0) !== 1 ? 's' : ''}</span>
-                <button id="transport-copy" ${!fits ? 'disabled' : ''} class="px-3 py-1.5 rounded text-xs font-medium ${fits ? 'bg-emerald-700 hover:bg-emerald-600' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}">Copy list</button>
+                <button id="transport-copy" ${!fits ? 'disabled' : ''} class="px-3 py-1.5 rounded text-xs font-medium ${fits ? 'bg-emerald-700 hover:bg-emerald-600 text-white' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}">Copy list</button>
               </div>
             </div>
           </div>
@@ -1972,13 +2174,13 @@ export class StockpileView {
         }
         if (addButton) {
           addButton.disabled = !loadFits;
-          addButton.className = `px-2 py-1 text-xs rounded ${loadFits ? 'bg-emerald-700 hover:bg-emerald-600' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}`;
+          addButton.className = `px-2 py-1 text-xs rounded ${loadFits ? 'bg-emerald-700 hover:bg-emerald-600 text-white' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}`;
         }
         if (preview) preview.value = currentDiscordText;
         if (summary) summary.textContent = `${units} units planned across ${actions} action${actions !== 1 ? 's' : ''}`;
         if (copyButton) {
           copyButton.disabled = !currentFits;
-          copyButton.className = `px-3 py-1.5 rounded text-xs font-medium ${currentFits ? 'bg-emerald-700 hover:bg-emerald-600' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}`;
+          copyButton.className = `px-3 py-1.5 rounded text-xs font-medium ${currentFits ? 'bg-emerald-700 hover:bg-emerald-600 text-white' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}`;
         }
       };
 
@@ -2040,6 +2242,7 @@ export class StockpileView {
         renderModal();
       });
       modal.querySelector('#transport-auto-fill')?.addEventListener('click', () => {
+        preAutoFillSnapshot = plannedRoutes.map(route => ({ ...route, missions: route.missions.map(m => ({ ...m, cargo: [...m.cargo] })) }));
         plannedRoutes = plannedRoutes.filter(route => route.source !== sourceName || route.destination !== destinationName);
         const missions = suggestTransportMissions(getRemainingCargo(), mode, trainCars);
         if (missions.length > 0) {
@@ -2048,10 +2251,18 @@ export class StockpileView {
         quantities = new Map();
         renderModal();
       });
+      modal.querySelector('#transport-undo-auto-fill')?.addEventListener('click', () => {
+        if (!preAutoFillSnapshot) return;
+        plannedRoutes = preAutoFillSnapshot;
+        preAutoFillSnapshot = null;
+        quantities = new Map();
+        renderModal();
+      });
       modal.querySelector('#transport-add-line')?.addEventListener('click', () => {
         const currentMission = getDraftMission();
         if (currentMission.cargo.length === 0 || !missionFits(currentMission)) return;
         addMissionToCurrentRoute(currentMission);
+        preAutoFillSnapshot = null;
         quantities = new Map();
         renderModal();
       });
@@ -2063,17 +2274,22 @@ export class StockpileView {
             plannedRoutes[routeIndex]?.missions.splice(missionIndex, 1);
             plannedRoutes = plannedRoutes.filter(route => route.missions.length > 0);
           }
+          preAutoFillSnapshot = null;
           renderModal();
         });
       });
-      modal.querySelectorAll<HTMLInputElement>('.transport-qty').forEach(input => {
-        input.addEventListener('input', () => {
-          const key = input.getAttribute('data-cargo-key');
-          const maximum = Number(input.max);
-          const quantity = Math.min(maximum, Math.max(0, Math.floor(Number(input.value) || 0)));
-          if (key) quantities.set(key, quantity);
-          updateDraftUi();
-        });
+      attachCargoRowListeners();
+      modal.querySelector<HTMLInputElement>('#transport-item-search')?.addEventListener('input', event => {
+        itemSearch = (event.target as HTMLInputElement).value;
+        const tbody = modal.querySelector<HTMLTableSectionElement>('#transport-cargo-rows');
+        if (tbody) tbody.innerHTML = renderCargoRows(itemSearch, categoryFilter);
+        attachCargoRowListeners();
+      });
+      modal.querySelector<HTMLSelectElement>('#transport-category-filter')?.addEventListener('change', event => {
+        categoryFilter = (event.target as HTMLSelectElement).value as CargoKind | IconCategory | 'all';
+        const tbody = modal.querySelector<HTMLTableSectionElement>('#transport-cargo-rows');
+        if (tbody) tbody.innerHTML = renderCargoRows(itemSearch, categoryFilter);
+        attachCargoRowListeners();
       });
       modal.querySelector('#transport-global-notes')?.addEventListener('change', event => {
         globalNotes = (event.target as HTMLTextAreaElement).value;
