@@ -4,6 +4,8 @@ import { getBaseUrl } from '../config';
 import { renderTodoList } from '../services/todoListExporter';
 import { fullOrderCost } from '../services/mpfCalculator';
 import { translateFrenchItemName } from '../services/frenchItemNames';
+import { showToast } from '../services/toast';
+import { confirmDialog } from '../services/confirmDialog';
 import {
   aggregateStockpileItems,
   buildBacklineCargo,
@@ -20,8 +22,10 @@ import {
   TransportRoute,
   transportSlotsPerTrip,
   usedTransportSlots,
+  formatLocationLabel,
   inferDepotName,
   normalizeStockItems,
+  suggestDepotRole,
   upsertStockpileSnapshot,
 } from '../services/stockpileLogistics';
 
@@ -60,6 +64,39 @@ function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!)
   );
+}
+
+const ROLE_LABELS: Record<DepotRole, string> = { backline: 'Backline', intermediate: 'Intermediate', front: 'Front' };
+
+interface RoleAccent { border: string; text: string; badgeBg: string; }
+const ROLE_ACCENTS: Record<DepotRole, RoleAccent> = {
+  backline: { border: 'border-lime-500', text: 'text-lime-400', badgeBg: 'bg-lime-900/30 border-lime-700/40' },
+  intermediate: { border: 'border-amber-500', text: 'text-amber-400', badgeBg: 'bg-amber-900/30 border-amber-700/40' },
+  front: { border: 'border-cyan-500', text: 'text-cyan-400', badgeBg: 'bg-cyan-900/30 border-cyan-700/40' },
+};
+
+/** Parse a Foxhole snapshot date string ("YYYY.MM.DD-HH.MM.SS") into a Date, or null if unparsable. */
+function parseSnapshotDate(date: string): Date | null {
+  const match = date.match(/^(\d{4})\.(\d{2})\.(\d{2})-(\d{2})\.(\d{2})\.(\d{2})$/);
+  if (!match) return null;
+  const [y, mo, d, h, mi, s] = match.slice(1).map(Number);
+  return new Date(y, mo - 1, d, h, mi, s);
+}
+
+function formatSnapshotDate(date: Date): string {
+  return date.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+/** Human-readable "recorded at" range across the snapshots that make up a depot card. */
+function formatSnapshotDateRange(entries: CsvEntry[]): string {
+  const dates = entries
+    .map(e => e.header ? parseSnapshotDate(e.header.date) : null)
+    .filter((d): d is Date => d !== null)
+    .sort((a, b) => a.getTime() - b.getTime());
+  if (dates.length === 0) return '—';
+  const first = formatSnapshotDate(dates[0]);
+  const last = formatSnapshotDate(dates[dates.length - 1]);
+  return first === last ? first : `${first} → ${last}`;
 }
 
 export function iconPathToMappingKey(path: string): string {
@@ -287,7 +324,7 @@ export class StockpileView {
   private officialFaction: 'warden' | 'colonial' | null = 'warden';
   private externalTemplateFileName: string | null = null;
   private collapsedSections: Set<string> = new Set();
-  private loadedStockpilesCollapsed = false;
+  private activeDepotTab: Partial<Record<DepotRole, number>> = {};
   private sortByGap = true;
   private hideOk = true;
   private searchQuery = '';
@@ -572,7 +609,7 @@ export class StockpileView {
     const label = header?.location ?? fileName ?? `Stockpile ${this.csvEntries.length + 1}`;
     const depotName = inferDepotName(header?.location ?? label);
     const sameDepot = this.csvEntries.find(entry => entry.depotName === depotName);
-    const role = sameDepot?.role ?? (this.csvEntries.some(entry => entry.role === 'intermediate') ? 'backline' : 'intermediate');
+    const role = sameDepot?.role ?? suggestDepotRole(items);
     this.csvEntries = upsertStockpileSnapshot(this.csvEntries, {
       id: generateId(),
       header,
@@ -586,21 +623,84 @@ export class StockpileView {
     this.filterStatus = 'all';
     this.render();
     if (frenchDetected) showFrenchWarningToast();
+    if (!sameDepot) this.showAssignRoleModal(depotName, role);
   }
 
+  /**
+   * Prompts the user to place a newly loaded depot in the right role column
+   * right away, instead of relying on the auto-assigned heuristic silently.
+   */
+  private showAssignRoleModal(depotName: string, defaultRole: DepotRole): void {
+    const roles: DepotRole[] = ['backline', 'intermediate', 'front'];
+    const modal = document.createElement('div');
+    modal.id = 'assign-role-modal';
+    modal.className = 'fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4';
+    modal.innerHTML = `
+      <div class="bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-5 w-96 max-w-[95vw] text-white">
+        <div class="flex items-center justify-between mb-1">
+          <h2 class="text-base font-semibold">Where is this stockpile?</h2>
+          <button id="assign-role-close" class="text-gray-400 hover:text-white transition-colors" title="Close">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <p class="text-xs text-gray-400 mb-4 truncate" title="${escapeHtml(depotName)}">${escapeHtml(depotName)}</p>
+        <div class="flex flex-col gap-2">
+          ${roles.map(role => {
+            const accent = ROLE_ACCENTS[role];
+            const isDefault = role === defaultRole;
+            return `
+              <button class="assign-role-btn flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg border ${accent.border} ${isDefault ? accent.badgeBg : 'bg-gray-900/40 hover:bg-gray-800'} transition-colors text-left"
+                data-role="${role}">
+                <span class="font-medium ${accent.text}">${ROLE_LABELS[role]}</span>
+                ${isDefault ? `<span class="text-[10px] text-gray-400 shrink-0">Suggested</span>` : ''}
+              </button>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    const close = this.attachEscapeClose(() => modal.remove());
+    modal.querySelector('#assign-role-close')!.addEventListener('click', close);
+    modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+    modal.querySelectorAll<HTMLButtonElement>('.assign-role-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const role = btn.getAttribute('data-role') as DepotRole;
+        close();
+        if (role !== defaultRole) this.handleDepotRoleChange(depotName, role);
+      });
+    });
+  }
+
+
   private handleRemoveEntry(id: string): void {
+    const index = this.csvEntries.findIndex(e => e.id === id);
+    if (index === -1) return;
+    const removed = this.csvEntries[index];
     this.csvEntries = this.csvEntries.filter(e => e.id !== id);
     this.result = this.csvEntries.length > 0
       ? buildComparison(this.getSections(), this.aggregateItems(), this.iconMapping, null)
       : null;
     this.saveCSV();
     this.render();
+
+    showToast(`Snapshot "${formatLocationLabel(removed.label, removed.depotName)}" removed`, {
+      actionLabel: 'Undo',
+      onAction: () => {
+        this.csvEntries.splice(index, 0, removed);
+        this.result = buildComparison(this.getSections(), this.aggregateItems(), this.iconMapping, null);
+        this.saveCSV();
+        this.render();
+      },
+    });
   }
 
-  private handleDepotNameChange(id: string, depotName: string): void {
-    const normalizedName = depotName.trim();
-    if (!normalizedName) return;
-    this.csvEntries = this.csvEntries.map(entry => entry.id === id ? { ...entry, depotName: normalizedName } : entry);
+  private handleDepotGroupNameChange(oldDepotName: string, newDepotName: string): void {
+    const normalizedName = newDepotName.trim();
+    if (!normalizedName || normalizedName === oldDepotName) return;
+    this.csvEntries = this.csvEntries.map(entry => entry.depotName === oldDepotName ? { ...entry, depotName: normalizedName } : entry);
     this.saveCSV();
     this.render();
   }
@@ -878,44 +978,95 @@ export class StockpileView {
 
   private renderLoadedStockpiles(): string {
     if (this.csvEntries.length === 0) return '';
-    const collapsed = this.loadedStockpilesCollapsed;
+    const depots = this.getDepots();
+    const directCargoNames = this.getDirectCargoNames();
+    const roles: DepotRole[] = ['backline', 'intermediate', 'front'];
     return `
-      <div class="mb-4 bg-gray-800/60 border border-gray-700 rounded-lg overflow-hidden">
-        <button id="btn-toggle-loaded-stockpiles" class="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-700/30 transition-colors text-left">
-          <span class="flex items-center gap-2 text-xs font-medium text-gray-400">
-            <svg class="w-3.5 h-3.5 shrink-0 text-gray-500 transition-transform ${collapsed ? '' : 'rotate-90'}"
-                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
-            Loaded stockpile${this.csvEntries.length > 1 ? 's' : ''}
-            <span class="px-1.5 py-0.5 bg-gray-700 rounded text-gray-300">${this.csvEntries.length}</span>
-          </span>
-          ${this.csvEntries.length > 1 ? `<span class="text-xs text-gray-500 italic">Aggregated quantities</span>` : ''}
-        </button>
-        <ul id="loaded-stockpiles-list" class="divide-y divide-gray-700/50 border-t border-gray-700/60 ${collapsed ? 'hidden' : ''}">
-          ${this.csvEntries.map(e => `
-            <li class="flex items-center gap-3 px-3 py-2 hover:bg-gray-700/20 transition-colors">
-              <svg class="w-3.5 h-3.5 shrink-0 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-              </svg>
-              <input class="depot-name-input min-w-0 flex-1 bg-transparent border-b border-transparent focus:border-blue-500 text-xs text-gray-200 font-medium focus:outline-none"
-                data-entry-id="${escapeHtml(e.id)}" value="${escapeHtml(e.depotName)}" aria-label="Depot name" />
-              <select class="depot-role-select bg-gray-900 border border-gray-700 rounded px-1.5 py-1 text-xs text-gray-300"
-                data-depot-name="${escapeHtml(e.depotName)}" aria-label="Depot role">
-                <option value="backline" ${e.role === 'backline' ? 'selected' : ''}>Backline</option>
-                <option value="intermediate" ${e.role === 'intermediate' ? 'selected' : ''}>Intermediate</option>
-                <option value="front" ${e.role === 'front' ? 'selected' : ''}>Front</option>
-              </select>
-              <span class="text-xs text-gray-500 truncate max-w-56" title="${escapeHtml(e.label)}">${escapeHtml(e.label)}</span>
-              ${e.header ? `<span class="text-xs text-gray-500 shrink-0">${escapeHtml(e.header.date)}</span>` : ''}
-              <button class="remove-entry-btn shrink-0 p-1 rounded text-gray-600 hover:text-red-400 hover:bg-gray-700 transition-colors" data-entry-id="${escapeHtml(e.id)}" title="Remove this stockpile">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-              </button>
-            </li>
+      <div class="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        ${roles.map(role => this.renderDepotRoleCard(role, depots.filter(d => d.role === role), directCargoNames)).join('')}
+      </div>
+    `;
+  }
+
+  private renderDepotRoleCard(
+    role: DepotRole,
+    roleDepots: Array<{ name: string; role: DepotRole; entries: CsvEntry[] }>,
+    directCargoNames: Set<string>,
+  ): string {
+    const accent = ROLE_ACCENTS[role];
+    const roleLabel = ROLE_LABELS[role];
+
+    if (roleDepots.length === 0) {
+      return `
+        <div class="bg-gray-800/30 border border-dashed border-gray-700 border-t-4 ${accent.border} rounded-lg p-3 flex flex-col items-center justify-center gap-1 min-h-52.5 text-center opacity-60">
+          <span class="text-[10px] font-semibold uppercase tracking-wide ${accent.text}">${roleLabel}</span>
+          <p class="text-xs text-gray-500 mt-1">No ${roleLabel.toLowerCase()} depot loaded</p>
+          <p class="text-[11px] text-gray-600 max-w-[16rem]">Load a stockpile and set its role to ${roleLabel} to see it here.</p>
+        </div>
+      `;
+    }
+
+    const activeIndex = Math.min(this.activeDepotTab[role] ?? 0, roleDepots.length - 1);
+    const depot = roleDepots[activeIndex];
+    const totals = normalizeStockItems(this.aggregateEntries(depot.entries), directCargoNames);
+    const totalCrates = totals.reduce((sum, item) => sum + item.crates, 0);
+    const totalAssembled = totals.reduce((sum, item) => sum + item.assembled, 0);
+    const location = depot.entries.find(e => e.header?.location)?.header?.location ?? null;
+
+    return `
+      <div class="bg-gray-800/60 border border-gray-700 border-t-4 ${accent.border} rounded-lg p-3 flex flex-col gap-2 min-h-52.5" data-role-card="${role}">
+        ${roleDepots.length > 1 ? `
+        <div class="flex flex-wrap gap-3 -mt-0.5 border-b border-gray-700">
+          ${roleDepots.map((d, i) => `
+            <button class="depot-tab-btn px-0.5 pb-1.5 text-xs border-b-2 -mb-px transition-colors ${i === activeIndex ? `${accent.border} ${accent.text} font-semibold` : 'border-transparent text-gray-500 hover:text-gray-300 hover:border-gray-600'}"
+              data-role="${role}" data-index="${i}">${escapeHtml(d.name)}</button>
           `).join('')}
-        </ul>
+        </div>
+        ` : ''}
+
+        <span class="text-[10px] font-semibold uppercase tracking-wide ${accent.text}">${roleLabel}</span>
+
+        <div class="flex items-center gap-2">
+          <input class="depot-group-name-input min-w-0 flex-1 bg-transparent border-b border-transparent focus:border-blue-500 text-base font-semibold text-gray-100 focus:outline-none"
+            data-old-depot-name="${escapeHtml(depot.name)}" value="${escapeHtml(depot.name)}" aria-label="Depot name" />
+          <select class="depot-role-select bg-gray-900 border border-gray-700 rounded px-1 py-0.5 text-[11px] text-gray-400 shrink-0"
+            data-depot-name="${escapeHtml(depot.name)}" aria-label="Depot role">
+            <option value="backline" ${role === 'backline' ? 'selected' : ''}>Backline</option>
+            <option value="intermediate" ${role === 'intermediate' ? 'selected' : ''}>Intermediate</option>
+            <option value="front" ${role === 'front' ? 'selected' : ''}>Front</option>
+          </select>
+        </div>
+        ${location ? `<span class="text-xs text-gray-500 -mt-1.5 truncate" title="${escapeHtml(location)}">${escapeHtml(formatLocationLabel(location, depot.name))}</span>` : ''}
+
+        <div>
+          <span class="block text-[10px] uppercase tracking-wide text-gray-500 mb-1">Snapshots included</span>
+          <div class="flex flex-wrap gap-1.5">
+            ${depot.entries.map(e => `
+              <span class="inline-flex items-center rounded-full border ${accent.badgeBg} text-[11px] text-gray-200 overflow-hidden" title="${escapeHtml(e.label)}">
+                <span class="pl-2 pr-1.5 py-1">${escapeHtml(formatLocationLabel(e.label, depot.name))}</span>
+                <button class="remove-entry-btn shrink-0 flex items-center justify-center w-5 h-5 mr-0.5 rounded-full bg-black/25 text-gray-100 hover:bg-red-500 hover:text-white transition-colors" data-entry-id="${escapeHtml(e.id)}" data-entry-label="${escapeHtml(formatLocationLabel(e.label, depot.name))}" title="Remove this snapshot" aria-label="Remove snapshot ${escapeHtml(e.label)}">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </span>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="bg-gray-900/60 border border-gray-700 rounded-md px-2 py-1.5">
+          <span class="block text-[10px] uppercase tracking-wide text-gray-500">Snapshot recorded</span>
+          <span class="text-xs text-gray-300">${escapeHtml(formatSnapshotDateRange(depot.entries))}</span>
+        </div>
+
+        <div class="mt-auto grid grid-cols-2 gap-2 pt-1">
+          <div>
+            <span class="block text-lg font-semibold text-gray-100 tabular-nums">${totalCrates}</span>
+            <span class="block text-[10px] text-gray-500">crates total</span>
+          </div>
+          <div>
+            <span class="block text-lg font-semibold text-gray-100 tabular-nums">${totalAssembled}</span>
+            <span class="block text-[10px] text-gray-500">vehicles &amp; equipment (unit)</span>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -2334,10 +2485,10 @@ export class StockpileView {
       });
     });
 
-    this.container.querySelectorAll<HTMLInputElement>('.depot-name-input').forEach(input => {
+    this.container.querySelectorAll<HTMLInputElement>('.depot-group-name-input').forEach(input => {
       input.addEventListener('change', () => {
-        const id = input.getAttribute('data-entry-id');
-        if (id) this.handleDepotNameChange(id, input.value);
+        const oldName = input.getAttribute('data-old-depot-name');
+        if (oldName) this.handleDepotGroupNameChange(oldName, input.value);
       });
     });
 
@@ -2348,21 +2499,27 @@ export class StockpileView {
       });
     });
 
-    // Loaded stockpiles collapse toggle — in-place, no re-render
-    this.container.querySelector('#btn-toggle-loaded-stockpiles')?.addEventListener('click', () => {
-      this.loadedStockpilesCollapsed = !this.loadedStockpilesCollapsed;
-      const list  = this.container?.querySelector('#loaded-stockpiles-list');
-      const arrow = this.container?.querySelector('#btn-toggle-loaded-stockpiles svg') as SVGElement | null;
-      list?.classList.toggle('hidden');
-      arrow?.classList.toggle('rotate-90');
+    // Depot role card tabs — switch which depot is shown, no full data recompute needed
+    this.container.querySelectorAll<HTMLButtonElement>('.depot-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const role = btn.getAttribute('data-role') as DepotRole | null;
+        const index = Number(btn.getAttribute('data-index'));
+        if (role && !Number.isNaN(index)) {
+          this.activeDepotTab[role] = index;
+          this.render();
+        }
+      });
     });
 
     // Remove individual stockpile entry chips
     this.container.querySelectorAll('.remove-entry-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const id = btn.getAttribute('data-entry-id');
-        if (id) this.handleRemoveEntry(id);
+        if (!id) return;
+        const label = btn.getAttribute('data-entry-label') ?? 'this snapshot';
+        const confirmed = await confirmDialog(`Remove snapshot "${label}"?`, { confirmLabel: 'Remove', variant: 'danger' });
+        if (confirmed) this.handleRemoveEntry(id);
       });
     });
 

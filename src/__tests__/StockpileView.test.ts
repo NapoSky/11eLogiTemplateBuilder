@@ -57,6 +57,20 @@ if (typeof Blob.prototype.text === 'undefined') {
 /** Vide la file de microtâches + un tick de macrotâche */
 const flushPromises = () => new Promise(r => setTimeout(r, 10));
 
+/**
+ * Change le rôle d'un dépôt via sa card. Si plusieurs dépôts partagent déjà
+ * son rôle, clique d'abord l'onglet correspondant pour l'activer (seul le
+ * dépôt actif d'une card affiche son `.depot-role-select`).
+ */
+const setDepotRole = (container: HTMLElement, depotName: string, role: string): void => {
+  const tab = [...container.querySelectorAll<HTMLButtonElement>('.depot-tab-btn')]
+    .find(btn => btn.textContent === depotName);
+  tab?.click();
+  const select = container.querySelector(`.depot-role-select[data-depot-name="${depotName}"]`) as HTMLSelectElement;
+  select.value = role;
+  select.dispatchEvent(new Event('change'));
+};
+
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
 const iconMapping: Record<string, string> = {
@@ -617,6 +631,10 @@ describe('StockpileView – dépôts et transport', () => {
     window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
       detail: { text: 'Basin - Kirknell - Storage Depot - 11e,now\n7.92mm,180\nDunne Transport,2\nDunne Transport (Crate),1\nUnlisted Cargo,4' },
     }));
+    // Le rôle par défaut est désormais suggéré à partir du contenu du CSV (peu de caisses ici
+    // => "front" par défaut) : on force explicitement les rôles attendus par ces tests.
+    setDepotRole(container, 'Mercy', 'intermediate');
+    setDepotRole(container, 'Kirknell', 'backline');
   });
 
   afterEach(() => {
@@ -698,9 +716,7 @@ describe('StockpileView – dépôts et transport', () => {
     window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
       detail: { text: 'Basin - Cinderwick - Seaport - 11e,now\nDunne Transport,1' },
     }));
-    const frontRole = container.querySelector('[data-depot-name="Cinderwick"]') as HTMLSelectElement;
-    frontRole.value = 'front';
-    frontRole.dispatchEvent(new Event('change'));
+    setDepotRole(container, 'Cinderwick', 'front');
 
     (container.querySelector('#btn-generate-todolist') as HTMLButtonElement).click();
     // Disable the Backline-deduction feature for this test: it is covered by a
@@ -747,9 +763,7 @@ describe('StockpileView – dépôts et transport', () => {
     window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
       detail: { text: 'Basin - Cinderwick - Seaport - 11e,now\nDunne Transport,1' },
     }));
-    const frontRole = container.querySelector('[data-depot-name="Cinderwick"]') as HTMLSelectElement;
-    frontRole.value = 'front';
-    frontRole.dispatchEvent(new Event('change'));
+    setDepotRole(container, 'Cinderwick', 'front');
 
     (container.querySelector('#btn-generate-todolist') as HTMLButtonElement).click();
 
@@ -773,9 +787,7 @@ describe('StockpileView – dépôts et transport', () => {
     window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
       detail: { text: 'Basin - Cinderwick - Seaport - 11e,now\nDunne Transport,1' },
     }));
-    const frontRole = container.querySelector('[data-depot-name="Cinderwick"]') as HTMLSelectElement;
-    frontRole.value = 'front';
-    frontRole.dispatchEvent(new Event('change'));
+    setDepotRole(container, 'Cinderwick', 'front');
 
     (container.querySelector('#btn-generate-todolist') as HTMLButtonElement).click();
     const deductToggle = document.querySelector<HTMLInputElement>('#deduct-backline-toggle');
@@ -1063,9 +1075,7 @@ describe('StockpileView – dépôts et transport', () => {
     window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
       detail: { text: 'Basin - Cinderwick - Seaport - 11e,now\n7.92mm,2' },
     }));
-    const frontRole = container.querySelector('[data-depot-name="Cinderwick"]') as HTMLSelectElement;
-    frontRole.value = 'front';
-    frontRole.dispatchEvent(new Event('change'));
+    setDepotRole(container, 'Cinderwick', 'front');
 
     (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
     (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
@@ -1090,9 +1100,7 @@ describe('StockpileView – dépôts et transport', () => {
   });
 
   test('ne conserve qu’un seul dépôt intermédiaire', () => {
-    const kirknellRole = container.querySelector('[data-depot-name="Kirknell"]') as HTMLSelectElement;
-    kirknellRole.value = 'intermediate';
-    kirknellRole.dispatchEvent(new Event('change'));
+    setDepotRole(container, 'Kirknell', 'intermediate');
 
     const intermediateRoles = [...container.querySelectorAll<HTMLSelectElement>('.depot-role-select')]
       .filter(select => select.value === 'intermediate');

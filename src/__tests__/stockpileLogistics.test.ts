@@ -1,10 +1,12 @@
 import {
   aggregateStockpileItems,
   buildBacklineCargo,
+  formatLocationLabel,
   missionFits,
   normalizeStockItems,
   renderTransportList,
   suggestCargoPerTrip,
+  suggestDepotRole,
   suggestTransportMissions,
   transportSlotsPerTrip,
   upsertStockpileSnapshot,
@@ -61,6 +63,115 @@ describe('stockpile snapshots', () => {
     ]);
 
     expect(result.get('7.92mm')).toBe(20);
+  });
+});
+
+describe('formatLocationLabel', () => {
+  test('retire les coordonnées et le nom de la ville (déjà affiché comme nom de dépôt)', () => {
+    const location = 'Ash Fields - Ashtown - Port - 11e-ASH-A - X: 0.5363015 Y: 0.4727113';
+    expect(formatLocationLabel(location, 'Ashtown')).toBe('Ash Fields - Port - 11e-ASH-A');
+  });
+
+  test('ne modifie pas un nom de ville avec une casse différente', () => {
+    const location = 'Ash Fields - Ashtown - Port - 11e-ASH-A - X: 0.5363015 Y: 0.4727113';
+    expect(formatLocationLabel(location, 'ASHTOWN')).toBe('Ash Fields - Port - 11e-ASH-A');
+  });
+
+  test('retombe sur la chaîne sans coordonnées si plus rien ne reste après retrait de la ville', () => {
+    const location = 'Ashtown - X: 0.5363015 Y: 0.4727113';
+    expect(formatLocationLabel(location, 'Ashtown')).toBe('Ashtown');
+  });
+});
+
+describe('suggestion de rôle basée sur le contenu du CSV', () => {
+  test('au moins 3 types de ressources brutes distincts (chacun ≥50 unités) suggèrent Backline, quel que soit leur ratio', () => {
+    const items = new Map([
+      ['Basic Materials', 50],
+      ['Refined Materials', 60],
+      ['Rare Metal', 70],
+      ['7.92mm', 3000],
+      ['Dunne Transport', 400],
+    ]);
+    expect(suggestDepotRole(items)).toBe('backline');
+  });
+
+  test('des traces de ressources brutes (moins de 50 unités) ne comptent pas pour la règle des 3 types', () => {
+    const items = new Map([
+      ['Basic Materials', 53],
+      ['Refined Materials', 10],
+      ['Rare Metal', 11],
+      ['7.92mm', 3000],
+      ['Dunne Transport', 400],
+    ]);
+    expect(suggestDepotRole(items)).not.toBe('backline');
+  });
+
+  test('moins de 3 types de ressources brutes distincts ne suffit pas à suggérer Backline', () => {
+    const items = new Map([
+      ['Basic Materials', 1000],
+      ['Refined Materials', 500],
+      ['7.92mm', 3000],
+      ['Dunne Transport', 400],
+    ]);
+    expect(suggestDepotRole(items)).not.toBe('backline');
+  });
+
+  test('reconnaît Explosive Powder (Emat) comme ressource brute au même titre que Bmat/Rmat', () => {
+    const items = new Map([
+      ['Basic Materials', 400],
+      ['Explosive Powder', 300],
+      ['Refined Materials', 300],
+      ['7.92mm', 2000],
+    ]);
+    expect(suggestDepotRole(items)).toBe('backline');
+  });
+
+  test('reconnaît les ressources brutes même suffixées "(Crate)" (cas réel des exports CSV) et Métal Rare traduit du français', () => {
+    const items = new Map([
+      ['Basic Materials (Crate)', 110],
+      ['Explosive Powder (Crate)', 144],
+      ['Heavy Explosive Powder (Crate)', 295],
+      ['Métal Rare (Crate)', 153],
+      ['Refined Materials (Crate)', 137],
+      ['7.92mm (Crate)', 18],
+      ['Diesel (Crate)', 100],
+      ['Gravel (Crate)', 300],
+    ]);
+    expect(suggestDepotRole(items)).toBe('backline');
+  });
+
+  test('de grosses quantités de caisses variées suggèrent Intermediate', () => {
+    const items = new Map([
+      ['7.92mm', 3000],
+      ['9mm', 2500],
+      ['Bandage', 800],
+      ['Dunne Transport', 400],
+    ]);
+    expect(suggestDepotRole(items)).toBe('intermediate');
+  });
+
+  test('un peu de tout en petites quantités suggère Front', () => {
+    const items = new Map([
+      ['7.92mm', 60],
+      ['9mm', 40],
+      ['Bandage', 20],
+    ]);
+    expect(suggestDepotRole(items)).toBe('front');
+  });
+
+  test('les items à quantité 0 (toujours présents dans un export réel listant tout le catalogue) ne diluent pas la moyenne', () => {
+    const items = new Map([
+      ['7.92mm', 80],
+      ['9mm', 60],
+      ['Bandage', 40],
+      // Des dizaines d'items à 0, comme dans un vrai export CSV.
+      ...Array.from({ length: 200 }, (_, i) => [`Unused item ${i}`, 0] as [string, number]),
+    ]);
+    expect(suggestDepotRole(items)).toBe('intermediate');
+  });
+
+  test('un CSV vide retombe sur Intermediate par défaut', () => {
+    expect(suggestDepotRole(new Map())).toBe('intermediate');
   });
 });
 

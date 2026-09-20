@@ -124,6 +124,7 @@ const FR_TO_EN: Record<string, string> = {
   'Poudre Explosive':                        'Explosive Powder',
   'Matériaux de Construction':               'Construction Materials',
   'Matériaux Rares':                         'Rare Materials (Facilities)',
+  'Métal Rare':                              'Rare Metal',
   'Gravier':                                 'Gravel',
   'Poudre Explosive Lourde':                 'Heavy Explosive Powder',
   'Alliage de Fer':                          'Iron Alloy',

@@ -58,6 +58,67 @@ export function inferDepotName(location: string): string {
   return parts.length >= 2 ? parts[1] : location.trim();
 }
 
+/**
+ * Strips the trailing "X: ... Y: ..." coordinates and the depot's own city name (already shown
+ * as the depot/tile name elsewhere) from a raw Foxhole location string, keeping the rest
+ * (region, POI type, depot code...) for a less redundant/noisy display.
+ */
+export function formatLocationLabel(location: string, depotName: string): string {
+  const withoutCoords = location.replace(/\s*-\s*X:\s*-?[\d.]+\s+Y:\s*-?[\d.]+\s*$/i, '');
+  const parts = withoutCoords.split(' - ').map(part => part.trim()).filter(Boolean);
+  const withoutCity = parts.filter(part => part.toLowerCase() !== depotName.trim().toLowerCase());
+  const result = withoutCity.join(' - ');
+  return result || withoutCoords.trim();
+}
+
+const RAW_MATERIAL_NAMES = new Set([
+  'Basic Materials',
+  'Refined Materials',
+  'Explosive Powder',
+  'Heavy Explosive Powder',
+  'Rare Metal',
+  'Rare Alloys',
+]);
+
+const RAW_MATERIAL_TYPES_THRESHOLD = 3;
+const RAW_MATERIAL_MIN_QUANTITY = 50;
+const AVG_OTHER_QTY_INTERMEDIATE_THRESHOLD = 60;
+
+/**
+ * Rough content-based guess of a depot's role, since we have no knowledge of the map or war plan:
+ * seeing at least 3 distinct raw material types (Bmat/Rmat/Emat/HEmat/Rare Metal/Rare Alloys),
+ * each with at least 50 units (to ignore trace amounts that just happen to pass through), is enough
+ * on its own to suggest backline — backline depots stock a real variety of raw materials, front/
+ * intermediate depots at most carry trace amounts of one or two in transit. Otherwise, large
+ * quantities spread across many item types → intermediate, small quantities of many item types →
+ * front (a real CSV export always lists the whole item catalog, so zero-quantity items are excluded
+ * from that average — otherwise it would always be diluted down to near-zero).
+ */
+export function suggestDepotRole(items: Map<string, number>): DepotRole {
+  let otherQty = 0;
+  const otherItemNames = new Set<string>();
+  const presentRawMaterials = new Set<string>();
+
+  for (const [rawName, quantity] of items) {
+    const translated = translateFrenchItemName(rawName);
+    // Real exports always suffix crated items with "(Crate)" — strip it before
+    // matching against the raw material names, which are never crate-suffixed.
+    const itemName = translated.endsWith(' (Crate)') ? translated.slice(0, -8) : translated;
+    if (RAW_MATERIAL_NAMES.has(itemName)) {
+      if (quantity >= RAW_MATERIAL_MIN_QUANTITY) presentRawMaterials.add(itemName);
+    } else if (quantity > 0) {
+      otherQty += quantity;
+      otherItemNames.add(itemName);
+    }
+  }
+
+  if (presentRawMaterials.size >= RAW_MATERIAL_TYPES_THRESHOLD) return 'backline';
+
+  if (otherQty === 0) return 'intermediate';
+  const avgOtherQty = otherQty / Math.max(otherItemNames.size, 1);
+  return avgOtherQty >= AVG_OTHER_QTY_INTERMEDIATE_THRESHOLD ? 'intermediate' : 'front';
+}
+
 export function upsertStockpileSnapshot(
   snapshots: StockpileSnapshot[],
   next: StockpileSnapshot
