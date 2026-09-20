@@ -673,6 +673,68 @@ describe('StockpileView – dépôts et transport', () => {
     expect(readiness?.textContent).toContain('✗ 1');
   });
 
+  test('recalcule la complétion MPF selon les rôles sélectionnés', () => {
+    let backline = container.querySelector<HTMLInputElement>('.calculation-role-toggle[value="backline"]')!;
+    let intermediate = container.querySelector<HTMLInputElement>('.calculation-role-toggle[value="intermediate"]')!;
+    const front = container.querySelector<HTMLInputElement>('.calculation-role-toggle[value="front"]')!;
+    expect([backline.checked, intermediate.checked, front.checked]).toEqual([false, true, false]);
+    expect(container.querySelector('[data-production-readiness]')?.textContent).toContain('0%');
+    expect(container.querySelector('#calculation-role-summary')?.textContent).toContain('Intermediate');
+
+    backline.checked = true;
+    backline.dispatchEvent(new Event('change'));
+
+    expect(container.querySelector('[data-production-readiness]')?.textContent).toContain('100%');
+    expect(container.querySelector('#calculation-role-summary')?.textContent).toContain('Backline + Intermediate');
+    expect(JSON.parse(localStorageMock.getItem('stockpile_calculation_roles')!)).toEqual(['intermediate', 'backline']);
+
+    (container.querySelector('#btn-generate-todolist') as HTMLButtonElement).click();
+    backline = document.querySelector<HTMLInputElement>('.todolist-role-toggle[value="backline"]')!;
+    intermediate = document.querySelector<HTMLInputElement>('.todolist-role-toggle[value="intermediate"]')!;
+    expect([backline.checked, intermediate.checked]).toEqual([true, true]);
+  });
+
+  test('recalcule la Todolist selon les rôles sélectionnés et mémorise le choix', () => {
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Cinderwick - Seaport - 11e,now\nDunne Transport,1' },
+    }));
+    const frontRole = container.querySelector('[data-depot-name="Cinderwick"]') as HTMLSelectElement;
+    frontRole.value = 'front';
+    frontRole.dispatchEvent(new Event('change'));
+
+    (container.querySelector('#btn-generate-todolist') as HTMLButtonElement).click();
+    let backline = document.querySelector<HTMLInputElement>('.todolist-role-toggle[value="backline"]')!;
+    let intermediate = document.querySelector<HTMLInputElement>('.todolist-role-toggle[value="intermediate"]')!;
+    let front = document.querySelector<HTMLInputElement>('.todolist-role-toggle[value="front"]')!;
+    expect(backline.checked).toBe(false);
+    expect(intermediate.checked).toBe(true);
+    expect(front.checked).toBe(false);
+    expect(document.querySelector('#todolist-role-summary')?.textContent).toContain('Intermediate');
+    expect((document.querySelector('#discord-textarea') as HTMLTextAreaElement).value).toContain('Dunne Transport');
+
+    backline.checked = true;
+    backline.dispatchEvent(new Event('change'));
+    expect((document.querySelector('#discord-textarea') as HTMLTextAreaElement).value).toBe('*(nothing to order)*');
+
+    backline = document.querySelector<HTMLInputElement>('.todolist-role-toggle[value="backline"]')!;
+    backline.checked = false;
+    backline.dispatchEvent(new Event('change'));
+    expect((document.querySelector('#discord-textarea') as HTMLTextAreaElement).value).toContain('Dunne Transport');
+
+    front = document.querySelector<HTMLInputElement>('.todolist-role-toggle[value="front"]')!;
+    front.checked = true;
+    front.dispatchEvent(new Event('change'));
+    expect((document.querySelector('#discord-textarea') as HTMLTextAreaElement).value).toBe('*(nothing to order)*');
+    expect(JSON.parse(localStorageMock.getItem('stockpile_calculation_roles')!)).toEqual(['intermediate', 'front']);
+
+    (document.querySelector('#close-shortage-modal') as HTMLButtonElement).click();
+    (container.querySelector('#btn-generate-todolist') as HTMLButtonElement).click();
+    backline = document.querySelector<HTMLInputElement>('.todolist-role-toggle[value="backline"]')!;
+    intermediate = document.querySelector<HTMLInputElement>('.todolist-role-toggle[value="intermediate"]')!;
+    front = document.querySelector<HTMLInputElement>('.todolist-role-toggle[value="front"]')!;
+    expect([backline.checked, intermediate.checked, front.checked]).toEqual([false, true, true]);
+  });
+
   test('ouvre le préparateur avec une backline et un intermédiaire', () => {
     (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
     (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();

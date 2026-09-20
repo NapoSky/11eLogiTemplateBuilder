@@ -217,6 +217,9 @@ const CSV_ENTRIES_KEY  = 'stockpile_csv_entries';
 const TPL_FILE_KEY     = 'stockpile_tpl_file';
 const TPL_FILENAME_KEY = 'stockpile_tpl_filename';
 const TRANSPORT_EXCLUSIONS_KEY = 'stockpile_transport_exclusions';
+const CALCULATION_ROLES_KEY = 'stockpile_calculation_roles';
+const LEGACY_TODOLIST_ROLES_KEY = 'stockpile_todolist_roles';
+const DEFAULT_CALCULATION_ROLES = new Set<DepotRole>(['intermediate']);
 
 function showFrenchWarningToast(): void {
   // Remove any existing French warning before showing a new one
@@ -286,6 +289,7 @@ export class StockpileView {
   private hideOk = true;
   private searchQuery = '';
   private stockViewMode: 'global' | 'depots' = 'global';
+  private calculationRoles = new Set<DepotRole>(DEFAULT_CALCULATION_ROLES);
 
   // Bound window listeners (for cleanup)
   private onLoadCsv      = (e: Event) => { this.handleLoadCsv((e as CustomEvent).detail.file as File); };
@@ -310,6 +314,7 @@ export class StockpileView {
     this.renderLoading();
     this.loadMapping().then(async () => {
       this.loadCollapsedSections();
+      this.loadCalculationRoles();
       const savedSource = localStorage.getItem('stockpile_tpl_source') ?? 'official';
       if (savedSource === 'official' || savedSource === 'official-colonial') {
         const faction = savedSource === 'official' ? 'warden' : 'colonial';
@@ -357,6 +362,7 @@ export class StockpileView {
     this.officialFaction = null;
     this.collapsedSections = new Set();
     this.searchQuery = '';
+    this.calculationRoles = new Set(DEFAULT_CALCULATION_ROLES);
   }
 
   private async loadMapping(): Promise<void> {
@@ -382,6 +388,33 @@ export class StockpileView {
     } catch (e) {
       console.warn('StockpileView: failed to restore collapsed sections', e);
     }
+  }
+
+  private loadCalculationRoles(): void {
+    try {
+      const raw = localStorage.getItem(CALCULATION_ROLES_KEY)
+        ?? localStorage.getItem(LEGACY_TODOLIST_ROLES_KEY);
+      if (!raw) return;
+      const roles: DepotRole[] = ['backline', 'intermediate', 'front'];
+      const restored = (JSON.parse(raw) as DepotRole[]).filter(role => roles.includes(role));
+      if (restored.length > 0) this.calculationRoles = new Set(restored);
+    } catch (error) {
+      console.warn('StockpileView: failed to restore calculation roles', error);
+    }
+  }
+
+  private setCalculationRole(role: DepotRole, included: boolean): boolean {
+    if (!included && this.calculationRoles.size === 1) return false;
+    if (included) this.calculationRoles.add(role);
+    else this.calculationRoles.delete(role);
+    try {
+      localStorage.setItem(CALCULATION_ROLES_KEY, JSON.stringify([...this.calculationRoles]));
+      localStorage.removeItem(LEGACY_TODOLIST_ROLES_KEY);
+    } catch (error) {
+      console.warn('StockpileView: failed to persist calculation roles', error);
+    }
+    this.rerunComparison();
+    return true;
   }
 
   private saveExternalTemplate(): void {
@@ -484,7 +517,10 @@ export class StockpileView {
   }
 
   private aggregateItems(): Map<string, number> {
-    return aggregateStockpileItems(this.csvEntries);
+    return aggregateStockpileItems(
+      this.csvEntries.filter(entry => this.calculationRoles.has(entry.role)),
+      true,
+    );
   }
 
   private aggregateEntries(entries: CsvEntry[]): Map<string, number> {
@@ -728,6 +764,34 @@ export class StockpileView {
           ` : ''}
         </div>
 
+        ${this.csvEntries.length > 0 && this.stockViewMode === 'global' ? (() => {
+          const roles: DepotRole[] = ['backline', 'intermediate', 'front'];
+          const includedDepots = new Set(this.csvEntries
+            .filter(entry => this.calculationRoles.has(entry.role))
+            .map(entry => entry.depotName));
+          const roleSummary = roles
+            .filter(role => this.calculationRoles.has(role))
+            .map(role => role[0].toUpperCase() + role.slice(1))
+            .join(' + ');
+          return `
+            <div class="shrink-0 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-gray-700 bg-gray-900/60 px-4 py-2">
+              <span class="text-xs font-medium text-gray-300">Stock included in calculation</span>
+              ${roles.map(role => {
+                const depotCount = new Set(this.csvEntries
+                  .filter(entry => entry.role === role)
+                  .map(entry => entry.depotName)).size;
+                return `
+                  <label class="flex items-center gap-1.5 text-xs text-gray-300">
+                    <input class="calculation-role-toggle accent-blue-500" type="checkbox" value="${role}" ${this.calculationRoles.has(role) ? 'checked' : ''} />
+                    <span>${role[0].toUpperCase() + role.slice(1)} <span class="text-gray-500">(${depotCount})</span></span>
+                  </label>
+                `;
+              }).join('')}
+              <span id="calculation-role-summary" class="text-xs text-gray-500 sm:ml-auto">Counting ${includedDepots.size} depot${includedDepots.size !== 1 ? 's' : ''}: ${roleSummary}</span>
+            </div>
+          `;
+        })() : ''}
+
         <!-- Content -->
         <div class="flex-1 overflow-y-auto p-4">
           ${this.renderLoadedStockpiles()}
@@ -757,7 +821,7 @@ export class StockpileView {
     const pct     = total > 0 ? Math.round((ok / total) * 100) : 0;
     const barColor = pct === 100 ? '#22c55e' : pct >= 50 ? '#eab308' : '#ef4444';
     return `
-      <div class="flex items-center gap-1.5">
+      <div data-production-readiness class="flex items-center gap-1.5">
         <div class="w-20 h-1.5 bg-gray-700 rounded-full overflow-hidden" title="${ok}/${total} items stocked">
           <div class="h-full rounded-full transition-all duration-300" style="width: ${pct}%; background-color: ${barColor}"></div>
         </div>
@@ -1235,13 +1299,20 @@ export class StockpileView {
 
   // ─── Shortage / Todolist generation ─────────────────────────────────────────
 
-  private buildShortageData(): {
+  private buildShortageData(includedRoles: ReadonlySet<DepotRole> = this.calculationRoles): {
     mpfRows: Array<{ row: StockpileRow; entry: MpfDataEntry; cratesNeeded: number; orderCount: number }>;
     nonMpfRows: StockpileRow[];
   } {
     if (!this.result) return { mpfRows: [], nonMpfRows: [] };
 
-    const missingRows = this.result.rows.filter(r =>
+    const includedEntries = this.csvEntries.filter(entry => includedRoles.has(entry.role));
+    const comparison = buildComparison(
+      this.getSections(),
+      this.aggregateEntries(includedEntries),
+      this.iconMapping,
+      null,
+    );
+    const missingRows = comparison.rows.filter(r =>
       r.itemName !== null &&
       (r.status === 'missing' || r.status === 'partial') &&
       r.targetQty !== -1
@@ -1395,89 +1466,117 @@ export class StockpileView {
 
   private showTodolistModal(): void {
     if (!this.container) return;
-    const { mpfRows, nonMpfRows } = this.buildShortageData();
-    const discordText = this.generateDiscordText(mpfRows);
+    const roles: DepotRole[] = ['backline', 'intermediate', 'front'];
+    let includedRoles = new Set(this.calculationRoles);
+    const depotCounts = new Map(roles.map(role => [
+      role,
+      new Set(this.csvEntries.filter(entry => entry.role === role).map(entry => entry.depotName)).size,
+    ]));
 
     const modal = document.createElement('div');
     modal.id = 'shortage-modal';
     modal.className = 'fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4';
-    modal.innerHTML = `
-      <div class="bg-gray-800 rounded-xl shadow-2xl flex flex-col w-full max-w-4xl" style="max-height: 85vh;">
-
-        <!-- Header -->
-        <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-700 shrink-0">
-          <div>
-            <h2 class="font-semibold text-base">Generate Todolist</h2>
-              <p class="text-xs text-gray-500 mt-0.5">${mpfRows.length} craftable item${mpfRows.length !== 1 ? 's' : ''} · ${nonMpfRows.length} non-MPF</p>
-          </div>
-          <button id="close-shortage-modal" class="text-gray-400 hover:text-gray-200 transition-colors p-1 rounded hover:bg-gray-700">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-          </button>
-        </div>
-
-        <!-- Body -->
-        <div class="flex flex-1 overflow-hidden">
-
-          <!-- Left: Discord text -->
-          <div class="flex-1 flex flex-col p-4 border-r border-gray-700 overflow-hidden">
-            <div class="flex items-center justify-between mb-2 shrink-0">
-              <h3 class="text-sm font-medium text-gray-300">Discord format</h3>
-              <button id="copy-discord-text"
-                class="flex items-center gap-1.5 px-2.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                </svg>
-                Copy
-              </button>
-            </div>
-            <textarea id="discord-textarea" readonly
-              class="flex-1 bg-gray-900 rounded border border-gray-700 p-3 text-xs text-gray-300 font-mono resize-none focus:outline-none focus:border-blue-500 leading-relaxed"
-            >${escapeHtml(discordText)}</textarea>
-          </div>
-
-          <!-- Right: non-MPF items -->
-          <div class="w-72 shrink-0 flex flex-col p-4 overflow-hidden">
-            <h3 class="text-sm font-medium text-gray-300 mb-1 shrink-0">Not craftable at MPF</h3>
-            <p class="text-xs text-gray-500 mb-3 shrink-0">Source these through factories, facilities, or other means.</p>
-            ${nonMpfRows.length === 0
-              ? '<p class="text-xs text-gray-600 italic">None — all missing items are MPF-craftable.</p>'
-              : `<div class="flex-1 overflow-y-auto space-y-1">
-                  ${nonMpfRows.map(row => {
-                    const gap = Math.abs(row.stockpileQty - row.targetQty);
-                    return `
-                      <div class="flex items-center gap-2 px-2 py-1.5 rounded bg-gray-700/40">
-                        <img src="${escapeHtml(row.iconPath)}" class="w-7 h-7 object-contain shrink-0" alt="" />
-                        <span class="flex-1 text-xs text-gray-300 truncate">${escapeHtml(row.itemName ?? '')}</span>
-                        <span class="text-xs font-mono text-red-400 shrink-0">−${gap}</span>
-                      </div>
-                    `;
-                  }).join('')}
-                </div>`
-            }
-          </div>
-
-        </div>
-      </div>
-    `;
-
     document.body.appendChild(modal);
 
-    // Close
-    modal.querySelector('#close-shortage-modal')?.addEventListener('click', () => modal.remove());
-    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+    const renderModal = (): void => {
+      const { mpfRows, nonMpfRows } = this.buildShortageData(includedRoles);
+      const discordText = this.generateDiscordText(mpfRows);
+      const includedDepots = new Set(this.csvEntries
+        .filter(entry => includedRoles.has(entry.role))
+        .map(entry => entry.depotName));
+      const roleSummary = roles
+        .filter(role => includedRoles.has(role))
+        .map(role => role[0].toUpperCase() + role.slice(1))
+        .join(' + ');
 
-    // Copy
-    modal.querySelector('#copy-discord-text')?.addEventListener('click', async () => {
-      const btn = modal.querySelector('#copy-discord-text') as HTMLButtonElement;
-      await navigator.clipboard.writeText(discordText);
-      btn.textContent = '✓ Copied!';
-      setTimeout(() => {
-        btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg> Copy`;
-      }, 2000);
-    });
+      modal.innerHTML = `
+        <div class="bg-gray-800 rounded-xl shadow-2xl flex flex-col w-full max-w-4xl" style="max-height: 85vh;">
+          <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-700 shrink-0">
+            <div>
+              <h2 class="font-semibold text-base">Generate Todolist</h2>
+              <p class="text-xs text-gray-500 mt-0.5">${mpfRows.length} craftable item${mpfRows.length !== 1 ? 's' : ''} · ${nonMpfRows.length} non-MPF</p>
+            </div>
+            <button id="close-shortage-modal" class="text-gray-400 hover:text-gray-200 transition-colors p-1 rounded hover:bg-gray-700" aria-label="Close">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="shrink-0 border-b border-gray-700 bg-gray-900/30 px-5 py-3">
+            <div class="flex flex-wrap items-center gap-4">
+              <span class="text-xs font-medium text-gray-300">Stock included in calculation</span>
+              ${roles.map(role => `
+                <label class="flex items-center gap-1.5 text-xs text-gray-300">
+                  <input class="todolist-role-toggle accent-blue-500" type="checkbox" value="${role}" ${includedRoles.has(role) ? 'checked' : ''} />
+                  <span>${role[0].toUpperCase() + role.slice(1)} <span class="text-gray-500">(${depotCounts.get(role)})</span></span>
+                </label>
+              `).join('')}
+            </div>
+            <p id="todolist-role-summary" class="mt-1.5 text-xs text-gray-500">Counting ${includedDepots.size} depot${includedDepots.size !== 1 ? 's' : ''}: ${roleSummary}</p>
+          </div>
+
+          <div class="flex flex-1 min-h-0 flex-col md:flex-row overflow-hidden">
+            <div class="flex-1 flex flex-col p-4 border-b md:border-b-0 md:border-r border-gray-700 overflow-hidden">
+              <div class="flex items-center justify-between mb-2 shrink-0">
+                <h3 class="text-sm font-medium text-gray-300">Discord format</h3>
+                <button id="copy-discord-text" class="flex items-center gap-1.5 px-2.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                  </svg>
+                  Copy
+                </button>
+              </div>
+              <textarea id="discord-textarea" readonly class="flex-1 min-h-56 bg-gray-900 rounded border border-gray-700 p-3 text-xs text-gray-300 font-mono resize-none focus:outline-none focus:border-blue-500 leading-relaxed">${escapeHtml(discordText)}</textarea>
+            </div>
+
+            <div class="w-full md:w-72 max-h-56 md:max-h-none shrink-0 flex flex-col p-4 overflow-hidden">
+              <h3 class="text-sm font-medium text-gray-300 mb-1 shrink-0">Not craftable at MPF</h3>
+              <p class="text-xs text-gray-500 mb-3 shrink-0">Source these through factories, facilities, or other means.</p>
+              ${nonMpfRows.length === 0
+                ? '<p class="text-xs text-gray-600 italic">None — all missing items are MPF-craftable.</p>'
+                : `<div class="flex-1 overflow-y-auto space-y-1">
+                    ${nonMpfRows.map(row => {
+                      const gap = Math.abs(row.stockpileQty - row.targetQty);
+                      return `
+                        <div class="flex items-center gap-2 px-2 py-1.5 rounded bg-gray-700/40">
+                          <img src="${escapeHtml(row.iconPath)}" class="w-7 h-7 object-contain shrink-0" alt="" />
+                          <span class="flex-1 text-xs text-gray-300 truncate">${escapeHtml(row.itemName ?? '')}</span>
+                          <span class="text-xs font-mono text-red-400 shrink-0">−${gap}</span>
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>`
+              }
+            </div>
+          </div>
+        </div>
+      `;
+
+      modal.querySelector('#close-shortage-modal')?.addEventListener('click', () => modal.remove());
+      modal.querySelectorAll<HTMLInputElement>('.todolist-role-toggle').forEach(input => {
+        input.addEventListener('change', () => {
+          if (!this.setCalculationRole(input.value as DepotRole, input.checked)) {
+            input.checked = true;
+            return;
+          }
+          includedRoles = new Set(this.calculationRoles);
+          this.render();
+          renderModal();
+        });
+      });
+      modal.querySelector('#copy-discord-text')?.addEventListener('click', async () => {
+        const btn = modal.querySelector('#copy-discord-text') as HTMLButtonElement;
+        await navigator.clipboard.writeText(discordText);
+        btn.textContent = '✓ Copied!';
+        setTimeout(() => {
+          btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg> Copy`;
+        }, 2000);
+      });
+    };
+
+    modal.addEventListener('click', (event) => { if (event.target === modal) modal.remove(); });
+    renderModal();
   }
 
   private showTransportModal(): void {
@@ -1917,6 +2016,16 @@ export class StockpileView {
 
     this.container.querySelector('#btn-prepare-transport')?.addEventListener('click', () => {
       this.showTransportModal();
+    });
+
+    this.container.querySelectorAll<HTMLInputElement>('.calculation-role-toggle').forEach(input => {
+      input.addEventListener('change', () => {
+        if (!this.setCalculationRole(input.value as DepotRole, input.checked)) {
+          input.checked = true;
+          return;
+        }
+        this.render();
+      });
     });
 
     this.container.querySelectorAll<HTMLInputElement>('.depot-name-input').forEach(input => {
