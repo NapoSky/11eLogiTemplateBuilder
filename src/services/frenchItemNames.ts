@@ -41,7 +41,7 @@ const FR_TO_EN: Record<string, string> = {
   'Fusil Argenti r.II':                      'Argenti r.II Rifle',
   'Chevrotines':                             'Buckshot',
   '"Le Pitch Gun" mc.V':                     '"The Pitch Gun" mc.V',
-  'Pistolet-mitrailleur No.1 "The Liar"':    'No.1 "The Liar" Submachine Gun',
+  'Pistolet-mitrailleur No.1 "The Liar"':    'No.1 "The Liar"',
   'Pistolet-mitrailleur Fiddler Model 868':  'Fiddler Submachine Gun Model 868',
   'Fusil Antichar Neville':                  'Neville Anti-Tank Rifle',
 
@@ -58,7 +58,6 @@ const FR_TO_EN: Record<string, string> = {
   'Grenade Flacon BF5 White Ash': 'BF5 White Ash Flask Grenade',
   'Bombe Collante Antichar':     'Anti-Tank Sticky Bomb',
   'Charge Havoc':                'Havoc Charge',
-  'Abisme AT-99 Mine':           'Abisme AT-99',
 
   // ── Rockets / shells ─────────────────────────────────────────────────────
   'Roquette':                       'RPG',
@@ -117,6 +116,7 @@ const FR_TO_EN: Record<string, string> = {
   'Pétrole Enrichi':                         'Enriched Oil',
   'Pétrole':                                 'Oil',
   'Essence':                                 'Petrol',
+  'Diesel':                                  'Diesel',
   'Tuyau':                                   'Pipeline Segment',
   'Alliage d\'Aluminium':                    'Aluminum Alloy',
   'Matériaux Basiques':                      'Basic Materials',

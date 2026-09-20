@@ -1,7 +1,6 @@
 import type { Config } from 'jest';
 
 const config: Config = {
-  preset: 'ts-jest',
   testEnvironment: 'jsdom',
   roots: ['<rootDir>/src'],
   testMatch: ['**/__tests__/**/*.test.ts'],
@@ -42,14 +41,13 @@ const config: Config = {
   },
   setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],
   transform: {
-    '^.+\\.ts$': ['ts-jest', {
-      useESM: false,
-      tsconfig: {
-        module: 'commonjs',
-        moduleResolution: 'node',
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true,
+    '^.+\\.ts$': ['@swc/jest', {
+      jsc: {
+        parser: { syntax: 'typescript' },
+        target: 'es2022',
+        transform: { useDefineForClassFields: true },
       },
+      module: { type: 'commonjs' },
     }],
   },
   moduleNameMapper: {

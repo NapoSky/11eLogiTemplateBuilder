@@ -1299,20 +1299,6 @@
     "maxCrates": 9
   },
   {
-    "iconFilename": "UI/ItemIcons/SMGHeavyWItemIcon.png",
-    "itemName": "No.1 \"The Liar\" Submachine Gun",
-    "itemCategory": "small_arms",
-    "faction": [
-      "neutral",
-      "warden"
-    ],
-    "cost": {
-      "bmat": 120
-    },
-    "numberProduced": 20,
-    "maxCrates": 9
-  },
-  {
     "iconFilename": "UI/ItemIcons/RifleW.png",
     "itemName": "No.2 Loughcaster",
     "itemCategory": "small_arms",
