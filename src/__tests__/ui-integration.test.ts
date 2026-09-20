@@ -529,6 +529,41 @@ describe('Canvas - Composant réel', () => {
     // Pas d'erreur après destroy
     expect(canvas.getCanvasElement()).toBeTruthy();
   });
+
+  test('applique un scale uniforme (sans déformation) basé sur le ratio le plus contraignant', async () => {
+    Object.defineProperty(container, 'clientWidth', { value: 960, configurable: true });
+    Object.defineProperty(container, 'clientHeight', { value: 1080, configurable: true });
+
+    const canvas = new Canvas();
+    canvas.mount(container);
+    await new Promise(r => setTimeout(r, 50));
+
+    const canvasEl = container.querySelector('#template-canvas') as HTMLElement;
+    // scaleX = 960/1920 = 0.5, scaleY = 1080/1080 = 1 → uniform scale = min = 0.5
+    expect(canvasEl.dataset.scale).toBe('0.5');
+    expect(canvasEl.dataset.scaleX).toBe(canvasEl.dataset.scale);
+    expect(canvasEl.dataset.scaleY).toBe(canvasEl.dataset.scale);
+    expect(canvasEl.style.transform).toBe('scale(0.5)');
+  });
+
+  test('centre le canvas dans son conteneur (classes flex)', () => {
+    const canvas = new Canvas();
+    canvas.mount(container);
+
+    expect(container.classList.contains('flex')).toBe(true);
+    expect(container.classList.contains('items-center')).toBe(true);
+    expect(container.classList.contains('justify-center')).toBe(true);
+
+    canvas.destroy();
+    expect(container.classList.contains('flex')).toBe(false);
+  });
+
+  test('affiche un indice onboarding quand il n\'y a aucune section au montage', () => {
+    const canvas = new Canvas();
+    canvas.mount(container);
+
+    expect(container.querySelector('#canvas-empty-hint')).toBeTruthy();
+  });
 });
 
 describe('Toolbar - Composant réel', () => {

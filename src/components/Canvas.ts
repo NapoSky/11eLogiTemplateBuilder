@@ -15,6 +15,7 @@ const CANVAS_LOGICAL_HEIGHT = 1080;
 export class Canvas {
   private container: HTMLElement | null = null;
   private canvas: HTMLElement | null = null;
+  private backdrop: HTMLElement | null = null;
   private sectionComponents: Map<string, SectionComponent> = new Map();
   private unsubscribe: (() => void) | null = null;
   private lastIconScale: string = store.iconScale;
@@ -26,7 +27,22 @@ export class Canvas {
 
   mount(container: HTMLElement): void {
     this.container = container;
-    
+    this.container.classList.add('flex', 'items-center', 'justify-center', 'relative');
+
+    // Fond flouté : remplit tout le conteneur en extrapolant le fond du template
+    // (couleur ou image), pour qu'un écran plus large que le ratio 16:9 du canvas
+    // n'affiche plus le fond brut du site dans les bandes vides (letterboxing).
+    // Purement décoratif : jamais capturé par l'export PNG (qui ne clone que #template-canvas).
+    this.backdrop = document.createElement('div');
+    this.backdrop.id = 'canvas-backdrop';
+    this.backdrop.className = 'absolute inset-0 pointer-events-none';
+    this.backdrop.style.backgroundSize = 'cover';
+    this.backdrop.style.backgroundPosition = 'center';
+    this.backdrop.style.backgroundRepeat = 'no-repeat';
+    this.backdrop.style.filter = 'blur(60px) brightness(0.55) saturate(1.15)';
+    this.backdrop.style.transform = 'scale(1.15)';
+    this.container.appendChild(this.backdrop);
+
     // Create the canvas element
     this.canvas = document.createElement('div');
     this.canvas.id = 'template-canvas';
@@ -34,7 +50,7 @@ export class Canvas {
     this.applyBackground(store.background);
     this.canvas.style.width = `${CANVAS_LOGICAL_WIDTH}px`;
     this.canvas.style.height = `${CANVAS_LOGICAL_HEIGHT}px`;
-    this.canvas.style.transformOrigin = 'top left';
+    this.canvas.style.transformOrigin = 'center center';
     this.canvas.style.flexShrink = '0';
     
     this.container.appendChild(this.canvas);
@@ -81,18 +97,17 @@ export class Canvas {
     const availW = this.container.clientWidth;
     const availH = this.container.clientHeight;
     if (availW <= 0 || availH <= 0) return;
-    // Scale non-uniforme : on remplit toute la place dispo (largeur ET hauteur).
-    // L'export PNG via html2canvas force 1920x1080 sur un clone avec transform:none,
-    // donc l'aperçu à l'écran peut être légèrement déformé sans affecter l'export.
+    // Scale uniforme : on prend le plus petit des deux ratios pour que le canvas
+    // tienne entièrement dans le conteneur sans déformation (WYSIWYG avec l'export
+    // PNG, qui force toujours 1920x1080). Le conteneur centre le canvas via flex.
     const scaleX = availW / CANVAS_LOGICAL_WIDTH;
     const scaleY = availH / CANVAS_LOGICAL_HEIGHT;
-    // currentScale est utilisé par les enfants (drag/resize) pour compenser les
-    // deltas pixel : on expose la moyenne géométrique comme approximation.
-    this.currentScale = Math.sqrt(scaleX * scaleY);
-    this.canvas.style.transform = `scale(${scaleX}, ${scaleY})`;
-    this.canvas.dataset.scale = String(this.currentScale);
-    this.canvas.dataset.scaleX = String(scaleX);
-    this.canvas.dataset.scaleY = String(scaleY);
+    const scale = Math.min(scaleX, scaleY);
+    this.currentScale = scale;
+    this.canvas.style.transform = `scale(${scale})`;
+    this.canvas.dataset.scale = String(scale);
+    this.canvas.dataset.scaleX = String(scale);
+    this.canvas.dataset.scaleY = String(scale);
   }
 
   private renderSections(): void {
@@ -140,6 +155,29 @@ export class Canvas {
         this.canvas.appendChild(component.getElement());
       }
     }
+
+    this.updateEmptyStateHint();
+  }
+
+  /** Shows a subtle onboarding hint over the canvas when there are no sections yet. */
+  private updateEmptyStateHint(): void {
+    if (!this.canvas) return;
+    let hint = this.canvas.querySelector('#canvas-empty-hint') as HTMLElement | null;
+    if (store.sections.length === 0) {
+      if (!hint) {
+        hint = document.createElement('div');
+        hint.id = 'canvas-empty-hint';
+        hint.className = 'absolute inset-0 flex items-center justify-center pointer-events-none';
+        hint.innerHTML = `
+          <p class="text-white/40 text-2xl font-medium text-center px-8" style="text-shadow: 0 2px 6px rgba(0,0,0,0.8);">
+            Double-click anywhere to create your first section
+          </p>
+        `;
+        this.canvas.appendChild(hint);
+      }
+    } else {
+      hint?.remove();
+    }
   }
 
   getCanvasElement(): HTMLElement | null {
@@ -182,10 +220,20 @@ export class Canvas {
         break;
     }
     this.lastBackgroundKey = JSON.stringify(bg);
+
+    // Le backdrop reprend exactement la même couleur/image (mais en 'cover' + flou),
+    // pour prolonger visuellement le fond du template dans les bandes vides.
+    if (this.backdrop) {
+      this.backdrop.style.backgroundColor = this.canvas.style.backgroundColor;
+      this.backdrop.style.backgroundImage = this.canvas.style.backgroundImage;
+    }
   }
 
   destroy(): void {
     this.unsubscribe?.();
+    this.container?.classList.remove('flex', 'items-center', 'justify-center', 'relative');
+    this.backdrop?.remove();
+    this.backdrop = null;
     if (this.resizeHandler) {
       window.removeEventListener('resize', this.resizeHandler);
       this.resizeHandler = null;

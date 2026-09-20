@@ -605,7 +605,7 @@ class Store {
     return JSON.stringify(template, null, 2);
   }
   
-  importJSON(json: string): void {
+  importJSON(json: string): boolean {
     try {
       const template: Template = JSON.parse(json);
       const baseUrl = getBaseUrl();
@@ -646,8 +646,10 @@ class Store {
       }));
       this.save();
       this.emit();
+      return true;
     } catch (e) {
       console.error('Failed to import template:', e);
+      return false;
     }
   }
 }

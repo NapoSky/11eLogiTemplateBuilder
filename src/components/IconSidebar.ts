@@ -28,6 +28,9 @@ export class IconSidebar {
     if (existingGrid && existingSearchInput && (!!existingFactionBlock === factionBlockShouldExist)) {
       // Just update the icon grid and category buttons without touching the search input
       existingGrid.innerHTML = store.filteredIcons.map(icon => this.renderIcon(icon)).join('');
+      const emptyState = this.container.querySelector('#icon-grid-empty');
+      emptyState?.classList.toggle('hidden', store.filteredIcons.length > 0);
+      (existingGrid as HTMLElement).classList.toggle('hidden', store.filteredIcons.length === 0);
       
       // Update category button states
       this.container.querySelectorAll('[data-category]').forEach(btn => {
@@ -57,7 +60,7 @@ export class IconSidebar {
         <input
           type="text"
           id="search-input"
-          placeholder="Rechercher..."
+          placeholder="Search icons..."
           value="${store.searchQuery}"
           class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm focus:outline-none focus:border-blue-500"
         />
@@ -65,7 +68,7 @@ export class IconSidebar {
 
       ${store.viewMode === 'template' ? `
       <div class="px-2 pt-2 pb-1 border-b border-gray-700 flex gap-1">
-        <button data-faction="all"      class="${this.factionButtonClass(store.templateFaction === 'all')}">Toutes</button>
+        <button data-faction="all"      class="${this.factionButtonClass(store.templateFaction === 'all')}">All</button>
         <button data-faction="warden"   class="${this.factionButtonClass(store.templateFaction === 'warden')}">Warden</button>
         <button data-faction="colonial" class="${this.factionButtonClass(store.templateFaction === 'colonial')}">Colonial</button>
       </div>` : ''}
@@ -74,7 +77,7 @@ export class IconSidebar {
         <button
           data-category="Toutes"
           class="px-2 py-1 text-xs rounded ${store.selectedCategory === 'Toutes' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}"
-        >Toutes</button>
+        >All</button>
         ${CATEGORIES.map(cat => `
           <button
             data-category="${cat}"
@@ -84,7 +87,8 @@ export class IconSidebar {
       </div>
       
       <div class="flex-1 overflow-y-auto p-2">
-        <div class="grid grid-cols-4 gap-1" id="icon-grid">
+        <p id="icon-grid-empty" class="text-xs text-gray-500 text-center mt-4 px-2 ${store.filteredIcons.length === 0 ? '' : 'hidden'}">No icons match your search or filters.</p>
+        <div class="grid grid-cols-4 gap-1 ${store.filteredIcons.length === 0 ? 'hidden' : ''}" id="icon-grid">
           ${store.filteredIcons.map(icon => this.renderIcon(icon)).join('')}
         </div>
       </div>

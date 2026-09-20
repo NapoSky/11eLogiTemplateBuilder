@@ -703,6 +703,14 @@ describe('StockpileView – dépôts et transport', () => {
     frontRole.dispatchEvent(new Event('change'));
 
     (container.querySelector('#btn-generate-todolist') as HTMLButtonElement).click();
+    // Disable the Backline-deduction feature for this test: it is covered by a
+    // dedicated test below and would otherwise zero out the gap via Kirknell's
+    // Backline stock, making role-selection assertions harder to read.
+    const deductToggle = document.querySelector<HTMLInputElement>('#deduct-backline-toggle');
+    if (deductToggle?.checked) {
+      deductToggle.checked = false;
+      deductToggle.dispatchEvent(new Event('change'));
+    }
     let backline = document.querySelector<HTMLInputElement>('.todolist-role-toggle[value="backline"]')!;
     let intermediate = document.querySelector<HTMLInputElement>('.todolist-role-toggle[value="intermediate"]')!;
     let front = document.querySelector<HTMLInputElement>('.todolist-role-toggle[value="front"]')!;
@@ -733,6 +741,32 @@ describe('StockpileView – dépôts et transport', () => {
     intermediate = document.querySelector<HTMLInputElement>('.todolist-role-toggle[value="intermediate"]')!;
     front = document.querySelector<HTMLInputElement>('.todolist-role-toggle[value="front"]')!;
     expect([backline.checked, intermediate.checked, front.checked]).toEqual([false, true, true]);
+  });
+
+  test('déduit le stock Backline disponible de la production MPF requise', () => {
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Cinderwick - Seaport - 11e,now\nDunne Transport,1' },
+    }));
+    const frontRole = container.querySelector('[data-depot-name="Cinderwick"]') as HTMLSelectElement;
+    frontRole.value = 'front';
+    frontRole.dispatchEvent(new Event('change'));
+
+    (container.querySelector('#btn-generate-todolist') as HTMLButtonElement).click();
+
+    // Par défaut, la déduction Backline est activée : Kirknell (Backline) a 3
+    // Dunne Transport en stock, ce qui couvre entièrement le manque (1) sur
+    // l'Intermediate → rien à produire, mais l'item apparaît en "disponible en Backline".
+    const deductToggle = document.querySelector<HTMLInputElement>('#deduct-backline-toggle');
+    expect(deductToggle?.checked).toBe(true);
+    expect((document.querySelector('#discord-textarea') as HTMLTextAreaElement).value).toBe('*(nothing to order)*');
+    expect(document.querySelector('#shortage-modal, [data-stock-view], body')?.textContent).toContain('Available in Backline');
+    expect(document.body.textContent).toContain('Dunne Transport');
+
+    // Désactiver la déduction : la production MPF redevient nécessaire.
+    deductToggle!.checked = false;
+    deductToggle!.dispatchEvent(new Event('change'));
+    expect((document.querySelector('#discord-textarea') as HTMLTextAreaElement).value).toContain('Dunne Transport');
+    expect(localStorageMock.getItem('stockpile_deduct_backline')).toBe('0');
   });
 
   test('ouvre le préparateur avec une backline et un intermédiaire', () => {

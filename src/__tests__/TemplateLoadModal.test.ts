@@ -235,6 +235,23 @@ describe('TemplateLoadModal – reference template', () => {
 
     expect(container.querySelector('#tpl-load-modal-backdrop')).toBeTruthy();
   });
+
+  test('a 200 response with non-JSON content (e.g. dev server SPA fallback) shows an error toast and keeps the modal open', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      text: async () => '<!DOCTYPE html><html>...</html>',
+    } as unknown as Response);
+
+    const { container } = mountModal();
+    openModal();
+    (container.querySelector('#tpl-load-reference') as HTMLElement).click();
+    await waitFor(() => document.querySelectorAll('.fixed.bottom-6').length > 0);
+
+    const toast = document.querySelector('.fixed.bottom-6') as HTMLElement;
+    expect(toast).toBeTruthy();
+    expect(toast.textContent).toContain('Failed to load the reference template.');
+    expect(container.querySelector('#tpl-load-modal-backdrop')).toBeTruthy();
+  });
 });
 
 // ─── Custom file ─────────────────────────────────────────────────────────────
@@ -273,7 +290,67 @@ describe('TemplateLoadModal – custom file', () => {
     expect(() => input.dispatchEvent(new Event('change'))).not.toThrow();
     expect(container.querySelector('#tpl-load-modal-backdrop')).toBeTruthy();
   });
+
+  test('an invalid JSON file shows an error toast and keeps the modal open', async () => {
+    const { container } = mountModal();
+    openModal();
+
+    const input = container.querySelector('#tpl-load-file-input') as HTMLInputElement;
+    const file = new File(['not valid json {'], 'broken.json', { type: 'application/json' });
+    Object.defineProperty(input, 'files', { value: [file], configurable: true });
+    input.dispatchEvent(new Event('change'));
+
+    await waitFor(() => document.querySelectorAll('.fixed.bottom-6').length > 0);
+
+    const toast = document.querySelector('.fixed.bottom-6') as HTMLElement;
+    expect(toast).toBeTruthy();
+    expect(toast.className).toContain('bg-red-600');
+    expect(toast.textContent).toContain('not a valid template file');
+  });
+
+  test('asks for confirmation before overwriting existing sections', async () => {
+    store.addSection({ id: 'existing', title: 'X', color: '#fff', x: 0, y: 0, width: 100, height: 100, icons: [] });
+    const importSpy = jest.spyOn(store, 'importJSON');
+    const { container } = mountModal();
+    openModal();
+
+    const input = container.querySelector('#tpl-load-file-input') as HTMLInputElement;
+    const file = new File([VALID_TEMPLATE_JSON], 'template.json', { type: 'application/json' });
+    Object.defineProperty(input, 'files', { value: [file], configurable: true });
+    input.dispatchEvent(new Event('change'));
+
+    await waitFor(() => document.querySelector('#confirm-dialog-ok') !== null);
+    expect(importSpy).not.toHaveBeenCalled();
+
+    // Declining the custom confirmation dialog leaves the template load modal open.
+    (document.querySelector('#confirm-dialog-cancel') as HTMLButtonElement).click();
+    await waitFor(() => importSpy.mock.calls.length > 0 || document.querySelector('#confirm-dialog-ok') === null);
+    expect(importSpy).not.toHaveBeenCalled();
+    expect(container.querySelector('#tpl-load-modal-backdrop')).toBeTruthy();
+
+    store.deleteSection('existing');
+  });
+
+  test('accepting the custom confirmation dialog proceeds with the import', async () => {
+    store.addSection({ id: 'existing-2', title: 'X', color: '#fff', x: 0, y: 0, width: 100, height: 100, icons: [] });
+    const importSpy = jest.spyOn(store, 'importJSON');
+    const { container } = mountModal();
+    openModal();
+
+    const input = container.querySelector('#tpl-load-file-input') as HTMLInputElement;
+    const file = new File([VALID_TEMPLATE_JSON], 'template.json', { type: 'application/json' });
+    Object.defineProperty(input, 'files', { value: [file], configurable: true });
+    input.dispatchEvent(new Event('change'));
+
+    await waitFor(() => document.querySelector('#confirm-dialog-ok') !== null);
+    (document.querySelector('#confirm-dialog-ok') as HTMLButtonElement).click();
+
+    await waitFor(() => importSpy.mock.calls.length > 0);
+    expect(importSpy).toHaveBeenCalledWith(VALID_TEMPLATE_JSON);
+    expect(container.innerHTML).toBe('');
+  });
 });
+
 
 // ─── Drag & drop ─────────────────────────────────────────────────────────────
 

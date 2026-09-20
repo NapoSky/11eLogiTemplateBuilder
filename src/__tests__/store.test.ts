@@ -466,6 +466,11 @@ describe('Store - Import/Export JSON', () => {
   test('importJSON gère un JSON invalide sans crash', () => {
     expect(() => store.importJSON('invalid json {')).not.toThrow();
   });
+
+  test('importJSON retourne true en cas de succès, false en cas de JSON invalide', () => {
+    expect(store.importJSON('invalid json {')).toBe(false);
+    expect(store.importJSON(JSON.stringify({ sections: [] }))).toBe(true);
+  });
   
   test('exportJSON puis importJSON préserve les données', () => {
     store.addSection({

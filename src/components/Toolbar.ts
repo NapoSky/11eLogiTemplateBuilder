@@ -4,6 +4,7 @@ import { bustBackgroundImageCache, inlineCrossOriginBackgrounds, neutralizeTaint
 export class Toolbar {
   private container: HTMLElement | null = null;
   private helpModalVisible = false;
+  private isExportingPng = false;
   private helpLang: 'en' | 'fr' = 'en';
 
   mount(container: HTMLElement): void {
@@ -145,7 +146,7 @@ export class Toolbar {
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
           </svg>
-          Save
+          Export JSON
         </button>
         <button id="btn-load-template" class="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 rounded text-sm flex items-center gap-1" title="Ctrl+O">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -278,6 +279,7 @@ export class Toolbar {
             <li>• <span class="text-gray-300">${fr ? 'Glisser' : 'Drag'}</span> ${fr ? 'une icône vers une section → Ajouter' : 'an icon to a section → Add'}</li>
             <li>• <span class="text-gray-300">${fr ? 'Glisser' : 'Drag'}</span> ${fr ? 'dans la grille → Réorganiser' : 'in grid → Reorder'}</li>
             <li>• <span class="text-gray-300">${fr ? 'Clic droit' : 'Right-click'}</span> ${fr ? "sur une icône → Quantité & sous-type" : 'an icon → Quantity & subtype'}</li>
+            <li>• <span class="text-gray-300">${fr ? 'Maintenir Shift' : 'Hold Shift'}</span> ${fr ? 'en déplaçant/redimensionnant une section → Accroche à la grille de 10px' : 'while dragging/resizing a section → Snaps to a 10px grid'}</li>
             <li>• <span class="text-gray-300">S / M / L</span> ${fr ? 'ajuste la taille des icônes.' : 'adjusts icon size.'}</li>
           </ul>
         </div>
@@ -493,8 +495,24 @@ export class Toolbar {
   }
 
   private async exportPng(): Promise<void> {
+    if (this.isExportingPng) return;
     const canvas = document.getElementById('template-canvas');
     if (!canvas) return;
+
+    const btn = this.container?.querySelector('#btn-export-png') as HTMLButtonElement | null;
+    const originalBtnHtml = btn?.innerHTML ?? '';
+    this.isExportingPng = true;
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add('opacity-70', 'cursor-wait');
+      btn.innerHTML = `
+        <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+        </svg>
+        Exporting…
+      `;
+    }
 
     try {
       // Clone the canvas to avoid modifying original
@@ -564,6 +582,13 @@ export class Toolbar {
         );
       } else {
         alert('PNG export failed');
+      }
+    } finally {
+      this.isExportingPng = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.classList.remove('opacity-70', 'cursor-wait');
+        btn.innerHTML = originalBtnHtml;
       }
     }
   }

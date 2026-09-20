@@ -1,16 +1,21 @@
 import interact from 'interactjs';
 import { store, ICON_SCALES } from '../store';
 import { Section as SectionType, SectionIcon } from '../types';
+import { showToast } from '../services/toast';
 
 interface InteractMoveEvent {
   dx: number;
   dy: number;
   rect: { width: number; height: number };
+  shiftKey: boolean;
 }
 
 // Constantes pour le layout
 const TITLE_HEIGHT = 32; // Hauteur du titre au-dessus
 const PADDING = 6; // Padding interne
+const SNAP_GRID = 10; // Pas de grille (px, repère logique) quand Shift est maintenu
+const MAX_TITLE_FONT = 20; // Taille de police max du titre (px, équivalent text-xl)
+const MIN_TITLE_FONT = 9; // Taille de police min du titre (px) avant d'accepter un débordement résiduel
 
 export class SectionComponent {
   private element: HTMLElement;
@@ -18,6 +23,11 @@ export class SectionComponent {
   private onDelete: (id: string) => void;
   private onEdit: (id: string) => void;
   private draggedIconId: string | null = null;
+  // Position logique non-snappée, accumulée à chaque event.dx/dy pendant un drag.
+  // Sert de référence pour éviter que l'arrondi au snap (Shift) ne s'accumule
+  // d'un event à l'autre, ce qui bloquait les déplacements en diagonale.
+  private dragRawX = 0;
+  private dragRawY = 0;
 
   constructor(section: SectionType, onDelete: (id: string) => void, onEdit: (id: string) => void) {
     this.section = section;
@@ -62,19 +72,19 @@ export class SectionComponent {
     // Design épuré : titre AU-DESSUS du cadre, pas de header intégré
     this.element.innerHTML = `
       <!-- Titre au-dessus du cadre -->
-      <div class="section-title-container flex items-center justify-center gap-2 mb-0.5" style="height: ${TITLE_HEIGHT}px;">
-        <span class="section-title text-xl font-bold text-white tracking-wider"
-              style="text-shadow: 0 0 8px rgba(0,0,0,1), 0 2px 4px rgba(0,0,0,0.9), 0 4px 8px rgba(0,0,0,0.7);">
+      <div class="section-title-container flex items-center justify-center gap-2 mb-0.5 overflow-hidden px-1" style="height: ${TITLE_HEIGHT}px;">
+        <span class="section-title font-bold text-white tracking-wider whitespace-nowrap min-w-0"
+              style="font-size: ${MAX_TITLE_FONT}px; text-shadow: 0 0 8px rgba(0,0,0,1), 0 2px 4px rgba(0,0,0,0.9), 0 4px 8px rgba(0,0,0,0.7);">
           ${this.section.title}
         </span>
-        <div class="section-controls flex gap-1 opacity-0 transition-opacity duration-200">
-          <button class="btn-edit p-0.5 bg-black/40 hover:bg-white/25 rounded transition-colors" title="Éditer">
-            <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="section-controls flex gap-2 opacity-0 transition-opacity duration-200">
+          <button class="btn-edit p-1.5 bg-black/40 hover:bg-white/25 rounded transition-colors" title="Edit section">
+            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
             </svg>
           </button>
-          <button class="btn-delete p-0.5 bg-black/40 hover:bg-red-500/60 rounded transition-colors" title="Supprimer">
-            <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <button class="btn-delete p-1.5 bg-black/40 hover:bg-red-500/60 rounded transition-colors" title="Delete section">
+            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
             </svg>
           </button>
@@ -102,7 +112,13 @@ export class SectionComponent {
     // Attach button events
     this.element.querySelector('.btn-delete')?.addEventListener('click', (e) => {
       e.stopPropagation();
+      const snapshot = this.section;
       this.onDelete(this.section.id);
+      showToast(`Section "${snapshot.title}" deleted`, {
+        type: 'info',
+        actionLabel: 'Undo',
+        onAction: () => store.addSection(snapshot),
+      });
     });
     this.element.querySelector('.btn-edit')?.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -110,6 +126,34 @@ export class SectionComponent {
     });
     
     this.setupIconDragDrop();
+
+    // Ajuste la taille de police du titre à la largeur disponible (mesure réelle du DOM),
+    // pour qu'il tienne toujours sur une seule ligne sans jamais être tronqué. Différé via
+    // rAF pour garantir que l'élément soit attaché au document (nécessaire au 1er render,
+    // avant l'appendChild fait par Canvas.ts) et que la largeur de section soit à jour.
+    requestAnimationFrame(() => this.fitTitleFont());
+  }
+
+  /** Réduit la taille de police du titre par pas de 1px jusqu'à tenir sur une seule ligne. */
+  private fitTitleFont(): void {
+    const container = this.element.querySelector('.section-title-container') as HTMLElement | null;
+    const titleEl = this.element.querySelector('.section-title') as HTMLElement | null;
+    const controls = this.element.querySelector('.section-controls') as HTMLElement | null;
+    if (!container || !titleEl) return;
+
+    const style = getComputedStyle(container);
+    const paddingX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+    const gap = parseFloat(style.columnGap || '0') || 0;
+    const reserved = (controls?.offsetWidth ?? 0) + gap;
+    const available = container.clientWidth - paddingX - reserved;
+    if (available <= 0) return;
+
+    let fontSize = MAX_TITLE_FONT;
+    titleEl.style.fontSize = `${fontSize}px`;
+    while (titleEl.scrollWidth > available && fontSize > MIN_TITLE_FONT) {
+      fontSize -= 1;
+      titleEl.style.fontSize = `${fontSize}px`;
+    }
   }
 
   private renderGridCells(cols: number, rows: number): string {
@@ -162,9 +206,9 @@ export class SectionComponent {
       : '';
     let quantityHtml = '';
     if (icon.quantity === 0) {
-      quantityHtml = `<span class="absolute -bottom-0.5 -right-0.5 bg-gradient-to-br from-amber-600 to-amber-800 text-white text-sm font-bold px-1.5 py-0.5 rounded shadow-lg border border-white/20">★</span>`;
-    } else if (icon.quantity === -1) {
       quantityHtml = `<span class="absolute -bottom-0.5 -right-0.5 bg-gradient-to-br from-purple-600 to-purple-800 text-white text-sm font-bold px-1.5 py-0.5 rounded shadow-lg border border-white/20">?</span>`;
+    } else if (icon.quantity === -1) {
+      quantityHtml = `<span class="absolute -bottom-0.5 -right-0.5 bg-gradient-to-br from-amber-600 to-amber-800 text-white text-sm font-bold px-1.5 py-0.5 rounded shadow-lg border border-white/20">★</span>`;
     } else if (icon.quantity > 1) {
       quantityHtml = `<span class="absolute -bottom-0.5 -right-0.5 bg-gradient-to-br from-gray-800 to-gray-900 text-white text-sm font-bold px-1.5 py-0.5 rounded shadow-lg border border-white/20">${icon.quantity}</span>`;
     }
@@ -173,12 +217,18 @@ export class SectionComponent {
       <div class="grid-cell icon-cell flex items-center justify-center"
            data-row="${row}" data-col="${col}"
            style="grid-row: ${row + 1}; grid-column: ${col + 1}; width: ${cellSize}px; height: ${cellSize}px;">
-        <div class="section-icon relative bg-black/30 rounded flex items-center justify-center cursor-grab hover:bg-black/50 hover:scale-105 transition-all duration-150 select-none ring-1 ring-white/10 hover:ring-white/25" 
+        <div class="section-icon group relative bg-black/30 rounded flex items-center justify-center cursor-grab hover:bg-black/50 hover:scale-105 transition-all duration-150 select-none ring-1 ring-white/10 hover:ring-white/25" 
              style="width: ${iconSize}px; height: ${iconSize}px;"
              data-icon-instance-id="${icon.id}" data-section-id="${this.section.id}" draggable="true">
           <img src="${icon.path}" alt="" style="width: ${imgSize}px; height: ${imgSize}px;" class="object-contain pointer-events-none select-none drop-shadow-sm" draggable="false" />
           ${subtypeHtml}
           ${quantityHtml}
+          <button class="icon-options-btn absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center bg-gray-900/90 hover:bg-blue-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity ring-1 ring-white/30"
+                  data-icon-instance-id="${icon.id}" data-section-id="${this.section.id}" title="Quantity &amp; subtype options">
+            <svg class="w-2.5 h-2.5 text-white pointer-events-none" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10 6a2 2 0 100-4 2 2 0 000 4zm0 6a2 2 0 100-4 2 2 0 000 4zm0 6a2 2 0 100-4 2 2 0 000 4z"/>
+            </svg>
+          </button>
         </div>
       </div>
     `;
@@ -187,6 +237,30 @@ export class SectionComponent {
   private setupIconDragDrop(): void {
     const iconGrid = this.element.querySelector('.icon-grid') as HTMLElement;
     if (!iconGrid) return;
+
+    // Bouton "options" visible au survol : ouvre le même menu contextuel que le
+    // clic droit, de façon découvrable (workflow 100% souris).
+    iconGrid.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest('.icon-options-btn') as HTMLElement | null;
+      if (!btn) return;
+      e.stopPropagation();
+      const rect = btn.getBoundingClientRect();
+      window.dispatchEvent(new CustomEvent('open-icon-context-menu', {
+        detail: {
+          x: rect.left,
+          y: rect.bottom + 4,
+          sectionId: btn.dataset.sectionId,
+          iconInstanceId: btn.dataset.iconInstanceId,
+        }
+      }));
+    });
+
+    // Éviter qu'un mousedown sur le bouton n'amorce un drag natif de l'icône parente.
+    iconGrid.addEventListener('mousedown', (e) => {
+      if ((e.target as HTMLElement).closest('.icon-options-btn')) {
+        e.stopPropagation();
+      }
+    });
 
     // Drag start sur les icônes
     iconGrid.addEventListener('dragstart', (e) => {
@@ -280,14 +354,30 @@ export class SectionComponent {
           })
         ],
         listeners: {
+          start: () => {
+            this.dragRawX = this.section.x;
+            this.dragRawY = this.section.y;
+          },
           move: (event: InteractMoveEvent) => {
             // event.dx/dy sont en pixels écran. Le canvas parent a un transform: scale(sx, sy)
             // appliqué pour le fit-to-screen ; on convertit donc les deltas écran en
             // deltas logiques (repère 1920x1080) en divisant par les scales courants.
             const scale = this.getCanvasScale();
-            const x = this.section.x + event.dx / scale.x;
-            const y = this.section.y + event.dy / scale.y;
-            
+            // On accumule sur la position brute (non-snappée) pour rester fidèle au
+            // curseur : si on accumulait sur la valeur déjà arrondie, les petits deltas
+            // se perdaient dans l'arrondi et le déplacement en diagonale se bloquait.
+            this.dragRawX += event.dx / scale.x;
+            this.dragRawY += event.dy / scale.y;
+            let x = this.dragRawX;
+            let y = this.dragRawY;
+
+            // Maintenir Shift pendant le déplacement aligne la section sur une grille
+            // de 10px (repère logique) pour faciliter l'alignement visuel.
+            if (event.shiftKey) {
+              x = Math.round(x / SNAP_GRID) * SNAP_GRID;
+              y = Math.round(y / SNAP_GRID) * SNAP_GRID;
+            }
+
             this.section.x = x;
             this.section.y = y;
             this.element.style.left = `${x}px`;
@@ -312,8 +402,12 @@ export class SectionComponent {
           move: (event: InteractMoveEvent) => {
             // Idem : event.rect est en pixels écran ; on reconvertit en logique.
             const scale = this.getCanvasScale();
-            const w = event.rect.width / scale.x;
-            const h = event.rect.height / scale.y;
+            let w = event.rect.width / scale.x;
+            let h = event.rect.height / scale.y;
+            if (event.shiftKey) {
+              w = Math.round(w / SNAP_GRID) * SNAP_GRID;
+              h = Math.round(h / SNAP_GRID) * SNAP_GRID;
+            }
             this.section.width = w;
             this.section.height = h;
             this.element.style.width = `${w}px`;
@@ -321,6 +415,7 @@ export class SectionComponent {
             
             // Re-render grid on resize
             this.renderGridOnly();
+            this.fitTitleFont();
           },
           end: () => {
             store.updateSection(this.section.id, {

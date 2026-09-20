@@ -220,6 +220,7 @@ const TRANSPORT_EXCLUSIONS_KEY = 'stockpile_transport_exclusions';
 const CALCULATION_ROLES_KEY = 'stockpile_calculation_roles';
 const LEGACY_TODOLIST_ROLES_KEY = 'stockpile_todolist_roles';
 const DEFAULT_CALCULATION_ROLES = new Set<DepotRole>(['intermediate']);
+const DEDUCT_BACKLINE_KEY = 'stockpile_deduct_backline';
 
 function showFrenchWarningToast(): void {
   // Remove any existing French warning before showing a new one
@@ -1299,8 +1300,26 @@ export class StockpileView {
 
   // ─── Shortage / Todolist generation ─────────────────────────────────────────
 
-  private buildShortageData(includedRoles: ReadonlySet<DepotRole> = this.calculationRoles): {
-    mpfRows: Array<{ row: StockpileRow; entry: MpfDataEntry; cratesNeeded: number; orderCount: number }>;
+  /**
+   * Sums the CSV-declared quantity of an item (crate + plain form) across all
+   * currently loaded Backline-role depots. Used to deduct existing Backline
+   * stock from the Intermediate shortfall so the MPF todolist only asks to
+   * produce what isn't already available to transport.
+   */
+  private getBacklineQty(itemName: string): number {
+    const backlineEntries = this.csvEntries.filter(entry => entry.role === 'backline');
+    if (backlineEntries.length === 0) return 0;
+    const items = this.aggregateEntries(backlineEntries);
+    const crateQty = items.get(`${itemName} (Crate)`) ?? 0;
+    const plainQty = items.get(itemName) ?? 0;
+    return crateQty + plainQty;
+  }
+
+  private buildShortageData(
+    includedRoles: ReadonlySet<DepotRole> = this.calculationRoles,
+    deductBackline = true,
+  ): {
+    mpfRows: Array<{ row: StockpileRow; entry: MpfDataEntry; cratesNeeded: number; backlineAvailable: number; toProduce: number; orderCount: number }>;
     nonMpfRows: StockpileRow[];
   } {
     if (!this.result) return { mpfRows: [], nonMpfRows: [] };
@@ -1318,8 +1337,12 @@ export class StockpileView {
       r.targetQty !== -1
     );
 
-    const mpfRows: Array<{ row: StockpileRow; entry: MpfDataEntry; cratesNeeded: number; orderCount: number }> = [];
+    const mpfRows: Array<{ row: StockpileRow; entry: MpfDataEntry; cratesNeeded: number; backlineAvailable: number; toProduce: number; orderCount: number }> = [];
     const nonMpfRows: StockpileRow[] = [];
+
+    // Deducting Backline stock only makes sense if Backline isn't already part
+    // of the included roles (otherwise its stock is already counted in the gap).
+    const shouldDeductBackline = deductBackline && !includedRoles.has('backline');
 
     for (const row of missingRows) {
       const filename = iconPathToMappingKey(row.iconPath);
@@ -1329,8 +1352,12 @@ export class StockpileView {
       if (entry) {
         // gap is always in crates for MPF-craftable items (Foxhole stores non-vehicles as crates)
         const cratesNeeded = gap;
-        const orderCount = Math.ceil(cratesNeeded / (entry.maxCrates || 1));
-        mpfRows.push({ row, entry, cratesNeeded, orderCount });
+        const backlineAvailable = shouldDeductBackline
+          ? Math.min(cratesNeeded, this.getBacklineQty(row.itemName ?? ''))
+          : 0;
+        const toProduce = Math.max(0, cratesNeeded - backlineAvailable);
+        const orderCount = Math.ceil(toProduce / (entry.maxCrates || 1));
+        mpfRows.push({ row, entry, cratesNeeded, backlineAvailable, toProduce, orderCount });
       } else {
         nonMpfRows.push(row);
       }
@@ -1339,8 +1366,9 @@ export class StockpileView {
     return { mpfRows, nonMpfRows };
   }
 
-  private generateDiscordText(mpfRows: Array<{ row: StockpileRow; entry: MpfDataEntry; cratesNeeded: number; orderCount: number }>): string {
-    if (mpfRows.length === 0) return '*(nothing to order)*';
+  private generateDiscordText(mpfRows: Array<{ row: StockpileRow; entry: MpfDataEntry; cratesNeeded: number; backlineAvailable: number; toProduce: number; orderCount: number }>): string {
+    const craftable = mpfRows.filter(r => r.orderCount > 0);
+    if (craftable.length === 0) return '*(nothing to order)*';
 
     const now = new Date();
     const firstHeader = this.csvEntries[0]?.header;
@@ -1348,7 +1376,7 @@ export class StockpileView {
       ? `TODOLIST ${firstHeader.location}`
       : 'TODOLIST';
 
-    const items: TodoListItem[] = mpfRows.map(({ row, entry, orderCount }) => ({
+    const items: TodoListItem[] = craftable.map(({ row, entry, orderCount }) => ({
       id: generateId(),
       iconFilename: entry.iconFilename,
       itemName: row.itemName ?? entry.itemName,
@@ -1371,6 +1399,23 @@ export class StockpileView {
     };
 
     return renderTodoList(fakeTodoList, now);
+  }
+
+  /**
+   * Wires an Escape-key listener that triggers `close`, and returns a wrapped
+   * close function that also removes the listener (call it from every close path:
+   * close button, backdrop click, successful action, etc.).
+   */
+  private attachEscapeClose(close: () => void): () => void {
+    const handler = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') wrappedClose();
+    };
+    window.addEventListener('keydown', handler);
+    const wrappedClose = (): void => {
+      window.removeEventListener('keydown', handler);
+      close();
+    };
+    return wrappedClose;
   }
 
   private showLoadCsvModal(): void {
@@ -1422,7 +1467,7 @@ export class StockpileView {
 
     document.body.appendChild(modal);
 
-    const close = () => modal.remove();
+    const close = this.attachEscapeClose(() => modal.remove());
 
     modal.querySelector('#csv-modal-close')!.addEventListener('click', close);
     modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
@@ -1468,6 +1513,14 @@ export class StockpileView {
     if (!this.container) return;
     const roles: DepotRole[] = ['backline', 'intermediate', 'front'];
     let includedRoles = new Set(this.calculationRoles);
+    let deductBackline = (() => {
+      try {
+        const saved = localStorage.getItem(DEDUCT_BACKLINE_KEY);
+        return saved === null ? true : saved === '1';
+      } catch {
+        return true;
+      }
+    })();
     const depotCounts = new Map(roles.map(role => [
       role,
       new Set(this.csvEntries.filter(entry => entry.role === role).map(entry => entry.depotName)).size,
@@ -1477,10 +1530,13 @@ export class StockpileView {
     modal.id = 'shortage-modal';
     modal.className = 'fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4';
     document.body.appendChild(modal);
+    const close = this.attachEscapeClose(() => modal.remove());
 
     const renderModal = (): void => {
-      const { mpfRows, nonMpfRows } = this.buildShortageData(includedRoles);
+      const { mpfRows, nonMpfRows } = this.buildShortageData(includedRoles, deductBackline);
       const discordText = this.generateDiscordText(mpfRows);
+      const craftableRows = mpfRows.filter(r => r.orderCount > 0);
+      const backlineRows = mpfRows.filter(r => r.backlineAvailable > 0);
       const includedDepots = new Set(this.csvEntries
         .filter(entry => includedRoles.has(entry.role))
         .map(entry => entry.depotName));
@@ -1488,13 +1544,14 @@ export class StockpileView {
         .filter(role => includedRoles.has(role))
         .map(role => role[0].toUpperCase() + role.slice(1))
         .join(' + ');
+      const hasBacklineDepots = this.csvEntries.some(entry => entry.role === 'backline');
 
       modal.innerHTML = `
         <div class="bg-gray-800 rounded-xl shadow-2xl flex flex-col w-full max-w-4xl" style="max-height: 85vh;">
           <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-700 shrink-0">
             <div>
               <h2 class="font-semibold text-base">Generate Todolist</h2>
-              <p class="text-xs text-gray-500 mt-0.5">${mpfRows.length} craftable item${mpfRows.length !== 1 ? 's' : ''} · ${nonMpfRows.length} non-MPF</p>
+              <p class="text-xs text-gray-500 mt-0.5">${craftableRows.length} craftable item${craftableRows.length !== 1 ? 's' : ''} · ${nonMpfRows.length} non-MPF</p>
             </div>
             <button id="close-shortage-modal" class="text-gray-400 hover:text-gray-200 transition-colors p-1 rounded hover:bg-gray-700" aria-label="Close">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1514,6 +1571,12 @@ export class StockpileView {
               `).join('')}
             </div>
             <p id="todolist-role-summary" class="mt-1.5 text-xs text-gray-500">Counting ${includedDepots.size} depot${includedDepots.size !== 1 ? 's' : ''}: ${roleSummary}</p>
+            ${hasBacklineDepots && !includedRoles.has('backline') ? `
+              <label class="mt-2 flex items-center gap-1.5 text-xs text-gray-300">
+                <input id="deduct-backline-toggle" class="accent-emerald-500" type="checkbox" ${deductBackline ? 'checked' : ''} />
+                <span>Deduct available Backline stock from MPF production <span class="text-gray-500">(recommended — avoids over-producing)</span></span>
+              </label>
+            ` : ''}
           </div>
 
           <div class="flex flex-1 min-h-0 flex-col md:flex-row overflow-hidden">
@@ -1530,30 +1593,47 @@ export class StockpileView {
               <textarea id="discord-textarea" readonly class="flex-1 min-h-56 bg-gray-900 rounded border border-gray-700 p-3 text-xs text-gray-300 font-mono resize-none focus:outline-none focus:border-blue-500 leading-relaxed">${escapeHtml(discordText)}</textarea>
             </div>
 
-            <div class="w-full md:w-72 max-h-56 md:max-h-none shrink-0 flex flex-col p-4 overflow-hidden">
-              <h3 class="text-sm font-medium text-gray-300 mb-1 shrink-0">Not craftable at MPF</h3>
-              <p class="text-xs text-gray-500 mb-3 shrink-0">Source these through factories, facilities, or other means.</p>
-              ${nonMpfRows.length === 0
-                ? '<p class="text-xs text-gray-600 italic">None — all missing items are MPF-craftable.</p>'
-                : `<div class="flex-1 overflow-y-auto space-y-1">
-                    ${nonMpfRows.map(row => {
-                      const gap = Math.abs(row.stockpileQty - row.targetQty);
-                      return `
-                        <div class="flex items-center gap-2 px-2 py-1.5 rounded bg-gray-700/40">
-                          <img src="${escapeHtml(row.iconPath)}" class="w-7 h-7 object-contain shrink-0" alt="" />
-                          <span class="flex-1 text-xs text-gray-300 truncate">${escapeHtml(row.itemName ?? '')}</span>
-                          <span class="text-xs font-mono text-red-400 shrink-0">−${gap}</span>
-                        </div>
-                      `;
-                    }).join('')}
-                  </div>`
-              }
+            <div class="w-full md:w-72 max-h-56 md:max-h-none shrink-0 flex flex-col p-4 overflow-hidden gap-3">
+              ${backlineRows.length > 0 ? `
+                <div class="flex flex-col overflow-hidden">
+                  <h3 class="text-sm font-medium text-gray-300 mb-1 shrink-0">Available in Backline</h3>
+                  <p class="text-xs text-gray-500 mb-2 shrink-0">Transport these instead of producing them.</p>
+                  <div class="overflow-y-auto space-y-1">
+                    ${backlineRows.map(({ row, backlineAvailable }) => `
+                      <div class="flex items-center gap-2 px-2 py-1.5 rounded bg-gray-700/40">
+                        <img src="${escapeHtml(row.iconPath)}" class="w-6 h-6 object-contain shrink-0" alt="" />
+                        <span class="flex-1 text-xs text-gray-300 truncate">${escapeHtml(row.itemName ?? '')}</span>
+                        <span class="text-xs font-mono text-emerald-400 shrink-0">${backlineAvailable}</span>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+              <div class="flex-1 flex flex-col overflow-hidden">
+                <h3 class="text-sm font-medium text-gray-300 mb-1 shrink-0">Not craftable at MPF</h3>
+                <p class="text-xs text-gray-500 mb-3 shrink-0">Source these through factories, facilities, or other means.</p>
+                ${nonMpfRows.length === 0
+                  ? '<p class="text-xs text-gray-600 italic">None — all missing items are MPF-craftable.</p>'
+                  : `<div class="flex-1 overflow-y-auto space-y-1">
+                      ${nonMpfRows.map(row => {
+                        const gap = Math.abs(row.stockpileQty - row.targetQty);
+                        return `
+                          <div class="flex items-center gap-2 px-2 py-1.5 rounded bg-gray-700/40">
+                            <img src="${escapeHtml(row.iconPath)}" class="w-7 h-7 object-contain shrink-0" alt="" />
+                            <span class="flex-1 text-xs text-gray-300 truncate">${escapeHtml(row.itemName ?? '')}</span>
+                            <span class="text-xs font-mono text-red-400 shrink-0">−${gap}</span>
+                          </div>
+                        `;
+                      }).join('')}
+                    </div>`
+                }
+              </div>
             </div>
           </div>
         </div>
       `;
 
-      modal.querySelector('#close-shortage-modal')?.addEventListener('click', () => modal.remove());
+      modal.querySelector('#close-shortage-modal')?.addEventListener('click', () => close());
       modal.querySelectorAll<HTMLInputElement>('.todolist-role-toggle').forEach(input => {
         input.addEventListener('change', () => {
           if (!this.setCalculationRole(input.value as DepotRole, input.checked)) {
@@ -1565,6 +1645,15 @@ export class StockpileView {
           renderModal();
         });
       });
+      modal.querySelector('#deduct-backline-toggle')?.addEventListener('change', (e) => {
+        deductBackline = (e.target as HTMLInputElement).checked;
+        try {
+          localStorage.setItem(DEDUCT_BACKLINE_KEY, deductBackline ? '1' : '0');
+        } catch (error) {
+          console.warn('StockpileView: failed to persist deduct-backline preference', error);
+        }
+        renderModal();
+      });
       modal.querySelector('#copy-discord-text')?.addEventListener('click', async () => {
         const btn = modal.querySelector('#copy-discord-text') as HTMLButtonElement;
         await navigator.clipboard.writeText(discordText);
@@ -1575,7 +1664,7 @@ export class StockpileView {
       });
     };
 
-    modal.addEventListener('click', (event) => { if (event.target === modal) modal.remove(); });
+    modal.addEventListener('click', (event) => { if (event.target === modal) close(); });
     renderModal();
   }
 
@@ -1700,6 +1789,7 @@ export class StockpileView {
     modal.id = 'transport-modal';
     modal.className = 'fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4';
     document.body.appendChild(modal);
+    const close = this.attachEscapeClose(() => modal.remove());
 
     const renderModal = (): void => {
       const available = getRemainingCargo();
@@ -1892,7 +1982,7 @@ export class StockpileView {
         }
       };
 
-      modal.querySelector('#transport-close')?.addEventListener('click', () => modal.remove());
+      modal.querySelector('#transport-close')?.addEventListener('click', () => close());
       modal.querySelector('#transport-source')?.addEventListener('change', event => {
         sourceName = (event.target as HTMLSelectElement).value;
         if (destinationName === sourceName) {
@@ -2000,7 +2090,7 @@ export class StockpileView {
       });
     };
 
-    modal.addEventListener('click', event => { if (event.target === modal) modal.remove(); });
+    modal.addEventListener('click', event => { if (event.target === modal) close(); });
     renderModal();
   }
 

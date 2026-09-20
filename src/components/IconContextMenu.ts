@@ -25,6 +25,16 @@ export class IconContextMenu {
       }
     });
 
+    // Also openable via a visible "options" button on each icon (left-click),
+    // dispatched by SectionComponent — discoverable alternative to right-click.
+    window.addEventListener('open-icon-context-menu', ((e: CustomEvent<{ x: number; y: number; sectionId: string; iconInstanceId: string }>) => {
+      const { x, y, sectionId, iconInstanceId } = e.detail;
+      if (!sectionId || !iconInstanceId) return;
+      this.currentSectionId = sectionId;
+      this.currentIconId = iconInstanceId;
+      this.show(x, y);
+    }) as EventListener);
+
     // Close on click outside (but not inside the menu)
     document.addEventListener('click', (e) => {
       if (this.menu && !this.menu.contains(e.target as Node)) {
@@ -53,8 +63,8 @@ export class IconContextMenu {
             <button class="qty-btn w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded flex items-center justify-center" data-qty-action="plus">+</button>
           </div>
           <div class="flex gap-1 mt-2">
-            <button class="qty-preset flex-1 px-2 py-1 text-xs rounded ${currentQuantity === 0 ? 'bg-amber-600' : 'bg-gray-700 hover:bg-gray-600'}" data-qty-preset="0" title="Not required">★ No</button>
-            <button class="qty-preset flex-1 px-2 py-1 text-xs rounded ${currentQuantity === -1 ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'}" data-qty-preset="-1" title="Specific">? Spec</button>
+            <button class="qty-preset flex-1 px-2 py-1 text-xs rounded ${currentQuantity === 0 ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'}" data-qty-preset="0" title="Not required">? Not required</button>
+            <button class="qty-preset flex-1 px-2 py-1 text-xs rounded ${currentQuantity === -1 ? 'bg-amber-600' : 'bg-gray-700 hover:bg-gray-600'}" data-qty-preset="-1" title="Specific / on demand">★ On demand</button>
           </div>
         </div>
         <div class="overflow-y-auto flex-1">

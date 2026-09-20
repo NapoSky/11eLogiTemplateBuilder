@@ -31,6 +31,7 @@ export class SectionModal {
   private editingId: string | null = null;
   private createX: number = 100;
   private createY: number = 100;
+  private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
 
   mount(container: HTMLElement): void {
     this.container = container;
@@ -50,6 +51,7 @@ export class SectionModal {
   private openCreate(): void {
     this.editingId = null;
     this.render('New Section', '', COLORS[Math.floor(Math.random() * COLORS.length)]);
+    this.attachKeydownHandler();
   }
 
   private openEdit(id: string): void {
@@ -58,6 +60,15 @@ export class SectionModal {
     
     this.editingId = id;
     this.render(section.title, section.title, section.color);
+    this.attachKeydownHandler();
+  }
+
+  private attachKeydownHandler(): void {
+    if (this.keydownHandler) return;
+    this.keydownHandler = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') this.close();
+    };
+    window.addEventListener('keydown', this.keydownHandler);
   }
 
   private render(title: string, inputValue: string, selectedColor: string): void {
@@ -180,5 +191,9 @@ export class SectionModal {
     }
     this.modal = null;
     this.editingId = null;
+    if (this.keydownHandler) {
+      window.removeEventListener('keydown', this.keydownHandler);
+      this.keydownHandler = null;
+    }
   }
 }

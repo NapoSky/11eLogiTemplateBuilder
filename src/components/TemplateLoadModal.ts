@@ -1,5 +1,7 @@
 import { store } from '../store';
 import { getBaseUrl } from '../config';
+import { showToast } from '../services/toast';
+import { confirmDialog } from '../services/confirmDialog';
 
 const OPEN_EVENT = 'open-template-load-modal';
 
@@ -36,10 +38,20 @@ export class TemplateLoadModal {
   private loadFile(file: File): void {
     const reader = new FileReader();
     reader.onload = () => {
-      store.importJSON(reader.result as string);
-      this.close();
+      const success = store.importJSON(reader.result as string);
+      if (success) {
+        this.close();
+      } else {
+        showToast(`"${file.name}" is not a valid template file.`, { type: 'error' });
+      }
     };
     reader.readAsText(file);
+  }
+
+  /** Asks for confirmation before replacing the current template, unless the canvas is already empty. */
+  private confirmOverwrite(): Promise<boolean> {
+    if (store.sections.length === 0) return Promise.resolve(true);
+    return confirmDialog('Loading a template will replace your current sections. Continue?', { variant: 'danger' });
   }
 
   private render(): void {
@@ -106,38 +118,43 @@ export class TemplateLoadModal {
 
     // Reference template (Warden)
     this.container.querySelector('#tpl-load-reference')?.addEventListener('click', async () => {
+      if (!(await this.confirmOverwrite())) return;
       try {
         const baseUrl = getBaseUrl();
         const res = await fetch(`${baseUrl}referenceTemplate.json`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const text = await res.text();
-        store.importJSON(text);
+        if (!store.importJSON(text)) throw new Error('invalid template content');
         this.close();
       } catch (e) {
         console.error('TemplateLoadModal: failed to load reference template', e);
+        showToast('Failed to load the reference template.', { type: 'error' });
       }
     });
 
     // Reference template (Colonial)
     this.container.querySelector('#tpl-load-reference-colonial')?.addEventListener('click', async () => {
+      if (!(await this.confirmOverwrite())) return;
       try {
         const baseUrl = getBaseUrl();
         const res = await fetch(`${baseUrl}referenceTemplateColonial.json`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const text = await res.text();
-        store.importJSON(text);
+        if (!store.importJSON(text)) throw new Error('invalid template content');
         this.close();
       } catch (e) {
         console.error('TemplateLoadModal: failed to load Colonial reference template', e);
+        showToast('Failed to load the Colonial reference template.', { type: 'error' });
       }
     });
 
     // File input
-    this.container.querySelector('#tpl-load-file-input')?.addEventListener('change', (e) => {
+    this.container.querySelector('#tpl-load-file-input')?.addEventListener('change', async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
-      this.loadFile(file);
       (e.target as HTMLInputElement).value = '';
+      if (!(await this.confirmOverwrite())) return;
+      this.loadFile(file);
     });
 
     // Drag & drop on dropzone
@@ -150,11 +167,11 @@ export class TemplateLoadModal {
     dropzone?.addEventListener('dragleave', () => {
       dropzone.classList.remove('border-blue-400', 'bg-gray-700');
     });
-    dropzone?.addEventListener('drop', (e) => {
+    dropzone?.addEventListener('drop', async (e) => {
       e.preventDefault();
       dropzone.classList.remove('border-blue-400', 'bg-gray-700');
       const file = e.dataTransfer?.files[0];
-      if (file) this.loadFile(file);
+      if (file && (await this.confirmOverwrite())) this.loadFile(file);
     });
   }
 }

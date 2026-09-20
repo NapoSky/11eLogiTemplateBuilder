@@ -3,6 +3,7 @@ import { TodoListItem, MPF_CATEGORIES, MPF_CATEGORY_LABELS, MpfCategory, Faction
 import { displayedCost } from '../services/mpfCalculator';
 import { renderTodoList } from '../services/todoListExporter';
 import { getBaseUrl } from '../config';
+import { showToast } from '../services/toast';
 
 const BASE_URL = getBaseUrl();
 
@@ -66,17 +67,6 @@ function renderPreviewHtml(raw: string): string {
 function regionalIndicator(index: number): string {
   if (index < 0 || index > 25) return '•';
   return String.fromCodePoint(0x1F1E6 + index);
-}
-
-function showToast(message: string): void {
-  const toast = document.createElement('div');
-  toast.className = 'fixed bottom-6 right-6 bg-red-600 text-white px-4 py-2 rounded shadow-lg z-50 transition-opacity';
-  toast.textContent = message;
-  document.body.appendChild(toast);
-  setTimeout(() => {
-    toast.style.opacity = '0';
-    setTimeout(() => toast.remove(), 300);
-  }, 2200);
 }
 
 export class TodoListView {
@@ -525,9 +515,9 @@ export class TodoListView {
       const text = previewEl?.dataset.raw ?? previewEl?.textContent ?? '';
       try {
         await navigator.clipboard.writeText(text);
-        showToast('Copied!');
+        showToast('Copied!', { type: 'success' });
       } catch {
-        showToast('Copy failed');
+        showToast('Copy failed', { type: 'error' });
       }
     });
     this.container.querySelector('#tl-download')?.addEventListener('click', () => {
@@ -561,9 +551,9 @@ export class TodoListView {
           if (!payload.filename) return;
           const result = store.addTodoListItemFromIcon(payload.filename);
           if (result === 'not-mpf') {
-            showToast(`"${payload.displayName ?? payload.filename}" is not MPF-craftable.`);
+            showToast(`"${payload.displayName ?? payload.filename}" is not MPF-craftable.`, { type: 'error' });
           } else if (result === 'wrong-faction') {
-            showToast(`"${payload.displayName ?? payload.filename}" belongs to the opposing faction.`);
+            showToast(`"${payload.displayName ?? payload.filename}" belongs to the opposing faction.`, { type: 'error' });
           }
         } catch (err) {
           console.error('drop parse failed:', err);
@@ -667,7 +657,7 @@ export class TodoListView {
           const selectedText = ta.value.slice(start, end);
 
           if (selectedText.length === 0) {
-            showToast('Please select text to format');
+            showToast('Please select text to format', { type: 'error' });
             return;
           }
 

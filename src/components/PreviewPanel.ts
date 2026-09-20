@@ -38,11 +38,11 @@ export class PreviewPanel {
         </button>
         <div id="preview-content" class="bg-gray-800 border-l border-gray-600 shadow-xl w-0 overflow-hidden transition-all duration-300">
           <div class="p-4 flex flex-col" style="width: 720px;">
-            <h3 class="font-semibold mb-3 text-base">Aperçu PNG</h3>
+            <h3 class="font-semibold mb-3 text-base">PNG Preview</h3>
             <div class="bg-black/50 rounded-lg border border-gray-600 p-2">
               <canvas id="preview-canvas" style="width: 100%; aspect-ratio: 16/9; display: block;"></canvas>
             </div>
-            <p class="text-xs text-gray-400 mt-2 text-center">Mise à jour en temps réel</p>
+            <p class="text-xs text-gray-400 mt-2 text-center">Live update</p>
           </div>
         </div>
       </div>
