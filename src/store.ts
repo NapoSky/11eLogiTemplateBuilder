@@ -43,7 +43,7 @@ class Store {
   templateFaction: FactionFilter = 'all';
 
   // Stockpile template source (shared with Toolbar for active state rendering)
-  stockpileTplSource: 'current' | 'official' | 'file' = 'current';
+  stockpileTplSource: 'current' | 'official' | 'official-colonial' | 'file' = 'current';
   stockpileTplFileName: string | null = null;
   
   // Subscribe to changes
@@ -292,7 +292,7 @@ class Store {
     this.emit();
   }
 
-  setStockpileTplSource(source: 'current' | 'official' | 'file', fileName: string | null = null): void {
+  setStockpileTplSource(source: 'current' | 'official' | 'official-colonial' | 'file', fileName: string | null = null): void {
     this.stockpileTplSource = source;
     this.stockpileTplFileName = fileName;
     this.emit();

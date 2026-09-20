@@ -597,6 +597,20 @@ describe('Toolbar - Composant réel', () => {
     expect(container.querySelector('#help-modal')?.classList.contains('hidden')).toBe(true);
   });
 
+  test('help Stockpile est contextuel et décrit les transports multi-routes', () => {
+    const toolbar = new Toolbar();
+    toolbar.mount(container);
+    (container.querySelector('#btn-mode-stockpile') as HTMLButtonElement).click();
+
+    const helpBody = container.querySelector('#help-body')?.textContent ?? '';
+    expect(helpBody).toContain('Stock and transport');
+    expect(helpBody).toContain('Previous routes remain in the same list');
+    expect(helpBody).toContain('incomplete containers');
+    expect(helpBody).not.toContain('Template Mode');
+    const headings = [...container.querySelectorAll('#help-body h3')].map(heading => heading.textContent?.trim());
+    expect(headings).not.toContain('📋 MPF Todolist');
+  });
+
   test('export JSON déclenche le téléchargement', () => {
     const toolbar = new Toolbar();
     toolbar.mount(container);

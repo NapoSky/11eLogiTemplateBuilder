@@ -132,6 +132,8 @@ const FR_TO_EN: Record<string, string> = {
   'Matériaux Raffinés':                      'Refined Materials',
   'Matériaux Béton':                         'Concrete Materials',
   'Conteneur de Liquide':                    'Liquid Container (Fuel Tank)',
+  'Container de ressources':                 'Resource Container',
+  'Conteneur de ressources':                 'Resource Container',
   'Palette de matériaux':                    'Material Pallet',
   'Conteneur de transport':                  'Shipping Container',
 

@@ -159,6 +159,42 @@ describe('TemplateLoadModal – reference template', () => {
     expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('referenceTemplate.json'));
   });
 
+  test('reference template (colonial) card is present', () => {
+    const { container } = mountModal();
+    openModal();
+    expect(container.querySelector('#tpl-load-reference-colonial')).toBeTruthy();
+  });
+
+  test('clicking the colonial reference card triggers a fetch for referenceTemplateColonial.json', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      text: async () => VALID_TEMPLATE_JSON,
+    } as unknown as Response);
+
+    const { container } = mountModal();
+    openModal();
+    (container.querySelector('#tpl-load-reference-colonial') as HTMLElement).click();
+    await Promise.resolve(); // flush microtasks
+
+    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('referenceTemplateColonial.json'));
+  });
+
+  test('successful colonial fetch calls store.importJSON and closes the modal', async () => {
+    const importSpy = jest.spyOn(store, 'importJSON');
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      text: async () => VALID_TEMPLATE_JSON,
+    } as unknown as Response);
+
+    const { container } = mountModal();
+    openModal();
+    (container.querySelector('#tpl-load-reference-colonial') as HTMLElement).click();
+    await new Promise(r => setTimeout(r, 0)); // flush async chain
+
+    expect(importSpy).toHaveBeenCalledWith(VALID_TEMPLATE_JSON);
+    expect(container.innerHTML).toBe('');
+  });
+
   test('successful fetch calls store.importJSON and closes the modal', async () => {
     const importSpy = jest.spyOn(store, 'importJSON');
     global.fetch = jest.fn().mockResolvedValue({

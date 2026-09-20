@@ -3,6 +3,25 @@ import { Template, Section, SectionIcon, MpfDataEntry, TodoListItem, TodoList, M
 import { getBaseUrl } from '../config';
 import { renderTodoList } from '../services/todoListExporter';
 import { translateFrenchItemName } from '../services/frenchItemNames';
+import {
+  aggregateStockpileItems,
+  buildBacklineCargo,
+  DEFAULT_TRANSPORT_EXCLUSIONS,
+  DepotRole,
+  missionFits,
+  renderTransportList,
+  StockpileSnapshot,
+  suggestTransportMissions,
+  TransportCargoItem,
+  TransportMission,
+  TransportMode,
+  TransportRoute,
+  transportSlotsPerTrip,
+  usedTransportSlots,
+  inferDepotName,
+  normalizeStockItems,
+  upsertStockpileSnapshot,
+} from '../services/stockpileLogistics';
 
 // ─── Local types ──────────────────────────────────────────────────────────────
 
@@ -31,12 +50,7 @@ interface ComparisonResult {
   surplus: Array<{ itemName: string; qty: number; isCrate: boolean }>;
 }
 
-interface CsvEntry {
-  id: string;
-  header: StockpileHeader | null;
-  items: Map<string, number>;
-  label: string;
-}
+type CsvEntry = StockpileSnapshot;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -119,7 +133,7 @@ export function parseCSV(text: string): { header: StockpileHeader | null; items:
     // "(Caisse)" is the unambiguous French indicator — English exports always
     // use "(Crate)", so this check never fires on an English CSV.
     if (/\(Caisse\)/i.test(afterQuoteNorm)) frenchDetected = true;
-    items.set(normalizedName, qty);
+    items.set(normalizedName, (items.get(normalizedName) ?? 0) + qty);
   }
 
   return { header, items, frenchDetected };
@@ -202,6 +216,7 @@ export function buildComparison(
 const CSV_ENTRIES_KEY  = 'stockpile_csv_entries';
 const TPL_FILE_KEY     = 'stockpile_tpl_file';
 const TPL_FILENAME_KEY = 'stockpile_tpl_filename';
+const TRANSPORT_EXCLUSIONS_KEY = 'stockpile_transport_exclusions';
 
 function showFrenchWarningToast(): void {
   // Remove any existing French warning before showing a new one
@@ -263,13 +278,14 @@ export class StockpileView {
   // UI state
   private filterStatus: FilterStatus = 'all';
   private externalTemplate: Template | null = null;
-  private useReferenceTemplate = true;
+  private officialFaction: 'warden' | 'colonial' | null = 'warden';
   private externalTemplateFileName: string | null = null;
   private collapsedSections: Set<string> = new Set();
   private loadedStockpilesCollapsed = false;
   private sortByGap = true;
   private hideOk = true;
   private searchQuery = '';
+  private stockViewMode: 'global' | 'depots' = 'global';
 
   // Bound window listeners (for cleanup)
   private onLoadCsv      = (e: Event) => { this.handleLoadCsv((e as CustomEvent).detail.file as File); };
@@ -277,7 +293,8 @@ export class StockpileView {
   private onClearCsv     = () => { this.handleClearCsv(); };
   private onOpenLoadModal = () => { this.showLoadCsvModal(); };
   private onSetTplCurrent  = () => { this.handleSetTplCurrent(); };
-  private onSetTplOfficial = () => { this.handleSetTplOfficial(); };
+  private onSetTplOfficial = () => { this.handleSetTplOfficial('warden'); };
+  private onSetTplOfficialColonial = () => { this.handleSetTplOfficial('colonial'); };
   private onLoadTpl      = (e: Event) => { this.handleLoadTpl((e as CustomEvent).detail.file as File); };
 
   mount(container: HTMLElement): void {
@@ -288,31 +305,34 @@ export class StockpileView {
     window.addEventListener('stockpile:open-load-modal', this.onOpenLoadModal);
     window.addEventListener('stockpile:set-tpl-current',  this.onSetTplCurrent);
     window.addEventListener('stockpile:set-tpl-official', this.onSetTplOfficial);
+    window.addEventListener('stockpile:set-tpl-official-colonial', this.onSetTplOfficialColonial);
     window.addEventListener('stockpile:load-tpl',      this.onLoadTpl);
     this.renderLoading();
     this.loadMapping().then(async () => {
       this.loadCollapsedSections();
       const savedSource = localStorage.getItem('stockpile_tpl_source') ?? 'official';
-      if (savedSource === 'official') {
+      if (savedSource === 'official' || savedSource === 'official-colonial') {
+        const faction = savedSource === 'official' ? 'warden' : 'colonial';
         try {
           const baseUrl = getBaseUrl();
-          const res = await fetch(`${baseUrl}referenceTemplate.json`);
+          const file = faction === 'warden' ? 'referenceTemplate.json' : 'referenceTemplateColonial.json';
+          const res = await fetch(`${baseUrl}${file}`);
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           this.externalTemplate = await res.json() as Template;
-          this.useReferenceTemplate = true;
+          this.officialFaction = faction;
         } catch (e) {
           console.warn('StockpileView: failed to load reference template', e);
-          this.useReferenceTemplate = false;
+          this.officialFaction = null;
         }
       } else if (savedSource === 'file') {
         this.restoreExternalTemplate();
-        this.useReferenceTemplate = false;
+        this.officialFaction = null;
       } else {
-        this.useReferenceTemplate = false;
+        this.officialFaction = null;
       }
       // Sync store so Toolbar reflects the restored state
       store.setStockpileTplSource(
-        this.useReferenceTemplate ? 'official' : this.externalTemplate ? 'file' : 'current',
+        this.officialFaction === 'warden' ? 'official' : this.officialFaction === 'colonial' ? 'official-colonial' : this.externalTemplate ? 'file' : 'current',
         this.externalTemplateFileName
       );
       this.restoreCSV();
@@ -327,13 +347,14 @@ export class StockpileView {
     window.removeEventListener('stockpile:open-load-modal', this.onOpenLoadModal);
     window.removeEventListener('stockpile:set-tpl-current',  this.onSetTplCurrent);
     window.removeEventListener('stockpile:set-tpl-official', this.onSetTplOfficial);
+    window.removeEventListener('stockpile:set-tpl-official-colonial', this.onSetTplOfficialColonial);
     window.removeEventListener('stockpile:load-tpl',      this.onLoadTpl);
     this.container = null;
     this.result = null;
     this.csvEntries = [];
     this.filterStatus = 'all';
     this.externalTemplate = null;
-    this.useReferenceTemplate = false;
+    this.officialFaction = null;
     this.collapsedSections = new Set();
     this.searchQuery = '';
   }
@@ -391,6 +412,8 @@ export class StockpileView {
         header: e.header,
         items: Object.fromEntries(e.items),
         label: e.label,
+        depotName: e.depotName,
+        role: e.role,
       }));
       localStorage.setItem(CSV_ENTRIES_KEY, JSON.stringify(raw));
     } catch (e) {
@@ -405,12 +428,21 @@ export class StockpileView {
         this.migrateOldCSV();
         return;
       }
-      const entries = JSON.parse(raw) as Array<{ id: string; header: StockpileHeader | null; items: Record<string, number>; label: string }>;
-      this.csvEntries = entries.map(e => ({
+      const entries = JSON.parse(raw) as Array<{
+        id: string;
+        header: StockpileHeader | null;
+        items: Record<string, number>;
+        label: string;
+        depotName?: string;
+        role?: DepotRole;
+      }>;
+      this.csvEntries = entries.map((e, index) => ({
         id: e.id,
         header: e.header,
         items: new Map(Object.entries(e.items)),
         label: e.label,
+        depotName: e.depotName ?? inferDepotName(e.header?.location ?? e.label),
+        role: e.role ?? (index === 0 ? 'intermediate' : 'backline'),
       }));
       if (this.csvEntries.length > 0) {
         this.result = buildComparison(this.getSections(), this.aggregateItems(), this.iconMapping, null);
@@ -429,7 +461,14 @@ export class StockpileView {
       const obj = JSON.parse(rawItems) as Record<string, number>;
       const header = rawHeader ? JSON.parse(rawHeader) as StockpileHeader : null;
       const label = header?.location ?? fileName ?? 'Stockpile 1';
-      this.csvEntries = [{ id: generateId(), header, items: new Map(Object.entries(obj)), label }];
+      this.csvEntries = [{
+        id: generateId(),
+        header,
+        items: new Map(Object.entries(obj)),
+        label,
+        depotName: inferDepotName(header?.location ?? label),
+        role: 'intermediate',
+      }];
       this.saveCSV();
       localStorage.removeItem('stockpile_csv_items');
       localStorage.removeItem('stockpile_csv_header');
@@ -445,13 +484,33 @@ export class StockpileView {
   }
 
   private aggregateItems(): Map<string, number> {
+    return aggregateStockpileItems(this.csvEntries);
+  }
+
+  private aggregateEntries(entries: CsvEntry[]): Map<string, number> {
     const result = new Map<string, number>();
-    for (const entry of this.csvEntries) {
-      for (const [name, qty] of entry.items) {
-        result.set(name, (result.get(name) ?? 0) + qty);
-      }
+    for (const entry of entries) {
+      for (const [name, qty] of entry.items) result.set(name, (result.get(name) ?? 0) + qty);
     }
     return result;
+  }
+
+  private getDepots(): Array<{ name: string; role: DepotRole; entries: CsvEntry[] }> {
+    const depots = new Map<string, { name: string; role: DepotRole; entries: CsvEntry[] }>();
+    for (const entry of this.csvEntries) {
+      const depot = depots.get(entry.depotName) ?? { name: entry.depotName, role: entry.role, entries: [] };
+      depot.entries.push(entry);
+      depot.role = entry.role;
+      depots.set(entry.depotName, depot);
+    }
+    const roleOrder: Record<DepotRole, number> = { backline: 0, intermediate: 1, front: 2 };
+    return [...depots.values()].sort((left, right) => roleOrder[left.role] - roleOrder[right.role]);
+  }
+
+  private getDirectCargoNames(): Set<string> {
+    return new Set(store.mpfData
+      .filter(entry => entry.itemCategory === 'vehicles' || entry.itemCategory === 'shipables')
+      .map(entry => entry.itemName));
   }
 
   private rerunComparison(): void {
@@ -472,7 +531,17 @@ export class StockpileView {
   private addCsvEntry(text: string, fileName: string | null): void {
     const { header, items, frenchDetected } = parseCSV(text);
     const label = header?.location ?? fileName ?? `Stockpile ${this.csvEntries.length + 1}`;
-    this.csvEntries.push({ id: generateId(), header, items, label });
+    const depotName = inferDepotName(header?.location ?? label);
+    const sameDepot = this.csvEntries.find(entry => entry.depotName === depotName);
+    const role = sameDepot?.role ?? (this.csvEntries.some(entry => entry.role === 'intermediate') ? 'backline' : 'intermediate');
+    this.csvEntries = upsertStockpileSnapshot(this.csvEntries, {
+      id: generateId(),
+      header,
+      items,
+      label,
+      depotName,
+      role,
+    });
     this.result = buildComparison(this.getSections(), this.aggregateItems(), this.iconMapping, null);
     this.saveCSV();
     this.filterStatus = 'all';
@@ -489,6 +558,25 @@ export class StockpileView {
     this.render();
   }
 
+  private handleDepotNameChange(id: string, depotName: string): void {
+    const normalizedName = depotName.trim();
+    if (!normalizedName) return;
+    this.csvEntries = this.csvEntries.map(entry => entry.id === id ? { ...entry, depotName: normalizedName } : entry);
+    this.saveCSV();
+    this.render();
+  }
+
+  private handleDepotRoleChange(depotName: string, role: DepotRole): void {
+    this.csvEntries = this.csvEntries.map(entry => {
+      if (entry.depotName === depotName) return { ...entry, role };
+      if (role === 'intermediate' && entry.role === 'intermediate') return { ...entry, role: 'backline' };
+      return entry;
+    });
+    this.rerunComparison();
+    this.saveCSV();
+    this.render();
+  }
+
   private handleClearCsv(): void {
     this.csvEntries = [];
     this.result = null;
@@ -497,10 +585,10 @@ export class StockpileView {
   }
 
   private handleSetTplCurrent(): void {
-    if (this.externalTemplate === null && !this.useReferenceTemplate) return;
+    if (this.externalTemplate === null && this.officialFaction === null) return;
     this.externalTemplate = null;
     this.externalTemplateFileName = null;
-    this.useReferenceTemplate = false;
+    this.officialFaction = null;
     localStorage.setItem('stockpile_tpl_source', 'current');
     localStorage.removeItem(TPL_FILE_KEY);
     localStorage.removeItem(TPL_FILENAME_KEY);
@@ -509,24 +597,26 @@ export class StockpileView {
     this.render();
   }
 
-  private async handleSetTplOfficial(): Promise<void> {
-    if (this.useReferenceTemplate) return;
+  private async handleSetTplOfficial(faction: 'warden' | 'colonial'): Promise<void> {
+    if (this.officialFaction === faction) return;
     try {
       const baseUrl = getBaseUrl();
-      const res = await fetch(`${baseUrl}referenceTemplate.json`);
+      const file = faction === 'warden' ? 'referenceTemplate.json' : 'referenceTemplateColonial.json';
+      const res = await fetch(`${baseUrl}${file}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       this.externalTemplate = await res.json() as Template;
       this.externalTemplateFileName = null;
-      this.useReferenceTemplate = true;
-      localStorage.setItem('stockpile_tpl_source', 'official');
+      this.officialFaction = faction;
+      const source = faction === 'warden' ? 'official' : 'official-colonial';
+      localStorage.setItem('stockpile_tpl_source', source);
       localStorage.removeItem(TPL_FILE_KEY);
       localStorage.removeItem(TPL_FILENAME_KEY);
-      store.setStockpileTplSource('official');
+      store.setStockpileTplSource(source);
       this.rerunComparison();
       this.render();
     } catch (e) {
-      console.error('Failed to load reference template:', e);
-      alert('Could not load the official reference template.');
+      console.error(`Failed to load ${faction} reference template:`, e);
+      alert(`Could not load the official ${faction === 'warden' ? 'Warden' : 'Colonial'} reference template.`);
     }
   }
 
@@ -535,7 +625,7 @@ export class StockpileView {
       const text = await file.text();
       this.externalTemplate = JSON.parse(text) as Template;
       this.externalTemplateFileName = file.name;
-      this.useReferenceTemplate = false;
+      this.officialFaction = null;
       localStorage.setItem('stockpile_tpl_source', 'file');
       this.saveExternalTemplate();
       store.setStockpileTplSource('file', file.name);
@@ -571,6 +661,11 @@ export class StockpileView {
         <div class="shrink-0 flex flex-wrap items-center gap-3 px-4 py-2.5 bg-gray-800 border-b border-gray-700">
 
           ${this.csvEntries.length > 0 ? `
+          <div class="flex items-center rounded border border-gray-600 overflow-hidden">
+            <button data-stock-view="global" class="px-2.5 py-1 text-xs ${this.stockViewMode === 'global' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}">MPF production needs</button>
+            <button data-stock-view="depots" class="px-2.5 py-1 text-xs ${this.stockViewMode === 'depots' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}">Transport planning</button>
+          </div>
+
           <!-- Filter -->
           <div class="flex items-center gap-1">
             <span class="text-xs text-gray-400 mr-1">Show:</span>
@@ -608,6 +703,7 @@ export class StockpileView {
               class="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-gray-200 placeholder-gray-500 w-36 focus:outline-none focus:border-blue-500 transition-colors"/>
           </div>
 
+              ${this.stockViewMode === 'global' ? `
           <!-- Stats + Generate -->
           <div class="flex items-center gap-3 border-l border-gray-600 pl-3 text-xs ml-auto">
             ${this.renderStats()}
@@ -622,6 +718,13 @@ export class StockpileView {
             </button>
             ` : ''}
           </div>
+          ` : `
+          <div class="ml-auto flex items-center gap-3 text-xs">
+            ${this.renderIntermediateReadiness()}
+            <span class="text-gray-500">Front depots are excluded from totals</span>
+            <button id="btn-prepare-transport" class="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 rounded font-medium transition-colors">Prepare transport</button>
+          </div>
+          `}
           ` : ''}
         </div>
 
@@ -635,7 +738,7 @@ export class StockpileView {
             </svg>
             <p>This comparison is for <span class="text-gray-300 font-semibold">informational purposes only</span>. It provides a snapshot diff between a template and ${this.csvEntries.length > 1 ? `aggregated stockpiles` : `an exported stockpile`} — not a live tracking system. Quantities may be outdated the moment the CSV is exported.</p>
           </div>
-          ${!hasResult ? this.renderEmpty() : this.renderTable()}
+          ${!hasResult ? this.renderEmpty() : this.stockViewMode === 'global' ? this.renderTable() : this.renderDepotMatrix()}
         </div>
       </div>
     `;
@@ -667,6 +770,45 @@ export class StockpileView {
     `;
   }
 
+  private renderIntermediateReadiness(): string {
+    if (!this.result) return '';
+    const intermediate = this.getDepots().find(depot => depot.role === 'intermediate');
+    if (!intermediate) return '<span class="text-amber-400">No Intermediate depot</span>';
+
+    const quantities = new Map(normalizeStockItems(
+      this.aggregateEntries(intermediate.entries),
+      this.getDirectCargoNames(),
+    ).map(item => [item.itemName, item.crates + item.assembled]));
+    const rows = this.result.rows.filter(
+      (row): row is StockpileRow & { itemName: string } => row.itemName !== null && row.targetQty !== -1,
+    );
+    const statuses = rows.map(row => {
+      const quantity = quantities.get(row.itemName) ?? 0;
+      if (quantity >= row.targetQty) return 'ok';
+      return quantity > 0 ? 'partial' : 'missing';
+    });
+    const ok = statuses.filter(status => status === 'ok').length;
+    const partial = statuses.filter(status => status === 'partial').length;
+    const missing = statuses.filter(status => status === 'missing').length;
+    const pct = rows.length > 0 ? Math.round((ok / rows.length) * 100) : 0;
+    const barColor = pct === 100 ? '#22c55e' : pct >= 50 ? '#eab308' : '#ef4444';
+
+    return `
+      <div data-intermediate-readiness class="flex items-center gap-2 border-l border-gray-600 pl-3" title="Intermediate readiness: ${escapeHtml(intermediate.name)}">
+        <span class="text-gray-400">Intermediate readiness</span>
+        <span class="flex items-center gap-1.5">
+          <span class="w-16 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+            <span class="h-full rounded-full block" style="width:${pct}%;background-color:${barColor}"></span>
+          </span>
+          <span class="text-gray-400 tabular-nums">${pct}%</span>
+        </span>
+        <span class="text-green-400 font-medium">✓ ${ok}</span>
+        <span class="text-yellow-400 font-medium">⚠ ${partial}</span>
+        <span class="text-red-400 font-medium">✗ ${missing}</span>
+      </div>
+    `;
+  }
+
   private renderLoadedStockpiles(): string {
     if (this.csvEntries.length === 0) return '';
     const collapsed = this.loadedStockpilesCollapsed;
@@ -689,7 +831,15 @@ export class StockpileView {
               <svg class="w-3.5 h-3.5 shrink-0 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
               </svg>
-              <span class="text-xs text-gray-200 font-medium flex-1 truncate">${escapeHtml(e.label)}</span>
+              <input class="depot-name-input min-w-0 flex-1 bg-transparent border-b border-transparent focus:border-blue-500 text-xs text-gray-200 font-medium focus:outline-none"
+                data-entry-id="${escapeHtml(e.id)}" value="${escapeHtml(e.depotName)}" aria-label="Depot name" />
+              <select class="depot-role-select bg-gray-900 border border-gray-700 rounded px-1.5 py-1 text-xs text-gray-300"
+                data-depot-name="${escapeHtml(e.depotName)}" aria-label="Depot role">
+                <option value="backline" ${e.role === 'backline' ? 'selected' : ''}>Backline</option>
+                <option value="intermediate" ${e.role === 'intermediate' ? 'selected' : ''}>Intermediate</option>
+                <option value="front" ${e.role === 'front' ? 'selected' : ''}>Front</option>
+              </select>
+              <span class="text-xs text-gray-500 truncate max-w-56" title="${escapeHtml(e.label)}">${escapeHtml(e.label)}</span>
               ${e.header ? `<span class="text-xs text-gray-500 shrink-0">${escapeHtml(e.header.date)}</span>` : ''}
               <button class="remove-entry-btn shrink-0 p-1 rounded text-gray-600 hover:text-red-400 hover:bg-gray-700 transition-colors" data-entry-id="${escapeHtml(e.id)}" title="Remove this stockpile">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -720,6 +870,147 @@ export class StockpileView {
           You can load multiple stockpiles — their quantities will be aggregated.
         </p>
       </div>
+    `;
+  }
+
+  private renderDepotMatrix(): string {
+    if (!this.result) return '';
+    const depots = this.getDepots();
+    const directCargoNames = this.getDirectCargoNames();
+    type DepotMatrixRow = Pick<StockpileRow, 'itemName' | 'targetQty' | 'sectionTitle' | 'sectionColor' | 'iconPath'> & { itemName: string };
+    const depotItems = new Map(depots.map(depot => [
+      depot.name,
+      new Map(normalizeStockItems(this.aggregateEntries(depot.entries), directCargoNames).map(item => [item.itemName, item])),
+    ]));
+    const iconPathsByName = new Map(Object.entries(this.iconMapping).map(([path, itemName]) => [
+      itemName,
+      `${getBaseUrl()}assets/icons/${path}`,
+    ]));
+    const rowsByName = new Map<string, DepotMatrixRow>(
+      this.result.rows
+        .filter((row): row is StockpileRow & { itemName: string } => row.itemName !== null)
+        .map(row => [row.itemName, row]),
+    );
+    for (const items of depotItems.values()) {
+      for (const itemName of items.keys()) {
+        if (!rowsByName.has(itemName)) rowsByName.set(itemName, {
+          itemName,
+          targetQty: -1,
+          sectionTitle: 'Not in template',
+          sectionColor: '#4b5563',
+          iconPath: iconPathsByName.get(itemName) ?? '',
+        });
+      }
+    }
+    const sectionOrder = [...new Set([...rowsByName.values()].map(row => row.sectionTitle))];
+    const intermediate = depots.find(depot => depot.role === 'intermediate');
+    const intermediateItems = intermediate ? depotItems.get(intermediate.name) : undefined;
+    const getStatus = (row: DepotMatrixRow): RowStatus => {
+      if (row.targetQty === -1) return 'unknown';
+      const item = intermediateItems?.get(row.itemName);
+      const quantity = (item?.crates ?? 0) + (item?.assembled ?? 0);
+      if (quantity >= row.targetQty) return 'ok';
+      return quantity > 0 ? 'partial' : 'missing';
+    };
+    const getGap = (row: DepotMatrixRow): number => {
+      if (row.targetQty === -1) return Infinity;
+      const item = intermediateItems?.get(row.itemName);
+      return (item?.crates ?? 0) + (item?.assembled ?? 0) - row.targetQty;
+    };
+    let rows = [...rowsByName.values()];
+    if (this.filterStatus !== 'all') rows = rows.filter(row => getStatus(row) === this.filterStatus);
+    if (this.hideOk) rows = rows.filter(row => getStatus(row) !== 'ok');
+    if (this.searchQuery.trim()) {
+      const query = this.searchQuery.trim().toLowerCase();
+      rows = rows.filter(row => row.itemName.toLowerCase().includes(query));
+    }
+    if (this.sortByGap) rows.sort((left, right) => getGap(left) - getGap(right));
+    const rowsBySection = new Map<string, DepotMatrixRow[]>();
+    for (const row of rows) {
+      const sectionRows = rowsBySection.get(row.sectionTitle) ?? [];
+      sectionRows.push(row);
+      rowsBySection.set(row.sectionTitle, sectionRows);
+    }
+
+    const renderHeader = (): string => `
+      <thead class="bg-gray-800 text-gray-300">
+        <tr>
+          <th class="sticky left-0 z-10 bg-gray-800 text-left px-3 py-2 min-w-72 border-r border-gray-700">Item / target</th>
+          ${depots.map(depot => `
+            <th class="px-3 py-2 min-w-40 text-right border-r border-gray-700">
+              <span class="block text-gray-200">${escapeHtml(depot.name)}</span>
+              <span class="block uppercase text-[10px] ${depot.role === 'front' ? 'text-cyan-400' : depot.role === 'intermediate' ? 'text-amber-400' : 'text-lime-400'}">${depot.role}</span>
+            </th>
+          `).join('')}
+          <th class="px-3 py-2 min-w-28 text-right">Calculated total</th>
+        </tr>
+      </thead>
+    `;
+
+    const renderRow = (row: DepotMatrixRow): string => {
+      const target = row.targetQty === -1 ? null : row.targetQty;
+      let calculatedTotal = 0;
+      return `
+        <tr class="hover:bg-gray-800/40">
+          <td class="sticky left-0 bg-gray-900 px-3 py-2 border-r border-gray-700">
+            <div class="flex items-center gap-3">
+              ${row.iconPath
+                ? `<img src="${escapeHtml(row.iconPath)}" class="w-10 h-10 object-contain shrink-0" alt="" />`
+                : `<span class="w-10 h-10 shrink-0 grid place-items-center rounded bg-gray-800 text-gray-600" aria-hidden="true">?</span>`}
+              <div class="min-w-0">
+                <span class="block text-gray-200">${escapeHtml(row.itemName)}</span>
+                <span class="block text-gray-600">target ${target ?? '∞'}</span>
+              </div>
+            </div>
+          </td>
+          ${depots.map(depot => {
+            const item = depotItems.get(depot.name)?.get(row.itemName);
+            const crates = item?.crates ?? 0;
+            const assembled = item?.assembled ?? 0;
+            if (depot.role !== 'front') calculatedTotal += crates + assembled;
+            const gap = depot.role === 'intermediate' && target !== null ? crates + assembled - target : null;
+            return `
+              <td class="px-3 py-2 text-right border-r border-gray-800 tabular-nums">
+                <span class="text-gray-200">${crates}</span><span class="text-gray-600"> cr</span>
+                ${assembled > 0 ? `<span class="block text-cyan-400">${assembled} assembled</span>` : ''}
+                ${gap !== null ? `<span class="block ${gap < 0 ? 'text-red-400' : 'text-green-400'}">${gap > 0 ? '+' : ''}${gap}</span>` : ''}
+              </td>
+            `;
+          }).join('')}
+          <td class="px-3 py-2 text-right font-medium text-gray-200 tabular-nums">${calculatedTotal}</td>
+        </tr>
+      `;
+    };
+
+    return `
+      <div class="mb-3 text-xs text-gray-500">${rows.length} item${rows.length !== 1 ? 's' : ''}</div>
+      ${sectionOrder.map(sectionTitle => {
+        const sectionRows = rowsBySection.get(sectionTitle);
+        if (!sectionRows) return '';
+        const collapsed = this.collapsedSections.has(sectionTitle);
+        const sectionColor = sectionRows[0].sectionColor;
+        return `
+          <div class="mb-3">
+            <button class="section-toggle w-full flex items-center gap-2 py-1.5 px-2 rounded text-left text-sm font-semibold text-gray-300 hover:bg-gray-800/50 transition-colors"
+                    data-section-key="${escapeHtml(sectionTitle)}">
+              <svg class="w-3.5 h-3.5 shrink-0 text-gray-500 transition-transform ${collapsed ? '' : 'rotate-90'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+              <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color:${escapeHtml(sectionColor)}"></span>
+              <span>${escapeHtml(sectionTitle)}</span>
+              <span class="text-xs text-gray-500 font-normal">${sectionRows.length} item${sectionRows.length !== 1 ? 's' : ''}</span>
+            </button>
+            <div class="${collapsed ? 'hidden' : ''}">
+              <div class="rounded-lg border border-gray-700 overflow-x-auto">
+                <table class="min-w-full text-xs border-collapse">
+                  ${renderHeader()}
+                  <tbody class="divide-y divide-gray-800">${sectionRows.map(renderRow).join('')}</tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('')}
     `;
   }
 
@@ -1189,8 +1480,458 @@ export class StockpileView {
     });
   }
 
+  private showTransportModal(): void {
+    const depots = this.getDepots();
+    if (depots.length < 2) {
+      alert('Configure at least two depots first.');
+      return;
+    }
+
+    let sourceName = depots.find(depot => depot.role === 'backline')?.name ?? depots[0].name;
+    let destinationName = depots.find(depot => depot.role === 'intermediate' && depot.name !== sourceName)?.name
+      ?? depots.find(depot => depot.name !== sourceName)!.name;
+    let mode: TransportMode = 'freighter';
+    let tripCount = 1;
+    let trainCars = 14;
+    let globalNotes = '';
+    let quantities = new Map<string, number>();
+    let plannedRoutes: TransportRoute[] = [];
+    const routeNotes = new Map<string, string>();
+    const directCargoNames = this.getDirectCargoNames();
+    const exclusionOptions = [
+      'Heavy Explosive Powder',
+      'Refined Materials',
+      'Rare Metal',
+      'Rare Alloys',
+      'Basic Materials',
+    ];
+    let transportExclusions = (() => {
+      try {
+        const saved = localStorage.getItem(TRANSPORT_EXCLUSIONS_KEY);
+        if (saved) return new Set(JSON.parse(saved) as string[]);
+      } catch (error) {
+        console.warn('StockpileView: failed to restore transport exclusions', error);
+      }
+      return new Set(DEFAULT_TRANSPORT_EXCLUSIONS);
+    })();
+    const saveTransportExclusions = (): void => {
+      localStorage.setItem(TRANSPORT_EXCLUSIONS_KEY, JSON.stringify([...transportExclusions]));
+    };
+    const routeKey = (source: string, destination: string): string => `${source}\u0000${destination}`;
+
+    const getAvailableCargo = (): TransportCargoItem[] => {
+      const source = depots.find(depot => depot.name === sourceName)!;
+      return buildBacklineCargo(this.aggregateEntries(source.entries), directCargoNames, transportExclusions);
+    };
+    const cargoKey = (item: TransportCargoItem): string => `${item.kind}:${item.itemName}`;
+    const getRemainingCargo = (): TransportCargoItem[] => getAvailableCargo().map(item => {
+      const plannedQuantity = plannedRoutes
+        .filter(route => route.source === sourceName)
+        .flatMap(route => route.missions)
+        .reduce((total, mission) => {
+          const cargo = mission.cargo.find(candidate => cargoKey(candidate) === cargoKey(item));
+          return total + (cargo?.quantity ?? 0) * mission.tripCount;
+        }, 0);
+      return { ...item, quantity: Math.max(0, item.quantity - plannedQuantity) };
+    }).filter(item => item.quantity > 0);
+    const addMissionToCurrentRoute = (mission: TransportMission): void => {
+      const existing = plannedRoutes.find(route => route.source === sourceName && route.destination === destinationName);
+      if (existing) {
+        existing.missions.push(mission);
+      } else {
+        plannedRoutes.push({ source: sourceName, destination: destinationName, missions: [mission] });
+      }
+    };
+    const buildRoutesWithDraft = (draft?: TransportMission): TransportRoute[] => {
+      const routes = plannedRoutes.map(route => ({
+        ...route,
+        notes: (routeNotes.get(routeKey(route.source, route.destination)) ?? '').split('\n').filter(Boolean),
+        missions: [...route.missions],
+      }));
+      if (draft?.cargo.length) {
+        const current = routes.find(route => route.source === sourceName && route.destination === destinationName);
+        if (current) current.missions.push(draft);
+        else routes.push({
+          source: sourceName,
+          destination: destinationName,
+          notes: (routeNotes.get(routeKey(sourceName, destinationName)) ?? '').split('\n').filter(Boolean),
+          missions: [draft],
+        });
+      }
+      return routes;
+    };
+    const renderLoadMeter = (mission: TransportMission): string => {
+      const capacity = transportSlotsPerTrip(mission);
+      const directSlots = mission.cargo
+        .filter(item => item.kind !== 'container-crate')
+        .reduce((total, item) => total + item.quantity, 0);
+      const crateQuantity = mission.cargo
+        .filter(item => item.kind === 'container-crate')
+        .reduce((total, item) => total + item.quantity, 0);
+      const containerSlots = Math.ceil(crateQuantity / 60);
+      const partialCrates = crateQuantity % 60;
+      const usedSlots = directSlots + containerSlots;
+      const slots = Array.from({ length: capacity }, (_, index) => {
+        if (index < directSlots) {
+          return '<span class="grid min-h-10 place-items-center rounded border border-cyan-700 bg-cyan-950/50 px-1 text-center text-[10px] text-cyan-300">Shippable</span>';
+        }
+        const containerIndex = index - directSlots;
+        if (containerIndex < containerSlots) {
+          const isPartial = containerIndex === containerSlots - 1 && partialCrates > 0;
+          const quantity = isPartial ? partialCrates : 60;
+          return `<span class="grid min-h-10 place-items-center rounded border ${isPartial ? 'border-amber-600 bg-amber-950/40 text-amber-300' : 'border-green-700 bg-green-950/40 text-green-300'} px-1 text-center text-[10px]">${quantity}/60<br>crates</span>`;
+        }
+        return '<span class="grid min-h-10 place-items-center rounded border border-gray-700 bg-gray-900/40 px-1 text-center text-[10px] text-gray-600">Empty</span>';
+      }).join('');
+      const warnings = [
+        ...(partialCrates > 0 ? [`<span data-container-warning class="text-amber-400">Incomplete container: ${partialCrates}/60 crates.</span>`] : []),
+        ...(usedSlots > capacity ? [`<span class="text-red-400">Over capacity by ${usedSlots - capacity} slot${usedSlots - capacity !== 1 ? 's' : ''}.</span>`] : []),
+      ].join(' ');
+
+      return `
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-gray-400">Transport slots</span>
+          <span class="${usedSlots > capacity ? 'text-red-400' : 'text-gray-300'} tabular-nums">${usedSlots}/${capacity} used · ${containerSlots} container${containerSlots !== 1 ? 's' : ''}</span>
+        </div>
+        <div class="mt-2 grid gap-1.5" style="grid-template-columns:repeat(${Math.min(capacity, 7)},minmax(0,1fr))">${slots}</div>
+        ${warnings ? `<div class="mt-2 text-xs">${warnings}</div>` : ''}
+      `;
+    };
+    const modal = document.createElement('div');
+    modal.id = 'transport-modal';
+    modal.className = 'fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4';
+    document.body.appendChild(modal);
+
+    const renderModal = (): void => {
+      const available = getRemainingCargo();
+      const getDraftMission = (): TransportMission => ({
+        mode,
+        tripCount,
+        trainCars,
+        cargo: available
+          .map(item => ({ ...item, quantity: quantities.get(cargoKey(item)) ?? 0 }))
+          .filter(item => item.quantity > 0),
+      });
+      const mission = getDraftMission();
+      const selected = mission.cargo;
+      const routes = buildRoutesWithDraft(mission);
+      const allMissions = routes.flatMap(route => route.missions);
+      const fits = allMissions.length > 0 && allMissions.every(missionFits);
+      const slots = usedTransportSlots(mission);
+      const slotCapacity = mode === 'flatbed' ? 1 : mode === 'freighter' ? 5 : trainCars;
+      const discordText = allMissions.length > 0 ? renderTransportList({
+        date: new Date(),
+        notes: globalNotes.split('\n').filter(Boolean),
+        routes,
+      }) : '';
+
+      modal.innerHTML = `
+        <div class="bg-gray-800 border border-gray-700 rounded-lg shadow-2xl flex flex-col w-full max-w-6xl overflow-hidden" style="max-height:92vh">
+          <div class="flex items-center justify-between px-5 py-3 border-b border-gray-700">
+            <div>
+              <h2 class="font-semibold text-gray-100">Prepare transport</h2>
+              <p class="text-xs text-gray-500">Build one or more loads. Enter what one vehicle carries on each trip.</p>
+            </div>
+            <button id="transport-close" class="p-1 text-gray-400 hover:text-white" aria-label="Close">✕</button>
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.25fr)_minmax(22rem,0.75fr)] flex-1 min-h-0">
+            <div class="flex min-h-0 flex-col border-r border-gray-700">
+              <div class="min-h-0 flex-1 overflow-y-auto p-4 pb-2">
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                <label class="text-xs text-gray-400">Source
+                  <select id="transport-source" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded px-2 py-1.5 text-gray-200">
+                    ${depots.map(source => `<option value="${escapeHtml(source.name)}" ${source.name === sourceName ? 'selected' : ''}>${escapeHtml(source.name)} (${source.role})</option>`).join('')}
+                  </select>
+                </label>
+                <label class="text-xs text-gray-400">Destination
+                  <select id="transport-destination" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded px-2 py-1.5 text-gray-200">
+                    ${depots.filter(depot => depot.name !== sourceName).map(depot => `<option value="${escapeHtml(depot.name)}" ${depot.name === destinationName ? 'selected' : ''}>${escapeHtml(depot.name)} (${depot.role})</option>`).join('')}
+                  </select>
+                </label>
+                <label class="text-xs text-gray-400">Hauler
+                  <select id="transport-mode" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded px-2 py-1.5 text-gray-200">
+                    ${(['flatbed', 'freighter', 'train'] as TransportMode[]).map(value => `<option value="${value}" ${value === mode ? 'selected' : ''}>${value[0].toUpperCase() + value.slice(1)}</option>`).join('')}
+                  </select>
+                </label>
+                <label class="text-xs text-gray-400">Identical trips
+                  <input id="transport-trips" type="number" min="1" value="${tripCount}" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded px-2 py-1.5 text-gray-200" />
+                </label>
+                ${mode === 'train' ? `<label class="text-xs text-gray-400">Flatbed cars
+                  <input id="transport-train-cars" type="number" min="1" max="14" value="${trainCars}" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded px-2 py-1.5 text-gray-200" />
+                </label>` : ''}
+              </div>
+
+              <details class="mb-4 rounded border border-gray-700 bg-gray-900/30">
+                <summary class="cursor-pointer px-3 py-2 text-xs font-medium text-gray-300">
+                  Cargo exclusions <span class="ml-1 text-gray-500">${transportExclusions.size} blocked</span>
+                </summary>
+                <div class="border-t border-gray-700 p-3">
+                  <p class="mb-2 text-xs text-gray-500">Excluded items never appear in manual or automatic loads.</p>
+                  <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                    ${exclusionOptions.map(itemName => `
+                      <label class="flex items-center gap-2 text-gray-300">
+                        <input class="transport-exclusion-toggle accent-blue-500" type="checkbox" value="${escapeHtml(itemName)}" ${transportExclusions.has(itemName) ? 'checked' : ''} />
+                        <span>${escapeHtml(itemName)}${itemName === 'Basic Materials' ? ' <span class="text-gray-500">(optional)</span>' : ''}</span>
+                      </label>
+                    `).join('')}
+                  </div>
+                  <label class="mt-3 block text-xs text-gray-400">Additional exclusions, one exact item name per line
+                    <textarea id="transport-custom-exclusions" rows="2" class="mt-1 w-full resize-none rounded border border-gray-700 bg-gray-950 p-2 text-gray-300" placeholder="Explosive Powder">${escapeHtml([...transportExclusions].filter(item => !exclusionOptions.includes(item)).join('\n'))}</textarea>
+                  </label>
+                  <button id="transport-reset-exclusions" class="mt-2 text-xs text-blue-400 hover:text-blue-300">Reset defaults</button>
+                </div>
+              </details>
+
+              <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-medium text-gray-200">Planned loads</h3>
+                <button id="transport-auto-fill" class="px-2 py-1 text-xs bg-blue-700 hover:bg-blue-600 rounded">Plan this route automatically</button>
+              </div>
+              ${plannedRoutes.length > 0 ? `
+                <div class="mb-4 space-y-1">
+                  ${(() => {
+                    let lineIndex = 0;
+                    return plannedRoutes.map((route, routeIndex) => route.missions.map((planned, missionIndex) => {
+                      const letter = String.fromCharCode(65 + ((lineIndex++) % 26));
+                      return `
+                        <div class="flex items-center gap-2 rounded border border-gray-700 bg-gray-900/50 px-3 py-2 text-xs">
+                          <span class="font-semibold text-blue-300">${letter}</span>
+                          <span class="text-gray-400">${escapeHtml(route.source)} → ${escapeHtml(route.destination)}</span>
+                          <span class="text-gray-300">${planned.mode === 'train' ? `Train (${planned.trainCars} cars)` : planned.mode[0].toUpperCase() + planned.mode.slice(1)}</span>
+                          <span class="text-gray-500">${usedTransportSlots(planned)}/${transportSlotsPerTrip(planned)} slots${planned.tripCount > 1 ? ` · x${planned.tripCount}` : ''}</span>
+                          <span class="ml-auto text-gray-500">${planned.cargo.length} cargo type${planned.cargo.length !== 1 ? 's' : ''}</span>
+                          <button class="transport-remove-line p-1 text-gray-500 hover:text-red-400" data-route-index="${routeIndex}" data-mission-index="${missionIndex}" aria-label="Remove transport line">✕</button>
+                        </div>
+                      `;
+                    }).join('')).join('');
+                  })()}
+                </div>
+              ` : ''}
+
+              <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-medium text-gray-200">Load for this transport</h3>
+                <button id="transport-add-line" ${!missionFits(mission) || selected.length === 0 ? 'disabled' : ''}
+                  class="px-2 py-1 text-xs rounded ${missionFits(mission) && selected.length > 0 ? 'bg-emerald-700 hover:bg-emerald-600' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}">Add this load</button>
+              </div>
+              <div class="border border-gray-700 rounded overflow-hidden">
+                <table class="w-full table-fixed text-xs">
+                  <thead class="bg-gray-900 text-gray-500"><tr><th class="w-[28%] text-left px-1.5 sm:px-3 py-2">Item</th><th class="w-[32%] text-left px-1.5 sm:px-3 py-2">Storage</th><th class="w-[18%] text-right px-1.5 sm:px-3 py-2">Remaining</th><th class="w-[22%] text-right px-1.5 sm:px-3 py-2">Load / trip</th></tr></thead>
+                  <tbody class="divide-y divide-gray-700/60">
+                    ${available.map(item => {
+                      const maxPerTrip = Math.floor(item.quantity / tripCount);
+                      return `<tr>
+                        <td class="wrap-break-word px-1.5 sm:px-3 py-2 text-gray-200">${escapeHtml(item.itemName)}</td>
+                        <td class="wrap-break-word px-1.5 sm:px-3 py-2 text-gray-500">${item.kind === 'container-crate' ? 'Crates in container' : item.kind === 'direct-crate' ? 'Crated shippable' : 'Assembled shippable'}</td>
+                        <td class="px-1.5 sm:px-3 py-2 text-right text-gray-400 tabular-nums">${item.quantity}</td>
+                        <td class="px-1.5 sm:px-3 py-2 text-right"><input class="transport-qty w-full min-w-0 bg-gray-900 border border-gray-700 rounded px-1.5 sm:px-2 py-1 text-right text-gray-200" data-cargo-key="${escapeHtml(cargoKey(item))}" type="number" min="0" max="${maxPerTrip}" value="${quantities.get(cargoKey(item)) ?? 0}" /></td>
+                      </tr>`;
+                    }).join('') || '<tr><td colspan="4" class="px-3 py-6 text-center text-gray-500">No transportable stock in this backline.</td></tr>'}
+                  </tbody>
+                </table>
+              </div>
+              </div>
+              <div id="transport-load-meter" class="shrink-0 border-t border-gray-700 bg-gray-900/70 p-3">
+                ${renderLoadMeter(mission)}
+              </div>
+            </div>
+
+            <div class="p-4 flex flex-col min-h-0 bg-gray-900/40">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-sm font-medium text-gray-200">11eForge preview</span>
+                <span id="transport-current-capacity" class="text-xs ${missionFits(mission) ? 'text-green-400' : 'text-red-400'}">Current load: ${slots}/${slotCapacity} slots</span>
+              </div>
+              <label class="text-xs text-gray-500 mb-2">Global notes
+                <textarea id="transport-global-notes" rows="2" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded p-2 text-gray-300 resize-none" placeholder=":exclamation: ...">${escapeHtml(globalNotes)}</textarea>
+              </label>
+              <label class="text-xs text-gray-500 mb-3">Route notes
+                <textarea id="transport-route-notes" rows="2" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded p-2 text-gray-300 resize-none" placeholder="*Instruction...*">${escapeHtml(routeNotes.get(routeKey(sourceName, destinationName)) ?? '')}</textarea>
+              </label>
+              <textarea id="transport-preview" readonly class="flex-1 min-h-56 bg-gray-950 border border-gray-700 rounded p-3 text-xs font-mono text-gray-300 resize-none">${escapeHtml(discordText)}</textarea>
+              <div class="mt-3 flex items-center justify-between gap-3">
+                <span id="transport-summary" class="text-xs text-gray-500">${allMissions.reduce((total, item) => total + item.cargo.reduce((cargoTotal, cargo) => cargoTotal + cargo.quantity, 0) * item.tripCount, 0)} units planned across ${allMissions.reduce((total, item) => total + item.tripCount, 0)} action${allMissions.reduce((total, item) => total + item.tripCount, 0) !== 1 ? 's' : ''}</span>
+                <button id="transport-copy" ${!fits ? 'disabled' : ''} class="px-3 py-1.5 rounded text-xs font-medium ${fits ? 'bg-emerald-700 hover:bg-emerald-600' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}">Copy list</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const updateDraftUi = (): void => {
+        const currentMission = getDraftMission();
+        const currentRoutes = buildRoutesWithDraft(currentMission);
+        const currentMissions = currentRoutes.flatMap(route => route.missions);
+        const currentFits = currentMissions.length > 0 && currentMissions.every(missionFits);
+        const currentSlots = usedTransportSlots(currentMission);
+        const currentCapacity = transportSlotsPerTrip(currentMission);
+        const currentDiscordText = currentMissions.length > 0 ? renderTransportList({
+          date: new Date(),
+          notes: globalNotes.split('\n').filter(Boolean),
+          routes: currentRoutes,
+        }) : '';
+        const actions = currentMissions.reduce((total, item) => total + item.tripCount, 0);
+        const units = currentMissions.reduce((total, item) => total + item.cargo.reduce((cargoTotal, cargo) => cargoTotal + cargo.quantity, 0) * item.tripCount, 0);
+        const loadFits = missionFits(currentMission) && currentMission.cargo.length > 0;
+        const addButton = modal.querySelector<HTMLButtonElement>('#transport-add-line');
+        const copyButton = modal.querySelector<HTMLButtonElement>('#transport-copy');
+        const capacityLabel = modal.querySelector<HTMLElement>('#transport-current-capacity');
+        const meter = modal.querySelector<HTMLElement>('#transport-load-meter');
+        const preview = modal.querySelector<HTMLTextAreaElement>('#transport-preview');
+        const summary = modal.querySelector<HTMLElement>('#transport-summary');
+        if (meter) meter.innerHTML = renderLoadMeter(currentMission);
+        if (capacityLabel) {
+          capacityLabel.textContent = `Current load: ${currentSlots}/${currentCapacity} slots`;
+          capacityLabel.className = `text-xs ${missionFits(currentMission) ? 'text-green-400' : 'text-red-400'}`;
+        }
+        if (addButton) {
+          addButton.disabled = !loadFits;
+          addButton.className = `px-2 py-1 text-xs rounded ${loadFits ? 'bg-emerald-700 hover:bg-emerald-600' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}`;
+        }
+        if (preview) preview.value = currentDiscordText;
+        if (summary) summary.textContent = `${units} units planned across ${actions} action${actions !== 1 ? 's' : ''}`;
+        if (copyButton) {
+          copyButton.disabled = !currentFits;
+          copyButton.className = `px-3 py-1.5 rounded text-xs font-medium ${currentFits ? 'bg-emerald-700 hover:bg-emerald-600' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}`;
+        }
+      };
+
+      modal.querySelector('#transport-close')?.addEventListener('click', () => modal.remove());
+      modal.querySelector('#transport-source')?.addEventListener('change', event => {
+        sourceName = (event.target as HTMLSelectElement).value;
+        if (destinationName === sourceName) {
+          destinationName = depots.find(depot => depot.name !== sourceName)!.name;
+        }
+        quantities = new Map();
+        renderModal();
+      });
+      modal.querySelector('#transport-destination')?.addEventListener('change', event => {
+        destinationName = (event.target as HTMLSelectElement).value;
+        quantities = new Map();
+        renderModal();
+      });
+      modal.querySelectorAll<HTMLInputElement>('.transport-exclusion-toggle').forEach(input => {
+        input.addEventListener('change', () => {
+          if (input.checked) transportExclusions.add(input.value);
+          else transportExclusions.delete(input.value);
+          saveTransportExclusions();
+          quantities = new Map();
+          renderModal();
+        });
+      });
+      modal.querySelector('#transport-custom-exclusions')?.addEventListener('change', event => {
+        const customItems = (event.target as HTMLTextAreaElement).value
+          .split('\n')
+          .map(item => item.trim())
+          .filter(Boolean);
+        transportExclusions = new Set([
+          ...exclusionOptions.filter(item => transportExclusions.has(item)),
+          ...customItems,
+        ]);
+        saveTransportExclusions();
+        quantities = new Map();
+        renderModal();
+      });
+      modal.querySelector('#transport-reset-exclusions')?.addEventListener('click', () => {
+        transportExclusions = new Set(DEFAULT_TRANSPORT_EXCLUSIONS);
+        saveTransportExclusions();
+        quantities = new Map();
+        renderModal();
+      });
+      modal.querySelector('#transport-mode')?.addEventListener('change', event => {
+        mode = (event.target as HTMLSelectElement).value as TransportMode;
+        quantities = new Map();
+        renderModal();
+      });
+      modal.querySelector('#transport-trips')?.addEventListener('change', event => {
+        tripCount = Math.max(1, Math.floor(Number((event.target as HTMLInputElement).value) || 1));
+        quantities = new Map();
+        renderModal();
+      });
+      modal.querySelector('#transport-train-cars')?.addEventListener('change', event => {
+        trainCars = Math.min(14, Math.max(1, Math.floor(Number((event.target as HTMLInputElement).value) || 1)));
+        quantities = new Map();
+        renderModal();
+      });
+      modal.querySelector('#transport-auto-fill')?.addEventListener('click', () => {
+        plannedRoutes = plannedRoutes.filter(route => route.source !== sourceName || route.destination !== destinationName);
+        const missions = suggestTransportMissions(getRemainingCargo(), mode, trainCars);
+        if (missions.length > 0) {
+          plannedRoutes.push({ source: sourceName, destination: destinationName, missions });
+        }
+        quantities = new Map();
+        renderModal();
+      });
+      modal.querySelector('#transport-add-line')?.addEventListener('click', () => {
+        const currentMission = getDraftMission();
+        if (currentMission.cargo.length === 0 || !missionFits(currentMission)) return;
+        addMissionToCurrentRoute(currentMission);
+        quantities = new Map();
+        renderModal();
+      });
+      modal.querySelectorAll<HTMLButtonElement>('.transport-remove-line').forEach(button => {
+        button.addEventListener('click', () => {
+          const routeIndex = Number(button.getAttribute('data-route-index'));
+          const missionIndex = Number(button.getAttribute('data-mission-index'));
+          if (Number.isInteger(routeIndex) && Number.isInteger(missionIndex)) {
+            plannedRoutes[routeIndex]?.missions.splice(missionIndex, 1);
+            plannedRoutes = plannedRoutes.filter(route => route.missions.length > 0);
+          }
+          renderModal();
+        });
+      });
+      modal.querySelectorAll<HTMLInputElement>('.transport-qty').forEach(input => {
+        input.addEventListener('input', () => {
+          const key = input.getAttribute('data-cargo-key');
+          const maximum = Number(input.max);
+          const quantity = Math.min(maximum, Math.max(0, Math.floor(Number(input.value) || 0)));
+          if (key) quantities.set(key, quantity);
+          updateDraftUi();
+        });
+      });
+      modal.querySelector('#transport-global-notes')?.addEventListener('change', event => {
+        globalNotes = (event.target as HTMLTextAreaElement).value;
+        renderModal();
+      });
+      modal.querySelector('#transport-route-notes')?.addEventListener('change', event => {
+        routeNotes.set(routeKey(sourceName, destinationName), (event.target as HTMLTextAreaElement).value);
+        renderModal();
+      });
+      modal.querySelector('#transport-copy')?.addEventListener('click', async () => {
+        await navigator.clipboard.writeText((modal.querySelector('#transport-preview') as HTMLTextAreaElement).value);
+        const button = modal.querySelector('#transport-copy') as HTMLButtonElement | null;
+        if (button) button.textContent = 'Copied!';
+      });
+    };
+
+    modal.addEventListener('click', event => { if (event.target === modal) modal.remove(); });
+    renderModal();
+  }
+
   private attachEvents(): void {
     if (!this.container) return;
+
+    this.container.querySelectorAll('[data-stock-view]').forEach(button => {
+      button.addEventListener('click', () => {
+        this.stockViewMode = button.getAttribute('data-stock-view') === 'depots' ? 'depots' : 'global';
+        this.render();
+      });
+    });
+
+    this.container.querySelector('#btn-prepare-transport')?.addEventListener('click', () => {
+      this.showTransportModal();
+    });
+
+    this.container.querySelectorAll<HTMLInputElement>('.depot-name-input').forEach(input => {
+      input.addEventListener('change', () => {
+        const id = input.getAttribute('data-entry-id');
+        if (id) this.handleDepotNameChange(id, input.value);
+      });
+    });
+
+    this.container.querySelectorAll<HTMLSelectElement>('.depot-role-select').forEach(select => {
+      select.addEventListener('change', () => {
+        const depotName = select.getAttribute('data-depot-name');
+        if (depotName) this.handleDepotRoleChange(depotName, select.value as DepotRole);
+      });
+    });
 
     // Loaded stockpiles collapse toggle — in-place, no re-render
     this.container.querySelector('#btn-toggle-loaded-stockpiles')?.addEventListener('click', () => {

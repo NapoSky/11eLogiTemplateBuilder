@@ -102,19 +102,22 @@ export class Toolbar {
           <span class="text-xs text-gray-400">Template:</span>
           <div class="flex rounded overflow-hidden border border-gray-600">
             <button id="btn-tpl-current" class="px-2 py-1 text-xs transition-colors ${activeTplBtn('current')}">Current</button>
-            <button id="btn-tpl-official" class="px-2 py-1 text-xs transition-colors border-l border-gray-600 ${activeTplBtn('official')}">Official</button>
+            <button id="btn-tpl-official" class="px-2 py-1 text-xs transition-colors border-l border-gray-600 ${activeTplBtn('official')}">Official (W)</button>
+            <button id="btn-tpl-official-colonial" class="px-2 py-1 text-xs transition-colors border-l border-gray-600 ${activeTplBtn('official-colonial')}">Official (C)</button>
             <label class="px-2 py-1 text-xs cursor-pointer transition-colors border-l border-gray-600 ${activeTplBtn('file')}">
               Load file
               <input type="file" accept=".json" id="tpl-upload-toolbar" class="hidden" />
             </label>
           </div>
           ${tplSource === 'official'
-            ? '<span class="text-xs text-green-400">✓ official</span>'
-            : tplSource === 'file' && tplFileName
-              ? `<span class="text-xs text-green-400">✓ <span class="text-gray-400">(${tplFileName})</span></span>`
-              : tplSource === 'file'
-                ? '<span class="text-xs text-green-400">✓ file loaded</span>'
-                : ''
+            ? '<span class="text-xs text-green-400">✓ official (W)</span>'
+            : tplSource === 'official-colonial'
+              ? '<span class="text-xs text-green-400">✓ official (C)</span>'
+              : tplSource === 'file' && tplFileName
+                ? `<span class="text-xs text-green-400">✓ <span class="text-gray-400">(${tplFileName})</span></span>`
+                : tplSource === 'file'
+                  ? '<span class="text-xs text-green-400">✓ file loaded</span>'
+                  : ''
           }
         </div>
         ` : ''}
@@ -175,7 +178,7 @@ export class Toolbar {
 
       <!-- Help Modal -->
       <div id="help-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-        <div class="bg-gray-800 rounded-lg shadow-2xl border border-gray-600 p-6 max-w-md w-full mx-4">
+        <div class="bg-gray-800 rounded-lg shadow-2xl border border-gray-600 p-5 max-w-md max-h-[85vh] overflow-y-auto w-full mx-4">
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-lg font-bold text-white flex items-center gap-2">
               <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -219,71 +222,66 @@ export class Toolbar {
 
   private renderHelpBody(): string {
     const fr = this.helpLang === 'fr';
-    return `
-      <div class="space-y-4">
-        <div>
-          <h3 class="text-sm font-semibold text-gray-300 mb-2">⌨️ ${fr ? 'Raccourcis clavier' : 'Keyboard Shortcuts'}</h3>
-          <div class="space-y-2 text-sm">
-            <div class="flex justify-between items-center py-1 px-2 bg-gray-700/50 rounded">
-              <span class="text-gray-300">${fr ? 'Sauvegarder (JSON)' : 'Save (JSON)'}</span>
-              <kbd class="px-2 py-0.5 bg-gray-900 rounded text-xs text-gray-400 font-mono">Ctrl + S</kbd>
-            </div>
-            <div class="flex justify-between items-center py-1 px-2 bg-gray-700/50 rounded">
-              <span class="text-gray-300">${fr ? 'Charger un template' : 'Load template'}</span>
-              <kbd class="px-2 py-0.5 bg-gray-900 rounded text-xs text-gray-400 font-mono">Ctrl + O</kbd>
-            </div>
-            <div class="flex justify-between items-center py-1 px-2 bg-gray-700/50 rounded">
-              <span class="text-gray-300">${fr ? 'Exporter en PNG' : 'Export as PNG'}</span>
-              <kbd class="px-2 py-0.5 bg-gray-900 rounded text-xs text-gray-400 font-mono">Ctrl + E</kbd>
-            </div>
-            <div class="flex justify-between items-center py-1 px-2 bg-gray-700/50 rounded">
-              <span class="text-gray-300">${fr ? 'Aide' : 'Help'}</span>
-              <kbd class="px-2 py-0.5 bg-gray-900 rounded text-xs text-gray-400 font-mono">?</kbd>
-            </div>
-            <div class="flex justify-between items-center py-1 px-2 bg-gray-700/50 rounded">
-              <span class="text-gray-300">${fr ? 'Fermer' : 'Close'}</span>
-              <kbd class="px-2 py-0.5 bg-gray-900 rounded text-xs text-gray-400 font-mono">Esc</kbd>
-            </div>
-          </div>
+    const shortcuts = `
+      <div class="pt-3 border-t border-gray-700">
+        <h3 class="text-xs font-semibold uppercase text-gray-500 mb-2">${fr ? 'Raccourcis' : 'Shortcuts'}</h3>
+        <div class="flex flex-wrap gap-2 text-xs text-gray-400">
+          <span><kbd class="px-1.5 py-0.5 bg-gray-900 rounded font-mono">Ctrl S</kbd> ${fr ? 'Sauver' : 'Save'}</span>
+          <span><kbd class="px-1.5 py-0.5 bg-gray-900 rounded font-mono">Ctrl O</kbd> ${fr ? 'Charger' : 'Load'}</span>
+          <span><kbd class="px-1.5 py-0.5 bg-gray-900 rounded font-mono">Esc</kbd> ${fr ? 'Fermer' : 'Close'}</span>
         </div>
+      </div>
+    `;
 
+    if (store.viewMode === 'stockpile') {
+      return `
+        <div class="space-y-3 text-sm">
+          <div>
+            <h3 class="font-semibold text-gray-200 mb-2">📦 ${fr ? 'Stocks et transports' : 'Stock and transport'}</h3>
+            <ol class="space-y-2 text-gray-400">
+              <li><span class="text-blue-400 font-semibold">1.</span> ${fr ? 'Importez les CSV. Un même emplacement remplace automatiquement son ancien relevé.' : 'Import CSV files. The same location automatically replaces its previous snapshot.'}</li>
+              <li><span class="text-blue-400 font-semibold">2.</span> ${fr ? 'Regroupez les relevés par dépôt puis attribuez les rôles Backline, Intermediate et Front.' : 'Group snapshots by depot, then assign Backline, Intermediate, and Front roles.'}</li>
+              <li><span class="text-blue-400 font-semibold">3.</span> <span class="text-gray-200">MPF production needs</span> ${fr ? 'compare les stocks hors Front au template et génère la Todolist MPF.' : 'compares non-Front stock against the template and generates the MPF Todolist.'}</li>
+              <li><span class="text-blue-400 font-semibold">4.</span> <span class="text-gray-200">Transport planning</span> ${fr ? 'compare les dépôts à l’Intermediate. Les filtres et la readiness utilisent ses objectifs.' : 'compares depots against the Intermediate. Filters and readiness use its targets.'}</li>
+              <li><span class="text-blue-400 font-semibold">5.</span> <span class="text-gray-200">Prepare transport</span> ${fr ? ': choisissez chaque route, planifiez-la automatiquement ou saisissez le chargement par trajet, puis ajoutez-la. Les routes précédentes restent dans la même liste.' : ': choose each route, plan it automatically or enter its load per trip, then add it. Previous routes remain in the same list.'}</li>
+            </ol>
+          </div>
+          <p class="rounded border border-amber-800/60 bg-amber-950/20 px-3 py-2 text-xs text-amber-300">${fr ? 'La jauge indique les slots utilisés et signale les conteneurs incomplets. Les dépôts Front restent exclus des totaux calculés.' : 'The meter shows used slots and warns about incomplete containers. Front depots remain excluded from calculated totals.'}</p>
+          ${shortcuts}
+        </div>
+      `;
+    }
+
+    if (store.viewMode === 'todolist') {
+      return `
+        <div class="space-y-3 text-sm">
+          <div>
+            <h3 class="font-semibold text-gray-200 mb-2">📋 ${fr ? 'Todolist MPF' : 'MPF Todolist'}</h3>
+            <ul class="text-gray-400 space-y-1.5">
+              <li>• ${fr ? 'Glissez un item MPF pour l’ajouter.' : 'Drag an MPF item to add it.'}</li>
+              <li>• ${fr ? 'Réglez le nombre d’ordres avec le compteur.' : 'Set the number of orders with the counter.'}</li>
+              <li>• <span class="text-gray-200">+ Text</span> ${fr ? 'ajoute une note Markdown Discord.' : 'adds a Discord Markdown note.'}</li>
+              <li>• <span class="text-gray-200">Copy / .txt</span> ${fr ? 'exporte la liste.' : 'exports the list.'}</li>
+            </ul>
+          </div>
+          ${shortcuts}
+        </div>
+      `;
+    }
+
+    return `
+      <div class="space-y-3 text-sm">
         <div>
           <h3 class="text-sm font-semibold text-gray-300 mb-2">🖱️ ${fr ? 'Mode Template — Actions souris' : 'Template Mode — Mouse Actions'}</h3>
-          <ul class="text-sm text-gray-400 space-y-1">
+          <ul class="text-gray-400 space-y-1">
             <li>• <span class="text-gray-300">${fr ? 'Double-clic' : 'Double-click'}</span> ${fr ? 'sur le canvas → Nouvelle section' : 'on canvas → New section'}</li>
             <li>• <span class="text-gray-300">${fr ? 'Glisser' : 'Drag'}</span> ${fr ? 'une icône vers une section → Ajouter' : 'an icon to a section → Add'}</li>
             <li>• <span class="text-gray-300">${fr ? 'Glisser' : 'Drag'}</span> ${fr ? 'dans la grille → Réorganiser' : 'in grid → Reorder'}</li>
             <li>• <span class="text-gray-300">${fr ? 'Clic droit' : 'Right-click'}</span> ${fr ? "sur une icône → Quantité & sous-type" : 'an icon → Quantity & subtype'}</li>
-            <li>• <span class="text-gray-300">${fr ? 'Glisser le header' : 'Drag header'}</span> ${fr ? "d'une section → Déplacer" : 'of a section → Move'}</li>
-            <li>• <span class="text-gray-300">${fr ? 'Glisser le coin' : 'Drag corner'}</span> ${fr ? "d'une section → Redimensionner" : 'of a section → Resize'}</li>
+            <li>• <span class="text-gray-300">S / M / L</span> ${fr ? 'ajuste la taille des icônes.' : 'adjusts icon size.'}</li>
           </ul>
         </div>
-
-        <div>
-          <h3 class="text-sm font-semibold text-gray-300 mb-2">📋 ${fr ? 'Mode TodoList' : 'TodoList Mode'}</h3>
-          <ul class="text-sm text-gray-400 space-y-1">
-            <li>• <span class="text-gray-300">${fr ? 'Glisser' : 'Drag'}</span> ${fr ? 'une icône MPF-craftable → Ajouter à la liste' : 'an MPF-craftable icon → Add to list'}</li>
-            <li>• <span class="text-gray-300">${fr ? 'Champ compteur' : 'Counter field'}</span> ${fr ? '→ Modifier le nombre d’ordres' : '→ Set the order count'}</li>
-            <li>• <span class="text-gray-300">+ Text</span> ${fr ? '→ Ajouter un bloc texte libre (Markdown Discord)' : '→ Add a free text block (Discord Markdown)'}</li>
-            <li>• <span class="text-gray-300">${fr ? 'Sélecteur de faction' : 'Faction selector'}</span> ${fr ? '→ Filtrer les items par faction' : '→ Filter items by faction'}</li>
-            <li>• <span class="text-gray-300">📋 Copy / ⬇️ .txt</span> ${fr ? '→ Exporter pour Discord' : '→ Export for Discord'}</li>
-          </ul>
-        </div>
-
-        <div>
-          <h3 class="text-sm font-semibold text-gray-300 mb-2">📦 ${fr ? 'Mode Stockpile' : 'Stockpile Mode'}</h3>
-          <ul class="text-sm text-gray-400 space-y-1">
-            <li>• <span class="text-gray-300">Load Stockpile CSV</span> ${fr ? '→ Importer un export CSV Foxhole' : '→ Import a Foxhole stockpile CSV export'}</li>
-            <li>• <span class="text-gray-300">${fr ? 'Glisser-déposer' : 'Drag & drop'}</span> ${fr ? 'un fichier CSV → Chargement rapide' : 'a CSV file → Quick load'}</li>
-            <li>• <span class="text-gray-300">Template</span> ${fr ? ': Current / Official / Load file → Source du template de référence' : ': Current / Official / Load file → Reference template source'}</li>
-            <li>• <span class="text-gray-300">Generate Todolist</span> ${fr ? '→ Générer une liste Discord des items manquants (MPF)' : '→ Generate a Discord list of missing items (MPF)'}</li>
-          </ul>
-        </div>
-
-        <div>
-          <h3 class="text-sm font-semibold text-gray-300 mb-2">📐 ${fr ? 'Taille des icônes' : 'Icon Size'}</h3>
-          <p class="text-sm text-gray-400">${fr ? "Utilisez les boutons" : 'Use the'} <kbd class="px-1.5 py-0.5 bg-gray-700 rounded text-xs">S</kbd> <kbd class="px-1.5 py-0.5 bg-gray-700 rounded text-xs">M</kbd> <kbd class="px-1.5 py-0.5 bg-gray-700 rounded text-xs">L</kbd> ${fr ? "dans la barre d'outils pour ajuster la taille globale des icônes." : 'buttons in the toolbar to adjust the global icon size.'}</p>
-        </div>
+        ${shortcuts}
       </div>
     `;
   }
@@ -344,6 +342,9 @@ export class Toolbar {
     });
     this.container.querySelector('#btn-tpl-official')?.addEventListener('click', () => {
       window.dispatchEvent(new CustomEvent('stockpile:set-tpl-official'));
+    });
+    this.container.querySelector('#btn-tpl-official-colonial')?.addEventListener('click', () => {
+      window.dispatchEvent(new CustomEvent('stockpile:set-tpl-official-colonial'));
     });
     this.container.querySelector('#tpl-upload-toolbar')?.addEventListener('change', (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];

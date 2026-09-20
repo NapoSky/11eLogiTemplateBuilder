@@ -46,7 +46,7 @@ export class TemplateLoadModal {
     if (!this.container) return;
     this.container.innerHTML = `
       <div id="tpl-load-modal-backdrop" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-[600px] max-w-[95vw]">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-215 max-w-[95vw]">
           <!-- Header -->
           <div class="flex items-center justify-between mb-5">
             <h2 class="text-lg font-semibold">Load template</h2>
@@ -56,15 +56,23 @@ export class TemplateLoadModal {
               </svg>
             </button>
           </div>
-          <!-- Two panels -->
-          <div class="grid grid-cols-2 gap-4">
-            <!-- Left: Reference template -->
+          <!-- Three panels -->
+          <div class="grid grid-cols-3 gap-4">
+            <!-- Left: Reference template (Warden) -->
             <div id="tpl-load-reference" class="flex flex-col items-center justify-center gap-3 p-5 bg-gray-700/50 rounded-lg border border-gray-600 hover:border-blue-500 hover:bg-gray-700 cursor-pointer transition-colors group">
               <svg class="w-10 h-10 text-blue-400 group-hover:text-blue-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6H8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"/>
               </svg>
               <p class="font-semibold text-sm text-center text-white">11e Brigade<br/>Reference Template</p>
               <p class="text-xs text-gray-400 text-center">Load the official 11e Brigade template</p>
+            </div>
+            <!-- Middle: Reference template (Colonial) -->
+            <div id="tpl-load-reference-colonial" class="flex flex-col items-center justify-center gap-3 p-5 bg-gray-700/50 rounded-lg border border-gray-600 hover:border-green-500 hover:bg-gray-700 cursor-pointer transition-colors group">
+              <svg class="w-10 h-10 text-green-400 group-hover:text-green-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6H8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"/>
+              </svg>
+              <p class="font-semibold text-sm text-center text-white">11e Brigade<br/>Reference Template (Colonial)</p>
+              <p class="text-xs text-gray-400 text-center">Load the official 11e Brigade template (Colonial)</p>
             </div>
             <!-- Right: Custom file (drag & drop) -->
             <div id="tpl-load-dropzone" class="flex flex-col items-center justify-center gap-3 p-5 bg-gray-700/50 rounded-lg border border-dashed border-gray-600 hover:border-gray-400 transition-colors">
@@ -96,7 +104,7 @@ export class TemplateLoadModal {
       if (e.target === this.container!.querySelector('#tpl-load-modal-backdrop')) this.close();
     });
 
-    // Reference template
+    // Reference template (Warden)
     this.container.querySelector('#tpl-load-reference')?.addEventListener('click', async () => {
       try {
         const baseUrl = getBaseUrl();
@@ -107,6 +115,20 @@ export class TemplateLoadModal {
         this.close();
       } catch (e) {
         console.error('TemplateLoadModal: failed to load reference template', e);
+      }
+    });
+
+    // Reference template (Colonial)
+    this.container.querySelector('#tpl-load-reference-colonial')?.addEventListener('click', async () => {
+      try {
+        const baseUrl = getBaseUrl();
+        const res = await fetch(`${baseUrl}referenceTemplateColonial.json`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const text = await res.text();
+        store.importJSON(text);
+        this.close();
+      } catch (e) {
+        console.error('TemplateLoadModal: failed to load Colonial reference template', e);
       }
     });
 

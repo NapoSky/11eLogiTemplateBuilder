@@ -161,6 +161,14 @@ describe('parseCSV', () => {
     expect(items.get('BMS - Class 2 Mobile Auto-Crane (Crate)')).toBe(1);
   });
 
+  test('traduit le conteneur de ressources en anglais', () => {
+    const csv = `Base,2024.01.01-00.00.00\nResource Container,2\nContainer de ressources,3\n`;
+    const { items } = parseCSV(csv);
+
+    expect(items.get('Resource Container')).toBe(5);
+    expect(items.has('Container de ressources')).toBe(false);
+  });
+
   test('traduit les uniformes en français', () => {
     const csv = `Base,2024.01.01-00.00.00\nManteau de Spécialiste (Caisse),0\nParka Caoivienne (Caisse),60\n`;
     const { items } = parseCSV(csv);
@@ -418,6 +426,20 @@ describe('StockpileView – événements window', () => {
     expect(store.stockpileTplSource).toBe('official');
   });
 
+  test('stockpile:set-tpl-official-colonial déclenche un fetch et met à jour le store', async () => {
+    window.dispatchEvent(new CustomEvent('stockpile:set-tpl-current'));
+    await flushPromises();
+    expect(store.stockpileTplSource).toBe('current');
+
+    const fetchCallsBefore = (global.fetch as jest.Mock).mock.calls.length;
+    window.dispatchEvent(new CustomEvent('stockpile:set-tpl-official-colonial'));
+    await flushPromises();
+
+    expect((global.fetch as jest.Mock).mock.calls.length).toBeGreaterThan(fetchCallsBefore);
+    expect((global.fetch as jest.Mock).mock.calls.at(-1)?.[0]).toEqual(expect.stringContaining('referenceTemplateColonial.json'));
+    expect(store.stockpileTplSource).toBe('official-colonial');
+  });
+
   test('stockpile:load-tpl avec JSON valide met à jour le store en mode file', async () => {
     const tpl = JSON.stringify({ sections: [] });
     const file = new File([tpl], 'myTemplate.json', { type: 'application/json' });
@@ -473,5 +495,313 @@ describe('StockpileView – persistance localStorage', () => {
     );
 
     view.unmount();
+  });
+
+  test('remplace automatiquement un relevé ayant le même header.location', async () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const view = new StockpileView();
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ 'UI/VehicleIcons/TruckVehicleIcon.png': 'Dunne Transport' }),
+      } as unknown as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          sections: [makeSection({
+            icons: [{
+              id: 'dunne',
+              iconId: 'dunne',
+              filename: 'TruckVehicleIcon.png',
+              path: '/assets/icons/UI/VehicleIcons/TruckVehicleIcon.png',
+              quantity: 1,
+              gridRow: 0,
+              gridCol: 0,
+            }],
+          })],
+        }),
+      } as unknown as Response);
+    view.mount(container);
+    await flushPromises();
+
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Lamplight - Seaport - 11e,old\n7.92mm,10' },
+    }));
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Lamplight - Seaport - 11e,new\n7.92mm,25' },
+    }));
+
+    const savedCalls = localStorageMock.setItem.mock.calls.filter(call => call[0] === 'stockpile_csv_entries');
+    const saved = JSON.parse(savedCalls.at(-1)?.[1] as string);
+    expect(saved).toHaveLength(1);
+    expect(saved[0].header.date).toBe('new');
+    expect(saved[0].items['7.92mm']).toBe(25);
+    view.unmount();
+  });
+});
+
+describe('StockpileView – dépôts et transport', () => {
+  let container: HTMLElement;
+  let view: StockpileView;
+
+  beforeEach(async () => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    view = new StockpileView();
+    store.setMpfData([
+      {
+        iconFilename: 'UI/VehicleIcons/TruckVehicleIcon.png',
+        itemName: 'Dunne Transport',
+        itemCategory: 'vehicles',
+        faction: ['neutral'],
+        cost: { bmat: 100 },
+        numberProduced: 1,
+        maxCrates: 5,
+      },
+      {
+        iconFilename: 'UI/StructureIcons/ResourceContainerIcon.png',
+        itemName: 'Resource Container',
+        itemCategory: 'shipables',
+        faction: ['neutral'],
+        cost: { bmat: 100 },
+        numberProduced: 1,
+        maxCrates: 1,
+      },
+    ]);
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          'UI/VehicleIcons/TruckVehicleIcon.png': 'Dunne Transport',
+          'UI/ItemIcons/AmmoLightIcon.png': '7.92mm',
+        }),
+      } as unknown as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          sections: [
+            makeSection({
+              icons: [{
+                id: 'dunne',
+                iconId: 'dunne',
+                filename: 'TruckVehicleIcon.png',
+                path: '/assets/icons/UI/VehicleIcons/TruckVehicleIcon.png',
+                quantity: 1,
+                gridRow: 0,
+                gridCol: 0,
+              }],
+            }),
+            makeSection({
+              id: 'sec-2',
+              title: 'Munitions',
+              color: '#ef4444',
+              icons: [{
+                id: 'ammo',
+                iconId: 'ammo',
+                filename: 'AmmoLightIcon.png',
+                path: '/assets/icons/UI/ItemIcons/AmmoLightIcon.png',
+                quantity: 100,
+                gridRow: 0,
+                gridCol: 0,
+              }],
+            }),
+          ],
+        }),
+      } as unknown as Response);
+    view.mount(container);
+    await flushPromises();
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Mercy - Seaport - 11e,now\n7.92mm,10' },
+    }));
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Kirknell - Storage Depot - 11e,now\n7.92mm,180\nDunne Transport,2\nDunne Transport (Crate),1\nUnlisted Cargo,4' },
+    }));
+  });
+
+  afterEach(() => {
+    view.unmount();
+    document.body.innerHTML = '';
+  });
+
+  test('affiche séparément les caisses et assemblés dans la vue par dépôt', () => {
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    expect(container.textContent).toContain('Transport planning');
+    expect(container.textContent).toContain('assembled');
+    expect(container.textContent).toContain('Unlisted Cargo');
+  });
+
+  test('conserve les icônes et les sections repliables dans la vue par dépôt', () => {
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+
+    const section = container.querySelector<HTMLButtonElement>('[data-section-key="Infanterie"]');
+    const icon = container.querySelector<HTMLImageElement>('img[src*="TruckVehicleIcon.png"]');
+    expect(section).toBeTruthy();
+    expect(icon).toBeTruthy();
+
+    section!.click();
+    expect(section!.nextElementSibling?.classList.contains('hidden')).toBe(true);
+  });
+
+  test('conserve l’ordre des catégories du template malgré le tri par gap', () => {
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+
+    const sections = [...container.querySelectorAll<HTMLElement>('.section-toggle')]
+      .map(section => section.getAttribute('data-section-key'));
+    expect(sections.slice(0, 2)).toEqual(['Infanterie', 'Munitions']);
+  });
+
+  test('réintègre les filtres globaux et les applique au dépôt intermédiaire', () => {
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+
+    expect(container.querySelectorAll('.filter-btn')).toHaveLength(4);
+    expect(container.querySelector('#btn-sort-gap')).toBeTruthy();
+    expect(container.querySelector('#btn-hide-ok')).toBeTruthy();
+    expect(container.querySelector('#search-items')).toBeTruthy();
+
+    (container.querySelector('[data-filter="missing"]') as HTMLButtonElement).click();
+    expect(container.textContent).toContain('Dunne Transport');
+    expect(container.textContent).not.toContain('Unlisted Cargo');
+  });
+
+  test('affiche la readiness calculée sur le dépôt intermédiaire', () => {
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+
+    const readiness = container.querySelector('[data-intermediate-readiness]');
+    expect(readiness?.textContent).toContain('Intermediate readiness');
+    expect(readiness?.textContent).toContain('⚠ 1');
+    expect(readiness?.textContent).toContain('✗ 1');
+  });
+
+  test('ouvre le préparateur avec une backline et un intermédiaire', () => {
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+
+    expect(document.querySelector('#transport-modal')).toBeTruthy();
+    expect((document.querySelector('#transport-preview') as HTMLTextAreaElement).value).toBe('');
+    expect((document.querySelector('#transport-add-line') as HTMLButtonElement).disabled).toBe(true);
+    expect(document.querySelector('#transport-modal')?.textContent).toContain('Load for this transport');
+  });
+
+  test('fusionne les conteneurs français et anglais dans Prepare transport', () => {
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Kirknell - Storage Depot - 11e,now\nResource Container,2\nContainer de ressources,3' },
+    }));
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+
+    const rows = [...document.querySelectorAll('#transport-modal tbody tr')]
+      .filter(row => row.textContent?.includes('Resource Container'));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].textContent).toContain('5');
+    expect(document.querySelector('#transport-modal')?.textContent).not.toContain('Container de ressources');
+  });
+
+  test('applique et persiste les exclusions de transport personnalisées', () => {
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Kirknell - Storage Depot - 11e,now\nBasic Materials,500\nHeavy Explosive Powder,10\nRefined Materials,20\nRare Metal,5\nRare Alloys,3\n7.92mm,60' },
+    }));
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+
+    const bmatToggle = document.querySelector<HTMLInputElement>('.transport-exclusion-toggle[value="Basic Materials"]')!;
+    expect(bmatToggle.checked).toBe(false);
+    expect(document.querySelector<HTMLInputElement>('.transport-exclusion-toggle[value="Heavy Explosive Powder"]')!.checked).toBe(true);
+    expect([...document.querySelectorAll('#transport-modal tbody tr')].some(row => row.textContent?.includes('Basic Materials'))).toBe(true);
+    expect([...document.querySelectorAll('#transport-modal tbody tr')].some(row => row.textContent?.includes('Heavy Explosive Powder'))).toBe(false);
+
+    bmatToggle.checked = true;
+    bmatToggle.dispatchEvent(new Event('change'));
+
+    expect([...document.querySelectorAll('#transport-modal tbody tr')].some(row => row.textContent?.includes('Basic Materials'))).toBe(false);
+    expect(JSON.parse(localStorageMock.getItem('stockpile_transport_exclusions')!)).toContain('Basic Materials');
+
+    (document.querySelector('#transport-close') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+    expect(document.querySelector<HTMLInputElement>('.transport-exclusion-toggle[value="Basic Materials"]')!.checked).toBe(true);
+  });
+
+  test('planifie automatiquement tout le cargo sur plusieurs lignes', () => {
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+    (document.querySelector('#transport-auto-fill') as HTMLButtonElement).click();
+
+    const preview = (document.querySelector('#transport-preview') as HTMLTextAreaElement).value;
+    expect(document.querySelectorAll('.transport-remove-line')).toHaveLength(2);
+    expect(preview).toMatch(/^A-One freighter/m);
+    expect(preview).toMatch(/^B-One freighter/m);
+  });
+
+  test('permet d’ajouter plusieurs lignes manuellement', () => {
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+
+    let quantity = document.querySelector<HTMLInputElement>('.transport-qty')!;
+    quantity.value = '60';
+    quantity.dispatchEvent(new Event('input'));
+    (document.querySelector('#transport-add-line') as HTMLButtonElement).click();
+
+    quantity = document.querySelector<HTMLInputElement>('.transport-qty')!;
+    quantity.value = '60';
+    quantity.dispatchEvent(new Event('input'));
+    (document.querySelector('#transport-add-line') as HTMLButtonElement).click();
+
+    expect(document.querySelectorAll('.transport-remove-line')).toHaveLength(2);
+    expect((document.querySelector('#transport-preview') as HTMLTextAreaElement).value).toMatch(/^B-One freighter/m);
+  });
+
+  test('affiche en temps réel le remplissage et prévient pour un conteneur incomplet', () => {
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+
+    const quantity = document.querySelector<HTMLInputElement>('.transport-qty')!;
+    quantity.value = '61';
+    quantity.dispatchEvent(new Event('input'));
+
+    expect(document.querySelector('#transport-load-meter')?.textContent).toContain('2/5 used');
+    expect(document.querySelector('[data-container-warning]')?.textContent).toContain('Incomplete container: 1/60 crates.');
+    expect((document.querySelector('#transport-add-line') as HTMLButtonElement).disabled).toBe(false);
+    expect(document.querySelector('#transport-load-meter')?.previousElementSibling?.classList.contains('overflow-y-auto')).toBe(true);
+  });
+
+  test('cumule une route backline vers intermédiaire et une route intermédiaire vers front', () => {
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Cinderwick - Seaport - 11e,now\n7.92mm,2' },
+    }));
+    const frontRole = container.querySelector('[data-depot-name="Cinderwick"]') as HTMLSelectElement;
+    frontRole.value = 'front';
+    frontRole.dispatchEvent(new Event('change'));
+
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+    (document.querySelector('#transport-auto-fill') as HTMLButtonElement).click();
+
+    const source = document.querySelector('#transport-source') as HTMLSelectElement;
+    source.value = 'Mercy';
+    source.dispatchEvent(new Event('change'));
+    const destination = document.querySelector('#transport-destination') as HTMLSelectElement;
+    destination.value = 'Cinderwick';
+    destination.dispatchEvent(new Event('change'));
+
+    const quantity = document.querySelector<HTMLInputElement>('.transport-qty')!;
+    quantity.value = '10';
+    quantity.dispatchEvent(new Event('input'));
+    (document.querySelector('#transport-add-line') as HTMLButtonElement).click();
+
+    const preview = (document.querySelector('#transport-preview') as HTMLTextAreaElement).value;
+    expect(preview).toContain('__Kirknell -> Mercy__');
+    expect(preview).toContain('__Mercy -> Cinderwick__');
+    expect(document.querySelectorAll('.transport-remove-line')).toHaveLength(3);
+  });
+
+  test('ne conserve qu’un seul dépôt intermédiaire', () => {
+    const kirknellRole = container.querySelector('[data-depot-name="Kirknell"]') as HTMLSelectElement;
+    kirknellRole.value = 'intermediate';
+    kirknellRole.dispatchEvent(new Event('change'));
+
+    const intermediateRoles = [...container.querySelectorAll<HTMLSelectElement>('.depot-role-select')]
+      .filter(select => select.value === 'intermediate');
+    expect(intermediateRoles).toHaveLength(1);
+    expect(intermediateRoles[0].getAttribute('data-depot-name')).toBe('Kirknell');
   });
 });
