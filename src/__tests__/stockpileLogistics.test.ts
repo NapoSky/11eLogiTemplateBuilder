@@ -356,4 +356,29 @@ describe('export Transport List 11eForge', () => {
     expect(rendered).toContain('.44 Mag, Dusk, Lionclaw and Pitch Gun');
     expect(rendered.match(/ and /g)).toHaveLength(1);
   });
+
+  test('découpe chaque item du hauler "container" en ligne autonome (Container/Crate/Assembled)', () => {
+    const rendered = renderTransportList({
+      date: new Date(2026, 8, 20),
+      routes: [{
+        source: 'Ashtown',
+        destination: 'Cinderwick',
+        missions: [{
+          mode: 'container',
+          tripCount: 1,
+          cargo: [
+            { itemName: 'Basic Materials', quantity: 500, kind: 'container-crate' },
+            { itemName: 'Argenti', quantity: 260, kind: 'container-crate' },
+            { itemName: 'Bardiche', quantity: 2, kind: 'direct-crate' },
+            { itemName: 'Dunne Transport', quantity: 3, kind: 'assembled' },
+          ],
+        }],
+      }],
+    });
+
+    expect(rendered).toContain('A-Container of Basic Materials (x9)');
+    expect(rendered).toContain('B-Container of Argenti (x5)');
+    expect(rendered).toContain('C-Crate of Bardiche (x2)');
+    expect(rendered).toContain('D-Assembled Dunne Transport (x3)');
+  });
 });

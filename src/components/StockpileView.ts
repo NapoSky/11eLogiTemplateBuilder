@@ -1869,7 +1869,8 @@ export class StockpileView {
     let sourceName = depots.find(depot => depot.role === 'backline')?.name ?? depots[0].name;
     let destinationName = depots.find(depot => depot.role === 'intermediate' && depot.name !== sourceName)?.name
       ?? depots.find(depot => depot.name !== sourceName)!.name;
-    let mode: TransportMode = 'freighter';
+    // 'container' est le défaut : abstrait le type de véhicule, juste la quantité à transporter.
+    let mode: TransportMode = 'container';
     let trainCars = 14;
     let globalNotes = '';
     let quantities = new Map<string, number>();
@@ -1887,6 +1888,8 @@ export class StockpileView {
     }
     const isCargoKind = (value: string): value is CargoKind =>
       value === 'container-crate' || value === 'direct-crate' || value === 'assembled';
+    const modeLabel = (value: TransportMode): string =>
+      value === 'container' ? 'Container/Shippable' : value[0].toUpperCase() + value.slice(1);
     const exclusionOptions = [
       'Heavy Explosive Powder',
       'Refined Materials',
@@ -1954,9 +1957,6 @@ export class StockpileView {
     const renderLoadMeter = (mission: TransportMission): string => {
       const perTripCapacity = transportSlotsPerTrip(mission);
       const tripCount = Math.max(1, mission.tripCount);
-      // mission.cargo est la quantité totale (tous véhicules confondus) : la jauge doit donc
-      // couvrir la capacité totale (capacité par véhicule x nombre de véhicules), pas juste un trajet.
-      const capacity = perTripCapacity * tripCount;
       const directItems = mission.cargo.filter(item => item.kind !== 'container-crate');
       const directSlots = directItems.reduce((total, item) => total + item.quantity, 0);
       // Un slot "direct" ne contient qu'une seule unité d'un seul item : on déplie la liste pour retrouver, par index, quel item occupe ce slot.
@@ -1967,6 +1967,9 @@ export class StockpileView {
       const containerSlots = Math.ceil(crateQuantity / 60);
       const partialCrates = crateQuantity % 60;
       const usedSlots = directSlots + containerSlots;
+      // Mode 'container' : aucune capacité de véhicule à plafonner, la jauge affiche exactement ce
+      // qui est chargé (pas de slot vide), contrairement aux autres haulers (perTripCapacity x tripCount).
+      const capacity = mission.mode === 'container' ? usedSlots : perTripCapacity * tripCount;
       // Les caisses en conteneur partagent un même pool de 60 : on répartit chaque item, dans l'ordre, dans des conteneurs de 60 pour savoir ce que contient chaque conteneur.
       const containerBins: Array<Array<{ itemName: string; quantity: number }>> = [];
       {
@@ -1991,8 +1994,9 @@ export class StockpileView {
       const slots = Array.from({ length: capacity }, (_, index) => {
         // Un véhicule au-delà du premier ne provient pas de la saisie manuelle mais de la mise à
         // l'échelle automatique (quantité > capacité d'un seul véhicule) : on le distingue par une
-        // autre couleur (bleu) plutôt que d'afficher un simple conteneur "plein" classique.
-        const isUpscaledVehicle = Math.floor(index / perTripCapacity) > 0;
+        // autre couleur (bleu) plutôt que d'afficher un simple conteneur "plein" classique. Ne
+        // s'applique pas en mode 'container', qui n'a pas de notion de véhicule/voyage.
+        const isUpscaledVehicle = mission.mode !== 'container' && Math.floor(index / perTripCapacity) > 0;
         if (index < directSlots) {
           const item = directSlotItems[index];
           const tooltip = item ? `${item.itemName} (${directKindLabel(item.kind as CargoKind)})` : '';
@@ -2097,6 +2101,22 @@ export class StockpileView {
         kind === 'container-crate' ? 'Crates in container' : kind === 'direct-crate' ? 'Crated shippable' : 'Assembled shippable';
       const categoryLabel = (category: CargoKind | IconCategory): string =>
         isCargoKind(category) ? cargoKindLabel(category) : category;
+      // Résumé de quantité indépendant de tout véhicule (mode 'container') : nombre de conteneurs de 60 caisses + nombre de shippables.
+      const describeContainerLoad = (cargo: TransportCargoItem[]): string => {
+        const directQuantity = cargo.filter(item => item.kind !== 'container-crate').reduce((total, item) => total + item.quantity, 0);
+        const crateQuantity = cargo.filter(item => item.kind === 'container-crate').reduce((total, item) => total + item.quantity, 0);
+        const containerCount = Math.ceil(crateQuantity / 60);
+        return `${containerCount} container${containerCount !== 1 ? 's' : ''} · ${directQuantity} shippable${directQuantity !== 1 ? 's' : ''}`;
+      };
+      const formatPlannedSlots = (planned: TransportMission): string => planned.mode === 'container'
+        ? describeContainerLoad(planned.cargo)
+        : `${usedTransportSlots(planned)}/${transportSlotsPerTrip(planned) * planned.tripCount} slots${planned.tripCount > 1 ? ` · x${planned.tripCount}` : ''}`;
+      const describeLoad = (currentMission: TransportMission): { text: string; className: string } => currentMission.mode === 'container'
+        ? { text: `Current load: ${describeContainerLoad(currentMission.cargo)}`, className: 'text-xs text-green-400' }
+        : {
+          text: `Current load: ${usedTransportSlots(currentMission)}/${transportSlotsPerTrip(currentMission) * Math.max(1, currentMission.tripCount)} slots${currentMission.tripCount > 1 ? ` · x${currentMission.tripCount}` : ''}`,
+          className: `text-xs ${!missionFits(currentMission) ? 'text-red-400' : currentMission.tripCount > 1 ? 'text-blue-400' : 'text-green-400'}`,
+        };
       const itemMatchesCategory = (item: TransportCargoItem, category: CargoKind | IconCategory | 'all'): boolean => {
         if (category === 'all') return true;
         if (isCargoKind(category)) return item.kind === category;
@@ -2175,8 +2195,7 @@ export class StockpileView {
       const routes = buildRoutesWithDraft(mission);
       const allMissions = routes.flatMap(route => route.missions);
       const fits = allMissions.length > 0 && allMissions.every(missionFits);
-      const slots = usedTransportSlots(mission);
-      const slotCapacity = (mode === 'flatbed' ? 1 : mode === 'freighter' ? 5 : trainCars) * Math.max(1, mission.tripCount);
+      const loadSummary = describeLoad(mission);
       const discordText = allMissions.length > 0 ? renderTransportList({
         date: new Date(),
         notes: globalNotes.split('\n').filter(Boolean),
@@ -2208,7 +2227,7 @@ export class StockpileView {
                 </label>
                 <label class="text-xs text-gray-400">Hauler
                   <select id="transport-mode" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded px-2 py-1.5 text-gray-200">
-                    ${(['flatbed', 'freighter', 'train'] as TransportMode[]).map(value => `<option value="${value}" ${value === mode ? 'selected' : ''}>${value[0].toUpperCase() + value.slice(1)}</option>`).join('')}
+                    ${(['container', 'flatbed', 'freighter', 'train'] as TransportMode[]).map(value => `<option value="${value}" ${value === mode ? 'selected' : ''}>${modeLabel(value)}</option>`).join('')}
                   </select>
                 </label>
                 ${mode === 'train' ? `<label class="text-xs text-gray-400">Flatbed cars
@@ -2254,8 +2273,8 @@ export class StockpileView {
                         <div class="flex items-center gap-2 rounded border border-gray-700 bg-gray-900/50 px-3 py-2 text-xs">
                           <span class="font-semibold text-blue-300">${letter}</span>
                           <span class="text-gray-400">${escapeHtml(route.source)} → ${escapeHtml(route.destination)}</span>
-                          <span class="text-gray-300">${planned.mode === 'train' ? `Train (${planned.trainCars} cars)` : planned.mode[0].toUpperCase() + planned.mode.slice(1)}</span>
-                          <span class="${planned.tripCount > 1 ? 'text-blue-400' : 'text-gray-500'}">${usedTransportSlots(planned)}/${transportSlotsPerTrip(planned) * planned.tripCount} slots${planned.tripCount > 1 ? ` · x${planned.tripCount}` : ''}</span>
+                          <span class="text-gray-300">${planned.mode === 'train' ? `Train (${planned.trainCars} cars)` : modeLabel(planned.mode)}</span>
+                          <span class="${planned.tripCount > 1 ? 'text-blue-400' : 'text-gray-500'}">${formatPlannedSlots(planned)}</span>
                           <span class="ml-auto text-gray-500">${planned.cargo.length} cargo type${planned.cargo.length !== 1 ? 's' : ''}</span>
                           <button class="transport-remove-line p-1 text-gray-500 hover:text-red-400" data-route-index="${routeIndex}" data-mission-index="${missionIndex}" aria-label="Remove transport line">✕</button>
                         </div>
@@ -2300,7 +2319,7 @@ export class StockpileView {
             <div class="p-4 flex flex-col min-h-0 bg-gray-900/40">
               <div class="flex items-center justify-between mb-3">
                 <span class="text-sm font-medium text-gray-200">11eForge preview</span>
-                <span id="transport-current-capacity" class="text-xs ${!missionFits(mission) ? 'text-red-400' : mission.tripCount > 1 ? 'text-blue-400' : 'text-green-400'}">Current load: ${slots}/${slotCapacity} slots${mission.tripCount > 1 ? ` · x${mission.tripCount}` : ''}</span>
+                <span id="transport-current-capacity" class="${loadSummary.className}">${loadSummary.text}</span>
               </div>
               <label class="text-xs text-gray-500 mb-2">Global notes
                 <textarea id="transport-global-notes" rows="2" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded p-2 text-gray-300 resize-none" placeholder=":exclamation: ...">${escapeHtml(globalNotes)}</textarea>
@@ -2323,8 +2342,7 @@ export class StockpileView {
         const currentRoutes = buildRoutesWithDraft(currentMission);
         const currentMissions = currentRoutes.flatMap(route => route.missions);
         const currentFits = currentMissions.length > 0 && currentMissions.every(missionFits);
-        const currentSlots = usedTransportSlots(currentMission);
-        const currentCapacity = transportSlotsPerTrip(currentMission) * Math.max(1, currentMission.tripCount);
+        const currentLoadSummary = describeLoad(currentMission);
         const currentDiscordText = currentMissions.length > 0 ? renderTransportList({
           date: new Date(),
           notes: globalNotes.split('\n').filter(Boolean),
@@ -2341,9 +2359,8 @@ export class StockpileView {
         const summary = modal.querySelector<HTMLElement>('#transport-summary');
         if (meter) meter.innerHTML = renderLoadMeter(currentMission);
         if (capacityLabel) {
-          const factor = currentMission.tripCount > 1 ? ` · x${currentMission.tripCount}` : '';
-          capacityLabel.textContent = `Current load: ${currentSlots}/${currentCapacity} slots${factor}`;
-          capacityLabel.className = `text-xs ${!missionFits(currentMission) ? 'text-red-400' : currentMission.tripCount > 1 ? 'text-blue-400' : 'text-green-400'}`;
+          capacityLabel.textContent = currentLoadSummary.text;
+          capacityLabel.className = currentLoadSummary.className;
         }
         if (addButton) {
           addButton.disabled = !loadFits;

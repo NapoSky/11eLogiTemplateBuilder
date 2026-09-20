@@ -2,7 +2,8 @@ import { translateFrenchItemName } from './frenchItemNames';
 
 export type DepotRole = 'backline' | 'intermediate' | 'front';
 export type CargoKind = 'container-crate' | 'direct-crate' | 'assembled';
-export type TransportMode = 'flatbed' | 'freighter' | 'train';
+// 'container' abstracts away the vehicle entirely: no per-trip capacity, just the raw quantity to transport.
+export type TransportMode = 'container' | 'flatbed' | 'freighter' | 'train';
 
 export interface StockpileSnapshot {
   id: string;
@@ -289,6 +290,7 @@ export function suggestTransportMissions(
 }
 
 export function transportSlotsPerTrip(mission: TransportMission): number {
+  if (mission.mode === 'container') return Infinity;
   if (mission.mode === 'flatbed') return 1;
   if (mission.mode === 'freighter') return 5;
   return Math.min(14, Math.max(1, Math.floor(mission.trainCars ?? 1)));
@@ -315,9 +317,21 @@ function formatDate(date: Date): string {
 }
 
 function formatCargoItem(item: TransportCargoItem): string {
-  // La volumétrie est déjà connue (chargement au maximum systématique) : on n'affiche que le nom
-  // de l'item, sauf pour les items assemblés qui suivent une procédure de chargement différente.
   return item.kind === 'assembled' ? `assembled ${item.itemName}` : item.itemName;
+}
+
+// Le mode 'container' n'a pas de véhicule qui mutualise plusieurs items dans un même chargement :
+// un container ne transporte qu'un seul type de caisse (jusqu'à 60), donc chaque item devient sa
+// propre ligne autonome avec sa quantité réelle (nb de containers, ou nb de caisses/unités pour
+// ce qui ne se poolée pas), plutôt qu'un "Load with X and Y" qui ne dit pas combien en prendre.
+function formatContainerCargoItem(item: TransportCargoItem): string {
+  if (item.kind === 'container-crate') {
+    return `Container of ${item.itemName} (x${Math.ceil(item.quantity / 60)})`;
+  }
+  if (item.kind === 'assembled') {
+    return `Assembled ${item.itemName} (x${item.quantity})`;
+  }
+  return `Crate of ${item.itemName} (x${item.quantity})`;
 }
 
 function formatMission(mission: TransportMission): string {
@@ -342,6 +356,14 @@ export function renderTransportList(list: TransportList): string {
     lines.push(`__${route.source} -> ${route.destination}__`);
     for (const note of route.notes ?? []) lines.push(note);
     for (const mission of route.missions) {
+      if (mission.mode === 'container') {
+        for (const item of mission.cargo) {
+          const letter = String.fromCharCode(65 + (missionIndex % 26));
+          lines.push(`${letter}-${formatContainerCargoItem(item)}`);
+          missionIndex += 1;
+        }
+        continue;
+      }
       const letter = String.fromCharCode(65 + (missionIndex % 26));
       lines.push(`${letter}-${formatMission(mission)}`);
       missionIndex += 1;

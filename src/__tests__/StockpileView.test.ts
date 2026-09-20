@@ -71,6 +71,13 @@ const setDepotRole = (container: HTMLElement, depotName: string, role: string): 
   select.dispatchEvent(new Event('change'));
 };
 
+/** Sélectionne un hauler dans la modale Transport ouverte (défaut : 'container', abstrait tout véhicule). */
+const selectHaulerMode = (mode: string): void => {
+  const select = document.querySelector<HTMLSelectElement>('#transport-mode')!;
+  select.value = mode;
+  select.dispatchEvent(new Event('change'));
+};
+
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
 const iconMapping: Record<string, string> = {
@@ -811,6 +818,33 @@ describe('StockpileView – dépôts et transport', () => {
     expect(document.querySelector('#transport-modal')?.textContent).toContain('Load for this transport');
   });
 
+  test('propose "Container/Shippable" par défaut, sans limite de capacité liée à un véhicule', () => {
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Kirknell - Storage Depot - 11e,now\nBasic Materials,400' },
+    }));
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+
+    const haulerSelect = document.querySelector<HTMLSelectElement>('#transport-mode')!;
+    expect(haulerSelect.value).toBe('container');
+    expect(haulerSelect.textContent).toContain('Container/Shippable');
+
+    const row = [...document.querySelectorAll('#transport-modal tbody tr')].find(candidate => candidate.textContent?.includes('Basic Materials'))!;
+    const maxButton = row.querySelector<HTMLButtonElement>('.transport-qty-max')!;
+    const input = row.querySelector<HTMLInputElement>('.transport-qty')!;
+    maxButton.click();
+
+    // Aucune limite de véhicule : tout le stock disponible (400) peut être chargé, contrairement au plafond freighter (300).
+    expect(input.value).toBe('400');
+    expect(document.querySelector('#transport-load-meter')?.textContent).toContain('7 containers');
+    expect((document.querySelector('#transport-add-line') as HTMLButtonElement).disabled).toBe(false);
+
+    (document.querySelector('#transport-add-line') as HTMLButtonElement).click();
+    // Un container ne mutualise qu'un seul type de caisse (60 max) : chaque item doit apparaître
+    // sur sa propre ligne avec le nombre de containers réellement nécessaires (ceil(400/60) = 7).
+    expect((document.querySelector('#transport-preview') as HTMLTextAreaElement).value).toMatch(/^A-Container of Basic Materials \(x7\)/m);
+  });
+
   test('fusionne les conteneurs français et anglais dans Prepare transport', () => {
     window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
       detail: { text: 'Basin - Kirknell - Storage Depot - 11e,now\nResource Container,2\nContainer de ressources,3' },
@@ -949,6 +983,7 @@ describe('StockpileView – dépôts et transport', () => {
     }));
     (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
     (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+    selectHaulerMode('freighter');
 
     const row = [...document.querySelectorAll('#transport-modal tbody tr')].find(candidate => candidate.textContent?.includes('Basic Materials'))!;
     const maxButton = row.querySelector<HTMLButtonElement>('.transport-qty-max')!;
@@ -965,6 +1000,7 @@ describe('StockpileView – dépôts et transport', () => {
   test('planifie automatiquement tout le cargo sur plusieurs lignes', () => {
     (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
     (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+    selectHaulerMode('freighter');
     (document.querySelector('#transport-auto-fill') as HTMLButtonElement).click();
 
     const preview = (document.querySelector('#transport-preview') as HTMLTextAreaElement).value;
@@ -976,6 +1012,7 @@ describe('StockpileView – dépôts et transport', () => {
   test('propose d\'annuler le plan automatique en un clic, uniquement après avoir planifié automatiquement', () => {
     (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
     (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+    selectHaulerMode('freighter');
 
     expect(document.querySelector('#transport-undo-auto-fill')).toBeNull();
 
@@ -1001,6 +1038,7 @@ describe('StockpileView – dépôts et transport', () => {
   test('permet d’ajouter plusieurs lignes manuellement', () => {
     (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
     (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+    selectHaulerMode('freighter');
 
     let quantity = document.querySelector<HTMLInputElement>('.transport-qty')!;
     quantity.value = '60';
@@ -1019,6 +1057,7 @@ describe('StockpileView – dépôts et transport', () => {
   test('affiche en temps réel le remplissage et prévient pour un conteneur incomplet', () => {
     (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
     (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+    selectHaulerMode('freighter');
 
     const quantity = document.querySelector<HTMLInputElement>('.transport-qty')!;
     quantity.value = '61';
@@ -1033,6 +1072,7 @@ describe('StockpileView – dépôts et transport', () => {
   test('affiche le contenu de chaque slot au survol via un tooltip custom (pas le title natif)', () => {
     (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
     (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+    selectHaulerMode('freighter');
 
     const ammoRow = [...document.querySelectorAll('#transport-cargo-rows tr')].find(row => row.textContent?.includes('7.92mm'))!;
     const ammoInput = ammoRow.querySelector<HTMLInputElement>('.transport-qty')!;
@@ -1079,6 +1119,7 @@ describe('StockpileView – dépôts et transport', () => {
 
     (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
     (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+    selectHaulerMode('freighter');
     (document.querySelector('#transport-auto-fill') as HTMLButtonElement).click();
 
     const source = document.querySelector('#transport-source') as HTMLSelectElement;
