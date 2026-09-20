@@ -69,10 +69,11 @@ function escapeHtml(s: string): string {
 const ROLE_LABELS: Record<DepotRole, string> = { backline: 'Backline', intermediate: 'Intermediate', front: 'Front' };
 
 interface RoleAccent { border: string; text: string; badgeBg: string; }
+// border-t-* (not border-*) so the accent only colors the top strip, not all 4 sides
 const ROLE_ACCENTS: Record<DepotRole, RoleAccent> = {
-  backline: { border: 'border-lime-500', text: 'text-lime-400', badgeBg: 'bg-lime-900/30 border-lime-700/40' },
-  intermediate: { border: 'border-amber-500', text: 'text-amber-400', badgeBg: 'bg-amber-900/30 border-amber-700/40' },
-  front: { border: 'border-cyan-500', text: 'text-cyan-400', badgeBg: 'bg-cyan-900/30 border-cyan-700/40' },
+  backline: { border: 'border-t-lime-500', text: 'text-lime-400', badgeBg: 'bg-lime-900/30 border-lime-700/40' },
+  intermediate: { border: 'border-t-amber-500', text: 'text-amber-400', badgeBg: 'bg-amber-900/30 border-amber-700/40' },
+  front: { border: 'border-t-cyan-500', text: 'text-cyan-400', badgeBg: 'bg-cyan-900/30 border-cyan-700/40' },
 };
 
 /** Parse a Foxhole snapshot date string ("YYYY.MM.DD-HH.MM.SS") into a Date, or null if unparsable. */
