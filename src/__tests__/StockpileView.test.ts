@@ -638,10 +638,12 @@ describe('StockpileView – dépôts et transport', () => {
     window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
       detail: { text: 'Basin - Kirknell - Storage Depot - 11e,now\n7.92mm,180\nDunne Transport,2\nDunne Transport (Crate),1\nUnlisted Cargo,4' },
     }));
-    // Le rôle par défaut est désormais suggéré à partir du contenu du CSV (peu de caisses ici
-    // => "front" par défaut) : on force explicitement les rôles attendus par ces tests.
-    setDepotRole(container, 'Mercy', 'intermediate');
+    // Le rôle par défaut est désormais suggéré à partir du contenu du CSV (Kirknell est
+    // par défaut "intermediate" au vu de son contenu) : on démote d'abord Kirknell en
+    // backline (aucune confirmation requise), puis on promeut Mercy en intermediate
+    // (plus aucun autre dépôt intermediate à ce moment, donc pas de confirmation non plus).
     setDepotRole(container, 'Kirknell', 'backline');
+    setDepotRole(container, 'Mercy', 'intermediate');
   });
 
   afterEach(() => {

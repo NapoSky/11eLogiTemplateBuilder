@@ -204,7 +204,7 @@ export class Toolbar {
 
           <div class="mt-5 pt-4 border-t border-gray-700 space-y-2">
             <div class="text-center">
-              <span class="text-xs text-gray-500">11eRC-FL Template Builder v2.0</span>
+              <span class="text-xs text-gray-500">11eRC-FL Template Builder v2.1</span>
             </div>
             <div class="text-center">
               <a href="https://github.com/NapoSky/11eLogiTemplateBuilder" target="_blank" rel="noopener noreferrer" class="text-xs text-blue-400 hover:text-blue-300 underline transition-colors">

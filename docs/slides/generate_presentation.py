@@ -815,7 +815,7 @@ def create_end_slide(prs):
     note = slide.shapes.add_textbox(Inches(0.5), Inches(6.5), Inches(12.333), Inches(0.6))
     tf3 = note.text_frame
     p3 = tf3.paragraphs[0]
-    p3.text = 'Made with ❤️ for the 11eRC-FL  —  v2.0'
+    p3.text = 'Made with ❤️ for the 11eRC-FL  —  v2.1'
     p3.font.size = Pt(14)
     p3.font.italic = True
     p3.font.color.rgb = COLORS['text_muted']

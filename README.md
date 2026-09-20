@@ -185,4 +185,4 @@ See the [LICENSE](LICENSE) file for details.
 
 ---
 
-**v2.0** - Made with ❤️ for the 11eRC-FL
+**v2.1** - Made with ❤️ for the 11eRC-FL
