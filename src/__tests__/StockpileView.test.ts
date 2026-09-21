@@ -695,30 +695,37 @@ describe('StockpileView – dépôts et transport', () => {
     (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
 
     const readiness = container.querySelector('[data-intermediate-readiness]');
-    expect(readiness?.textContent).toContain('Intermediate readiness');
+    expect(readiness?.textContent).toContain('Main readiness');
     expect(readiness?.textContent).toContain('⚠ 1');
     expect(readiness?.textContent).toContain('✗ 1');
   });
 
-  test('recalcule la complétion MPF selon les rôles sélectionnés', () => {
-    let backline = container.querySelector<HTMLInputElement>('.calculation-role-toggle[value="backline"]')!;
-    let intermediate = container.querySelector<HTMLInputElement>('.calculation-role-toggle[value="intermediate"]')!;
-    const front = container.querySelector<HTMLInputElement>('.calculation-role-toggle[value="front"]')!;
-    expect([backline.checked, intermediate.checked, front.checked]).toEqual([false, true, false]);
-    expect(container.querySelector('[data-production-readiness]')?.textContent).toContain('0%');
-    expect(container.querySelector('#calculation-role-summary')?.textContent).toContain('Intermediate');
+  test('affiche la répartition Back/Main/Front et le cumul Back+Main dans la vue MPF production needs', () => {
+    // Les deux items sont déjà à l'objectif (Backline + Main) : on désactive "Hide OK" pour les voir.
+    (container.querySelector('#btn-hide-ok') as HTMLButtonElement).click();
 
-    backline.checked = true;
-    backline.dispatchEvent(new Event('change'));
+    const dunneRow = [...container.querySelectorAll('tbody tr')]
+      .find(tr => tr.textContent?.includes('Dunne Transport'))!;
+    const dunneCells = [...dunneRow.querySelectorAll('td')].map(td => td.textContent?.trim());
+    // Target 1, Backline (Kirknell) = 1 crate + 2 assemblés = 3, Main (Mercy) = 0, Front = 0, Stockpile B+M = 3, Gap = +2
+    expect(dunneCells[1]).toBe('1');
+    expect(dunneCells[2]).toBe('3');
+    expect(dunneCells[3]).toBe('0');
+    expect(dunneCells[4]).toBe('0');
+    expect(dunneCells[5]).toBe('3');
+    expect(dunneCells[6]).toBe('+2');
+    expect(dunneRow.textContent).toContain('OK');
 
-    expect(container.querySelector('[data-production-readiness]')?.textContent).toContain('100%');
-    expect(container.querySelector('#calculation-role-summary')?.textContent).toContain('Backline + Intermediate');
-    expect(JSON.parse(localStorageMock.getItem('stockpile_calculation_roles')!)).toEqual(['intermediate', 'backline']);
-
-    (container.querySelector('#btn-generate-todolist') as HTMLButtonElement).click();
-    backline = document.querySelector<HTMLInputElement>('.todolist-role-toggle[value="backline"]')!;
-    intermediate = document.querySelector<HTMLInputElement>('.todolist-role-toggle[value="intermediate"]')!;
-    expect([backline.checked, intermediate.checked]).toEqual([true, true]);
+    const ammoRow = [...container.querySelectorAll('tbody tr')]
+      .find(tr => tr.textContent?.includes('7.92mm'))!;
+    const ammoCells = [...ammoRow.querySelectorAll('td')].map(td => td.textContent?.trim());
+    // Target 100, Backline (Kirknell) = 180, Main (Mercy) = 10, Front = 0, Stockpile B+M = 190, Gap = +90
+    expect(ammoCells[1]).toBe('100');
+    expect(ammoCells[2]).toBe('180');
+    expect(ammoCells[3]).toBe('10');
+    expect(ammoCells[4]).toBe('0');
+    expect(ammoCells[5]).toBe('190');
+    expect(ammoCells[6]).toBe('+90');
   });
 
   test('recalcule la Todolist selon les rôles sélectionnés et mémorise le choix', () => {
@@ -742,7 +749,7 @@ describe('StockpileView – dépôts et transport', () => {
     expect(backline.checked).toBe(false);
     expect(intermediate.checked).toBe(true);
     expect(front.checked).toBe(false);
-    expect(document.querySelector('#todolist-role-summary')?.textContent).toContain('Intermediate');
+    expect(document.querySelector('#todolist-role-summary')?.textContent).toContain('Main');
     expect((document.querySelector('#discord-textarea') as HTMLTextAreaElement).value).toContain('Dunne Transport');
 
     backline.checked = true;

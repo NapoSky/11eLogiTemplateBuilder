@@ -66,7 +66,12 @@ function escapeHtml(s: string): string {
   );
 }
 
-const ROLE_LABELS: Record<DepotRole, string> = { backline: 'Backline', intermediate: 'Intermediate', front: 'Front' };
+const ROLE_LABELS: Record<DepotRole, string> = { backline: 'Backline', intermediate: 'Main', front: 'Front' };
+
+/** Sums the crate + plain (assembled) quantities of an item from a raw CSV items map. */
+function resolveItemQuantity(items: Map<string, number>, itemName: string): number {
+  return (items.get(`${itemName} (Crate)`) ?? 0) + (items.get(itemName) ?? 0);
+}
 
 interface RoleAccent { border: string; text: string; badgeBg: string; }
 // border-t-* (not border-*) so the accent only colors the top strip, not all 4 sides
@@ -554,14 +559,19 @@ export class StockpileView {
   }
 
   private getSections(): Section[] {
-    return this.externalTemplate?.sections ?? store.sections;
+    // "Facility" sections hold facility-only gear that isn't part of MPF production — exclude
+    // them from the comparison so they never appear in the production needs table/calculator.
+    const sections = this.externalTemplate?.sections ?? store.sections;
+    return sections.filter(section => !section.title.toLowerCase().includes('facility'));
   }
 
+  /**
+   * The MPF production needs view always counts Backline + Main stock (Front depots are
+   * informational only, transport isn't guaranteed) — no user toggle needed anymore since
+   * the per-role breakdown is now shown directly in the table (see renderTable/getRoleItemMaps).
+   */
   private aggregateItems(): Map<string, number> {
-    return aggregateStockpileItems(
-      this.csvEntries.filter(entry => this.calculationRoles.has(entry.role)),
-      true,
-    );
+    return aggregateStockpileItems(this.csvEntries.filter(entry => entry.role !== 'front'));
   }
 
   private aggregateEntries(entries: CsvEntry[]): Map<string, number> {
@@ -570,6 +580,16 @@ export class StockpileView {
       for (const [name, qty] of entry.items) result.set(name, (result.get(name) ?? 0) + qty);
     }
     return result;
+  }
+
+  /** Raw (crate-key-unresolved) item quantities per depot role, for the B/M/F breakdown columns. */
+  private getRoleItemMaps(): Record<DepotRole, Map<string, number>> {
+    const roles: DepotRole[] = ['backline', 'intermediate', 'front'];
+    const maps = {} as Record<DepotRole, Map<string, number>>;
+    for (const role of roles) {
+      maps[role] = this.aggregateEntries(this.csvEntries.filter(entry => entry.role === role));
+    }
+    return maps;
   }
 
   private getDepots(): Array<{ name: string; role: DepotRole; entries: CsvEntry[] }> {
@@ -707,8 +727,8 @@ export class StockpileView {
   }
 
   private async handleDepotRoleChange(depotName: string, role: DepotRole): Promise<boolean> {
-    // Only one depot can hold the "Intermediate" role at a time (readiness/gap calculations
-    // elsewhere assume a single Intermediate depot) — ask before demoting the previous one
+    // Only one depot can hold the "Main" role at a time (readiness/gap calculations
+    // elsewhere assume a single Main depot) — ask before demoting the previous one
     // instead of silently swapping it, so the user stays in control of where it ends up.
     const previousIntermediate = role === 'intermediate'
       ? this.getDepots().find(depot => depot.role === 'intermediate' && depot.name !== depotName)
@@ -716,7 +736,7 @@ export class StockpileView {
 
     if (previousIntermediate) {
       const confirmed = await confirmDialog(
-        `"${previousIntermediate.name}" is currently the Intermediate depot. Only one depot can hold that role — it will be moved to Backline. Continue?`
+        `"${previousIntermediate.name}" is currently the Main depot. Only one depot can hold that role — it will be moved to Backline. Continue?`
       );
       if (!confirmed) return false;
     }
@@ -883,34 +903,6 @@ export class StockpileView {
           ` : ''}
         </div>
 
-        ${this.csvEntries.length > 0 && this.stockViewMode === 'global' ? (() => {
-          const roles: DepotRole[] = ['backline', 'intermediate', 'front'];
-          const includedDepots = new Set(this.csvEntries
-            .filter(entry => this.calculationRoles.has(entry.role))
-            .map(entry => entry.depotName));
-          const roleSummary = roles
-            .filter(role => this.calculationRoles.has(role))
-            .map(role => role[0].toUpperCase() + role.slice(1))
-            .join(' + ');
-          return `
-            <div class="shrink-0 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-gray-700 bg-gray-900/60 px-4 py-2">
-              <span class="text-xs font-medium text-gray-300">Stock included in calculation</span>
-              ${roles.map(role => {
-                const depotCount = new Set(this.csvEntries
-                  .filter(entry => entry.role === role)
-                  .map(entry => entry.depotName)).size;
-                return `
-                  <label class="flex items-center gap-1.5 text-xs text-gray-300">
-                    <input class="calculation-role-toggle accent-blue-500" type="checkbox" value="${role}" ${this.calculationRoles.has(role) ? 'checked' : ''} />
-                    <span>${role[0].toUpperCase() + role.slice(1)} <span class="text-gray-500">(${depotCount})</span></span>
-                  </label>
-                `;
-              }).join('')}
-              <span id="calculation-role-summary" class="text-xs text-gray-500 sm:ml-auto">Counting ${includedDepots.size} depot${includedDepots.size !== 1 ? 's' : ''}: ${roleSummary}</span>
-            </div>
-          `;
-        })() : ''}
-
         <!-- Content -->
         <div class="flex-1 overflow-y-auto p-4">
           ${this.renderLoadedStockpiles()}
@@ -956,7 +948,7 @@ export class StockpileView {
   private renderIntermediateReadiness(): string {
     if (!this.result) return '';
     const intermediate = this.getDepots().find(depot => depot.role === 'intermediate');
-    if (!intermediate) return '<span class="text-amber-400">No Intermediate depot</span>';
+    if (!intermediate) return '<span class="text-amber-400">No Main depot</span>';
 
     const quantities = new Map(normalizeStockItems(
       this.aggregateEntries(intermediate.entries),
@@ -977,8 +969,8 @@ export class StockpileView {
     const barColor = pct === 100 ? '#22c55e' : pct >= 50 ? '#eab308' : '#ef4444';
 
     return `
-      <div data-intermediate-readiness class="flex items-center gap-2 border-l border-gray-600 pl-3" title="Intermediate readiness: ${escapeHtml(intermediate.name)}">
-        <span class="text-gray-400">Intermediate readiness</span>
+      <div data-intermediate-readiness class="flex items-center gap-2 border-l border-gray-600 pl-3" title="Main readiness: ${escapeHtml(intermediate.name)}">
+        <span class="text-gray-400">Main readiness</span>
         <span class="flex items-center gap-1.5">
           <span class="w-16 h-1.5 bg-gray-700 rounded-full overflow-hidden">
             <span class="h-full rounded-full block" style="width:${pct}%;background-color:${barColor}"></span>
@@ -1048,7 +1040,7 @@ export class StockpileView {
           <select class="depot-role-select bg-gray-900 border border-gray-700 rounded px-1 py-0.5 text-[11px] text-gray-400 shrink-0"
             data-depot-name="${escapeHtml(depot.name)}" aria-label="Depot role">
             <option value="backline" ${role === 'backline' ? 'selected' : ''}>Backline</option>
-            <option value="intermediate" ${role === 'intermediate' ? 'selected' : ''}>Intermediate</option>
+            <option value="intermediate" ${role === 'intermediate' ? 'selected' : ''}>Main</option>
             <option value="front" ${role === 'front' ? 'selected' : ''}>Front</option>
           </select>
         </div>
@@ -1166,55 +1158,64 @@ export class StockpileView {
       rowsBySection.set(row.sectionTitle, sectionRows);
     }
 
-    const renderHeader = (): string => `
-      <thead class="bg-gray-800 text-gray-300">
-        <tr>
-          <th class="sticky left-0 z-10 bg-gray-800 text-left px-3 py-2 min-w-72 border-r border-gray-700">Item / target</th>
-          ${depots.map(depot => `
-            <th class="px-3 py-2 min-w-40 text-right border-r border-gray-700">
-              <span class="block text-gray-200">${escapeHtml(depot.name)}</span>
-              <span class="block uppercase text-[10px] ${depot.role === 'front' ? 'text-cyan-400' : depot.role === 'intermediate' ? 'text-amber-400' : 'text-lime-400'}">${depot.role}</span>
-            </th>
-          `).join('')}
-          <th class="px-3 py-2 min-w-28 text-right">Calculated total</th>
-        </tr>
-      </thead>
-    `;
-
-    const renderRow = (row: DepotMatrixRow): string => {
-      const target = row.targetQty === -1 ? null : row.targetQty;
-      let calculatedTotal = 0;
+    const renderHeader = (): string => {
+      const group = (sticky: boolean): string => `
+        <th class="${sticky ? 'sticky left-0 z-10' : ''} bg-gray-800 text-left px-3 py-2 min-w-72 border-r border-gray-700">Item / target</th>
+        ${depots.map(depot => `
+          <th class="px-3 py-2 min-w-40 text-right border-r border-gray-700">
+            <span class="block text-gray-200">${escapeHtml(depot.name)}</span>
+            <span class="block uppercase text-[10px] ${depot.role === 'front' ? 'text-cyan-400' : depot.role === 'intermediate' ? 'text-amber-400' : 'text-lime-400'}">${ROLE_LABELS[depot.role]}</span>
+          </th>
+        `).join('')}
+        <th class="px-3 py-2 min-w-28 text-right">Calculated total</th>
+      `;
       return `
-        <tr class="hover:bg-gray-800/40">
-          <td class="sticky left-0 bg-gray-900 px-3 py-2 border-r border-gray-700">
-            <div class="flex items-center gap-3">
-              ${row.iconPath
-                ? `<img src="${escapeHtml(row.iconPath)}" class="w-10 h-10 object-contain shrink-0" alt="" />`
-                : `<span class="w-10 h-10 shrink-0 grid place-items-center rounded bg-gray-800 text-gray-600" aria-hidden="true">?</span>`}
-              <div class="min-w-0">
-                <span class="block text-gray-200">${escapeHtml(row.itemName)}</span>
-                <span class="block text-gray-600">target ${target ?? '∞'}</span>
-              </div>
-            </div>
-          </td>
-          ${depots.map(depot => {
-            const item = depotItems.get(depot.name)?.get(row.itemName);
-            const crates = item?.crates ?? 0;
-            const assembled = item?.assembled ?? 0;
-            if (depot.role !== 'front') calculatedTotal += crates + assembled;
-            const gap = depot.role === 'intermediate' && target !== null ? crates + assembled - target : null;
-            return `
-              <td class="px-3 py-2 text-right border-r border-gray-800 tabular-nums">
-                <span class="text-gray-200">${crates}</span><span class="text-gray-600"> cr</span>
-                ${assembled > 0 ? `<span class="block text-cyan-400">${assembled} assembled</span>` : ''}
-                ${gap !== null ? `<span class="block ${gap < 0 ? 'text-red-400' : 'text-green-400'}">${gap > 0 ? '+' : ''}${gap}</span>` : ''}
-              </td>
-            `;
-          }).join('')}
-          <td class="px-3 py-2 text-right font-medium text-gray-200 tabular-nums">${calculatedTotal}</td>
-        </tr>
+        <thead class="bg-gray-800 text-gray-300">
+          <tr>
+            ${group(true)}
+            <th class="w-px p-0 border-l-2 border-gray-600"></th>
+            ${group(false)}
+          </tr>
+        </thead>
       `;
     };
+
+    const renderRowCells = (row: DepotMatrixRow, sticky: boolean): string => {
+      const target = row.targetQty === -1 ? null : row.targetQty;
+      let calculatedTotal = 0;
+      const depotCells = depots.map(depot => {
+        const item = depotItems.get(depot.name)?.get(row.itemName);
+        const crates = item?.crates ?? 0;
+        const assembled = item?.assembled ?? 0;
+        if (depot.role !== 'front') calculatedTotal += crates + assembled;
+        const gap = depot.role === 'intermediate' && target !== null ? crates + assembled - target : null;
+        return `
+          <td class="px-3 py-2 text-right border-r border-gray-800 tabular-nums">
+            <span class="text-gray-200">${crates}</span><span class="text-gray-600"> cr</span>
+            ${assembled > 0 ? `<span class="block text-cyan-400">${assembled} assembled</span>` : ''}
+            ${gap !== null ? `<span class="block ${gap < 0 ? 'text-red-400' : 'text-green-400'}">${gap > 0 ? '+' : ''}${gap}</span>` : ''}
+          </td>
+        `;
+      }).join('');
+      return `
+        <td class="${sticky ? 'sticky left-0' : ''} bg-gray-900 px-3 py-2 border-r border-gray-700">
+          <div class="flex items-center gap-3">
+            ${row.iconPath
+              ? `<img src="${escapeHtml(row.iconPath)}" class="w-10 h-10 object-contain shrink-0" alt="" />`
+              : `<span class="w-10 h-10 shrink-0 grid place-items-center rounded bg-gray-800 text-gray-600" aria-hidden="true">?</span>`}
+            <div class="min-w-0">
+              <span class="block text-gray-200">${escapeHtml(row.itemName)}</span>
+              <span class="block text-gray-600">target ${target ?? '∞'}</span>
+            </div>
+          </div>
+        </td>
+        ${depotCells}
+        <td class="px-3 py-2 text-right font-medium text-gray-200 tabular-nums">${calculatedTotal}</td>
+      `;
+    };
+
+    const renderEmptyRowCells = (): string =>
+      '<td></td>'.repeat(depots.length + 2);
 
     return `
       <div class="mb-3 text-xs text-gray-500">${rows.length} item${rows.length !== 1 ? 's' : ''}</div>
@@ -1223,6 +1224,10 @@ export class StockpileView {
         if (!sectionRows) return '';
         const collapsed = this.collapsedSections.has(sectionTitle);
         const sectionColor = sectionRows[0].sectionColor;
+        const pairs: [DepotMatrixRow, DepotMatrixRow | null][] = [];
+        for (let i = 0; i < sectionRows.length; i += 2) {
+          pairs.push([sectionRows[i], sectionRows[i + 1] ?? null]);
+        }
         return `
           <div class="mb-3">
             <button class="section-toggle w-full flex items-center gap-2 py-1.5 px-2 rounded text-left text-sm font-semibold text-gray-300 hover:bg-gray-800/50 transition-colors"
@@ -1238,7 +1243,15 @@ export class StockpileView {
               <div class="rounded-lg border border-gray-700 overflow-x-auto">
                 <table class="min-w-full text-xs border-collapse">
                   ${renderHeader()}
-                  <tbody class="divide-y divide-gray-800">${sectionRows.map(renderRow).join('')}</tbody>
+                  <tbody class="divide-y divide-gray-800">
+                    ${pairs.map(([left, right]) => `
+                      <tr class="hover:bg-gray-800/40">
+                        ${renderRowCells(left, true)}
+                        <td class="w-px p-0 border-l-2 border-gray-600"></td>
+                        ${right ? renderRowCells(right, false) : renderEmptyRowCells()}
+                      </tr>
+                    `).join('')}
+                  </tbody>
                 </table>
               </div>
             </div>
@@ -1250,6 +1263,8 @@ export class StockpileView {
 
   private renderTable(): string {
     if (!this.result) return '';
+
+    const roleMaps = this.getRoleItemMaps();
 
     // Group rows by section title (preserving order)
     const sectionOrder: string[] = [];
@@ -1326,20 +1341,30 @@ export class StockpileView {
           </button>
           <div class="${collapsed ? 'hidden' : ''}">
             <div class="rounded-lg overflow-hidden border border-gray-700">
-              <table class="w-full table-fixed text-sm">
+              <table class="w-full text-sm">
                 <thead>
                   <tr class="bg-gray-800 text-gray-400 text-xs">
-                    <th class="text-left px-2 py-2 font-medium w-56">Item</th>
-                    <th class="text-right px-2 py-2 font-medium w-20">Target</th>
-                    <th class="text-right px-2 py-2 font-medium w-20">Stockpile</th>
-                    <th class="text-right px-2 py-2 font-medium w-20">Gap</th>
-                    <th class="text-center px-2 py-2 font-medium w-24">Status</th>
-                    <th class="w-px p-0 border-l-2 border-gray-600"></th>
-                    <th class="text-left px-2 py-2 font-medium w-56">Item</th>
-                    <th class="text-right px-2 py-2 font-medium w-20">Target</th>
-                    <th class="text-right px-2 py-2 font-medium w-20">Stockpile</th>
-                    <th class="text-right px-2 py-2 font-medium w-20">Gap</th>
-                    <th class="text-center px-2 py-2 font-medium w-24">Status</th>
+                    <th class="text-left px-2 py-2 font-medium w-56" rowspan="2">Item</th>
+                    <th class="text-right px-2 py-2 font-medium w-16" rowspan="2">Target</th>
+                    <th class="text-center px-2 py-1 font-medium border-b border-gray-700/70" colspan="3">Stockpile</th>
+                    <th class="text-right px-2 py-2 font-medium w-20" rowspan="2">Stockpile<br/><span class="${ROLE_ACCENTS.backline.text}">B</span>+<span class="${ROLE_ACCENTS.intermediate.text}">M</span></th>
+                    <th class="text-right px-2 py-2 font-medium w-16" rowspan="2">Gap</th>
+                    <th class="text-center px-2 py-2 font-medium w-24" rowspan="2">Status</th>
+                    <th class="w-px p-0 border-l-2 border-gray-600" rowspan="2"></th>
+                    <th class="text-left px-2 py-2 font-medium w-56" rowspan="2">Item</th>
+                    <th class="text-right px-2 py-2 font-medium w-16" rowspan="2">Target</th>
+                    <th class="text-center px-2 py-1 font-medium border-b border-gray-700/70" colspan="3">Stockpile</th>
+                    <th class="text-right px-2 py-2 font-medium w-20" rowspan="2">Stockpile<br/><span class="${ROLE_ACCENTS.backline.text}">B</span>+<span class="${ROLE_ACCENTS.intermediate.text}">M</span></th>
+                    <th class="text-right px-2 py-2 font-medium w-16" rowspan="2">Gap</th>
+                    <th class="text-center px-2 py-2 font-medium w-24" rowspan="2">Status</th>
+                  </tr>
+                  <tr class="bg-gray-800 text-gray-500 text-[11px]">
+                    <th class="text-right px-2 py-1 font-medium w-10 ${ROLE_ACCENTS.backline.text}" title="Backline">B</th>
+                    <th class="text-right px-2 py-1 font-medium w-10 ${ROLE_ACCENTS.intermediate.text}" title="Main">M</th>
+                    <th class="text-right px-2 py-1 font-medium w-10 ${ROLE_ACCENTS.front.text}" title="Front">F</th>
+                    <th class="text-right px-2 py-1 font-medium w-10 ${ROLE_ACCENTS.backline.text}" title="Backline">B</th>
+                    <th class="text-right px-2 py-1 font-medium w-10 ${ROLE_ACCENTS.intermediate.text}" title="Main">M</th>
+                    <th class="text-right px-2 py-1 font-medium w-10 ${ROLE_ACCENTS.front.text}" title="Front">F</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-700/50">
@@ -1350,9 +1375,9 @@ export class StockpileView {
                     }
                     return pairs.map(([left, right], i) => `
                       <tr class="${i % 2 === 1 ? 'bg-gray-800/30' : ''} hover:bg-gray-700/30 transition-colors">
-                        ${this.renderRowCells(left)}
+                        ${this.renderRowCells(left, roleMaps)}
                         <td class="w-px p-0 border-l-2 border-gray-600"></td>
-                        ${right ? this.renderRowCells(right) : this.renderEmptyCells()}
+                        ${right ? this.renderRowCells(right, roleMaps) : this.renderEmptyCells()}
                       </tr>
                     `).join('');
                   })()}
@@ -1407,7 +1432,7 @@ export class StockpileView {
     return html;
   }
 
-  private renderRowCells(row: StockpileRow): string {
+  private renderRowCells(row: StockpileRow, roleMaps: Record<DepotRole, Map<string, number>>): string {
     const isUnknown = row.status === 'unknown';
     const cellClass = isUnknown ? 'text-gray-600' : 'text-gray-300';
 
@@ -1426,6 +1451,11 @@ export class StockpileView {
     const targetDisplay = row.targetQty === -1
       ? '<span class="text-gray-500">∞</span>'
       : `${row.targetQty}`;
+
+    const roleQtyDisplay = (role: DepotRole): string => {
+      if (isUnknown || !row.itemName) return '<span class="text-gray-600">—</span>';
+      return `${resolveItemQuantity(roleMaps[role], row.itemName)}`;
+    };
 
     const stockpileDisplay = isUnknown
       ? '<span class="text-gray-600">—</span>'
@@ -1455,6 +1485,9 @@ export class StockpileView {
         </div>
       </td>
       <td class="px-2 py-1.5 text-right font-mono text-sm text-gray-400">${targetDisplay}</td>
+      <td class="px-2 py-1.5 text-right font-mono text-xs text-gray-500">${roleQtyDisplay('backline')}</td>
+      <td class="px-2 py-1.5 text-right font-mono text-xs text-gray-500">${roleQtyDisplay('intermediate')}</td>
+      <td class="px-2 py-1.5 text-right font-mono text-xs text-gray-500">${roleQtyDisplay('front')}</td>
       <td class="px-2 py-1.5 text-right font-mono text-sm ${cellClass}">${stockpileDisplay}</td>
       <td class="px-2 py-1.5 text-right font-mono text-sm ${cellClass}">${gapDisplay}</td>
       <td class="px-2 py-1.5 text-center">${statusBadge}</td>
@@ -1462,7 +1495,7 @@ export class StockpileView {
   }
 
   private renderEmptyCells(): string {
-    return '<td></td><td></td><td></td><td></td><td></td>';
+    return '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
   }
 
   // ─── Events ───────────────────────────────────────────────────────────────
@@ -1743,7 +1776,7 @@ export class StockpileView {
         .map(entry => entry.depotName));
       const roleSummary = roles
         .filter(role => includedRoles.has(role))
-        .map(role => role[0].toUpperCase() + role.slice(1))
+        .map(role => ROLE_LABELS[role])
         .join(' + ');
       const hasBacklineDepots = this.csvEntries.some(entry => entry.role === 'backline');
 
@@ -1767,7 +1800,7 @@ export class StockpileView {
               ${roles.map(role => `
                 <label class="flex items-center gap-1.5 text-xs text-gray-300">
                   <input class="todolist-role-toggle accent-blue-500" type="checkbox" value="${role}" ${includedRoles.has(role) ? 'checked' : ''} />
-                  <span>${role[0].toUpperCase() + role.slice(1)} <span class="text-gray-500">(${depotCounts.get(role)})</span></span>
+                  <span>${ROLE_LABELS[role]} <span class="text-gray-500">(${depotCounts.get(role)})</span></span>
                 </label>
               `).join('')}
             </div>
@@ -1891,6 +1924,8 @@ export class StockpileView {
     let globalNotes = '';
     let quantities = new Map<string, number>();
     let itemSearch = '';
+    let exclusionSearch = '';
+    let exclusionsPanelOpen = false;
     let categoryFilter: CargoKind | IconCategory | 'all' = 'all';
     let plannedRoutes: TransportRoute[] = [];
     // Snapshot pris juste avant un "Plan automatically", pour pouvoir tout annuler en un clic plutôt que ligne par ligne.
@@ -1913,6 +1948,39 @@ export class StockpileView {
       'Rare Alloys',
       'Basic Materials',
     ];
+    // Catalogue complet des noms d'items connus, pour proposer des suggestions plutôt que d'imposer une saisie exacte.
+    const allKnownItemNames = [...new Set(store.icons.map(icon => icon.displayName))].sort((left, right) => left.localeCompare(right));
+    // Score de correspondance approximative (sous-séquence ordonnée, bonus consécutif/début de mot) : tolère fautes de frappe et ordre partiel sans dépendance externe.
+    const fuzzyMatchScore = (query: string, target: string): number | null => {
+      const q = query.toLowerCase();
+      const t = target.toLowerCase();
+      let queryIndex = 0;
+      let score = 0;
+      let consecutive = 0;
+      for (let targetIndex = 0; targetIndex < t.length && queryIndex < q.length; targetIndex++) {
+        if (t[targetIndex] !== q[queryIndex]) {
+          consecutive = 0;
+          continue;
+        }
+        consecutive++;
+        score += 1 + consecutive;
+        if (targetIndex === 0 || /[\s'-]/.test(t[targetIndex - 1])) score += 2;
+        queryIndex++;
+      }
+      if (queryIndex < q.length) return null;
+      return score - t.length * 0.01;
+    };
+    const getExclusionSuggestions = (query: string): string[] => {
+      const term = query.trim();
+      if (!term) return [];
+      return allKnownItemNames
+        .filter(name => !transportExclusions.has(name))
+        .map(name => ({ name, score: fuzzyMatchScore(term, name) }))
+        .filter((entry): entry is { name: string; score: number } => entry.score !== null)
+        .sort((left, right) => right.score - left.score)
+        .slice(0, 8)
+        .map(entry => entry.name);
+    };
     let transportExclusions = (() => {
       try {
         const saved = localStorage.getItem(TRANSPORT_EXCLUSIONS_KEY);
@@ -2189,6 +2257,49 @@ export class StockpileView {
           });
         });
       };
+      const addExclusion = (name: string): void => {
+        transportExclusions.add(name);
+        exclusionSearch = '';
+        saveTransportExclusions();
+        quantities = new Map();
+        renderModal();
+      };
+      const removeExclusion = (name: string): void => {
+        transportExclusions.delete(name);
+        saveTransportExclusions();
+        quantities = new Map();
+        renderModal();
+      };
+      const renderExclusionSuggestions = (): string => {
+        const suggestions = getExclusionSuggestions(exclusionSearch);
+        if (suggestions.length === 0) return '';
+        return `<ul class="absolute z-10 mt-1 max-h-40 w-full overflow-y-auto rounded border border-gray-700 bg-gray-900 shadow-lg">
+          ${suggestions.map(name => `<li><button type="button" class="transport-exclusion-suggestion block w-full px-2 py-1.5 text-left text-xs text-gray-200 hover:bg-blue-700" data-item-name="${escapeHtml(name)}">${escapeHtml(name)}</button></li>`).join('')}
+        </ul>`;
+      };
+      const renderExclusionChips = (): string => {
+        const customExclusions = [...transportExclusions].filter(item => !exclusionOptions.includes(item)).sort((left, right) => left.localeCompare(right));
+        return customExclusions.map(name => `
+          <span class="flex items-center gap-1 rounded-full border border-gray-700 bg-gray-900 px-2 py-0.5 text-xs text-gray-300">
+            ${escapeHtml(name)}
+            <button type="button" class="transport-remove-custom-exclusion text-gray-500 hover:text-red-400" data-item-name="${escapeHtml(name)}" aria-label="Remove exclusion">✕</button>
+          </span>
+        `).join('');
+      };
+      const attachExclusionListeners = (): void => {
+        modal.querySelectorAll<HTMLButtonElement>('.transport-exclusion-suggestion').forEach(button => {
+          button.addEventListener('click', () => {
+            const name = button.getAttribute('data-item-name');
+            if (name) addExclusion(name);
+          });
+        });
+        modal.querySelectorAll<HTMLButtonElement>('.transport-remove-custom-exclusion').forEach(button => {
+          button.addEventListener('click', () => {
+            const name = button.getAttribute('data-item-name');
+            if (name) removeExclusion(name);
+          });
+        });
+      };
       const presentItemCategories = CATEGORIES.filter(category =>
         available.some(item => itemCategoryLookup.get(item.itemName.toLowerCase()) === category)
       );
@@ -2251,7 +2362,7 @@ export class StockpileView {
                 </label>` : ''}
               </div>
 
-              <details class="mb-4 rounded border border-gray-700 bg-gray-900/30">
+              <details id="transport-exclusions-details" class="mb-4 rounded border border-gray-700 bg-gray-900/30" ${exclusionsPanelOpen ? 'open' : ''}>
                 <summary class="cursor-pointer px-3 py-2 text-xs font-medium text-gray-300">
                   Cargo exclusions <span class="ml-1 text-gray-500">${transportExclusions.size} blocked</span>
                 </summary>
@@ -2265,9 +2376,13 @@ export class StockpileView {
                       </label>
                     `).join('')}
                   </div>
-                  <label class="mt-3 block text-xs text-gray-400">Additional exclusions, one exact item name per line
-                    <textarea id="transport-custom-exclusions" rows="2" class="mt-1 w-full resize-none rounded border border-gray-700 bg-gray-950 p-2 text-gray-300" placeholder="Explosive Powder">${escapeHtml([...transportExclusions].filter(item => !exclusionOptions.includes(item)).join('\n'))}</textarea>
-                  </label>
+                  <div class="relative mt-3">
+                    <label class="block text-xs text-gray-400" for="transport-exclusion-search">Add another exclusion</label>
+                    <input id="transport-exclusion-search" type="text" autocomplete="off" value="${escapeHtml(exclusionSearch)}" placeholder="Search an item..."
+                      class="mt-1 w-full rounded border border-gray-700 bg-gray-950 px-2 py-1.5 text-gray-200 focus:outline-none focus:border-blue-500" />
+                    <div id="transport-exclusion-suggestions">${renderExclusionSuggestions()}</div>
+                  </div>
+                  <div id="transport-exclusion-chips" class="mt-2 flex flex-wrap gap-1.5">${renderExclusionChips()}</div>
                   <button id="transport-reset-exclusions" class="mt-2 text-xs text-blue-400 hover:text-blue-300">Reset defaults</button>
                 </div>
               </details>
@@ -2413,19 +2528,6 @@ export class StockpileView {
           renderModal();
         });
       });
-      modal.querySelector('#transport-custom-exclusions')?.addEventListener('change', event => {
-        const customItems = (event.target as HTMLTextAreaElement).value
-          .split('\n')
-          .map(item => item.trim())
-          .filter(Boolean);
-        transportExclusions = new Set([
-          ...exclusionOptions.filter(item => transportExclusions.has(item)),
-          ...customItems,
-        ]);
-        saveTransportExclusions();
-        quantities = new Map();
-        renderModal();
-      });
       modal.querySelector('#transport-reset-exclusions')?.addEventListener('click', () => {
         transportExclusions = new Set(DEFAULT_TRANSPORT_EXCLUSIONS);
         saveTransportExclusions();
@@ -2480,6 +2582,16 @@ export class StockpileView {
         });
       });
       attachCargoRowListeners();
+      attachExclusionListeners();
+      modal.querySelector<HTMLDetailsElement>('#transport-exclusions-details')?.addEventListener('toggle', event => {
+        exclusionsPanelOpen = (event.target as HTMLDetailsElement).open;
+      });
+      modal.querySelector<HTMLInputElement>('#transport-exclusion-search')?.addEventListener('input', event => {
+        exclusionSearch = (event.target as HTMLInputElement).value;
+        const suggestionsBox = modal.querySelector<HTMLDivElement>('#transport-exclusion-suggestions');
+        if (suggestionsBox) suggestionsBox.innerHTML = renderExclusionSuggestions();
+        attachExclusionListeners();
+      });
       modal.querySelector<HTMLInputElement>('#transport-item-search')?.addEventListener('input', event => {
         itemSearch = (event.target as HTMLInputElement).value;
         const tbody = modal.querySelector<HTMLTableSectionElement>('#transport-cargo-rows');
@@ -2523,16 +2635,6 @@ export class StockpileView {
 
     this.container.querySelector('#btn-prepare-transport')?.addEventListener('click', () => {
       this.showTransportModal();
-    });
-
-    this.container.querySelectorAll<HTMLInputElement>('.calculation-role-toggle').forEach(input => {
-      input.addEventListener('change', () => {
-        if (!this.setCalculationRole(input.value as DepotRole, input.checked)) {
-          input.checked = true;
-          return;
-        }
-        this.render();
-      });
     });
 
     this.container.querySelectorAll<HTMLInputElement>('.depot-group-name-input').forEach(input => {
