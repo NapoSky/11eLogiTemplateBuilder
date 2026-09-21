@@ -663,8 +663,8 @@ describe('StockpileView – dépôts et transport', () => {
 
     const headerCells = [...container.querySelectorAll('thead th')].map(th => th.textContent?.trim());
     expect(headerCells).toContain('Target');
-    expect(headerCells).toContain('Gap');
-    expect(headerCells).toContain('Total');
+    expect(headerCells).toContain('Gap(total missing)');
+    expect(headerCells).toContain('TotalB+M');
 
     const dunneRow = [...container.querySelectorAll('tbody tr')]
       .find(tr => tr.textContent?.includes('Dunne Transport'))!;
