@@ -1026,7 +1026,7 @@ describe('StockpileView – dépôts et transport', () => {
     (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
     (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
     selectHaulerMode('freighter');
-    (document.querySelector('#transport-auto-fill') as HTMLButtonElement).click();
+    (document.querySelector('#transport-auto-fill-all') as HTMLButtonElement).click();
 
     const preview = (document.querySelector('#transport-preview') as HTMLTextAreaElement).value;
     expect(document.querySelectorAll('.transport-remove-line')).toHaveLength(2);
@@ -1041,7 +1041,7 @@ describe('StockpileView – dépôts et transport', () => {
 
     expect(document.querySelector('#transport-undo-auto-fill')).toBeNull();
 
-    (document.querySelector('#transport-auto-fill') as HTMLButtonElement).click();
+    (document.querySelector('#transport-auto-fill-all') as HTMLButtonElement).click();
     expect(document.querySelectorAll('.transport-remove-line')).toHaveLength(2);
     expect(document.querySelector('#transport-undo-auto-fill')).toBeTruthy();
 
@@ -1053,7 +1053,7 @@ describe('StockpileView – dépôts et transport', () => {
   test('masque le bouton Undo dès qu\'une ligne est modifiée manuellement après le plan automatique', () => {
     (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
     (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
-    (document.querySelector('#transport-auto-fill') as HTMLButtonElement).click();
+    (document.querySelector('#transport-auto-fill-all') as HTMLButtonElement).click();
     expect(document.querySelector('#transport-undo-auto-fill')).toBeTruthy();
 
     (document.querySelector('.transport-remove-line') as HTMLButtonElement).click();
@@ -1145,7 +1145,7 @@ describe('StockpileView – dépôts et transport', () => {
     (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
     (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
     selectHaulerMode('freighter');
-    (document.querySelector('#transport-auto-fill') as HTMLButtonElement).click();
+    (document.querySelector('#transport-auto-fill-all') as HTMLButtonElement).click();
 
     const source = document.querySelector('#transport-source') as HTMLSelectElement;
     source.value = 'Mercy';
