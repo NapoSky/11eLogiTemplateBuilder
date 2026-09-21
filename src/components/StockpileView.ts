@@ -1167,8 +1167,8 @@ export class StockpileView {
           </th>
         `).join('')}
         <th class="px-2 py-2 w-16 text-right">Target</th>
-        <th class="px-2 py-2 w-16 text-right">Gap</th>
-        <th class="px-2 py-2 w-20 text-right">Total</th>
+        <th class="px-2 py-2 w-16 text-right">Gap<br/><span class="italic text-gray-500 text-[9px] whitespace-nowrap">(total missing)</span></th>
+        <th class="px-2 py-2 w-20 text-right">Total<br/><span class="${ROLE_ACCENTS.backline.text}">B</span>+<span class="${ROLE_ACCENTS.intermediate.text}">M</span></th>
       `;
       return `
         <thead class="bg-gray-800 text-gray-300">
