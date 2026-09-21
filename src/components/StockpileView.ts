@@ -559,10 +559,7 @@ export class StockpileView {
   }
 
   private getSections(): Section[] {
-    // "Facility" sections hold facility-only gear that isn't part of MPF production — exclude
-    // them from the comparison so they never appear in the production needs table/calculator.
-    const sections = this.externalTemplate?.sections ?? store.sections;
-    return sections.filter(section => !section.title.toLowerCase().includes('facility'));
+    return this.externalTemplate?.sections ?? store.sections;
   }
 
   /**
@@ -1266,10 +1263,12 @@ export class StockpileView {
 
     const roleMaps = this.getRoleItemMaps();
 
-    // Group rows by section title (preserving order)
+    // Group rows by section title (preserving order) — "Facility" sections hold facility-only
+    // gear that isn't part of MPF production, so they're hidden here (Transport planning still shows them).
     const sectionOrder: string[] = [];
     const bySection = new Map<string, StockpileRow[]>();
     for (const row of this.result.rows) {
+      if (row.sectionTitle.toLowerCase().includes('facility')) continue;
       if (!bySection.has(row.sectionTitle)) {
         sectionOrder.push(row.sectionTitle);
         bySection.set(row.sectionTitle, []);
@@ -1527,8 +1526,10 @@ export class StockpileView {
     if (!this.result) return { mpfRows: [], nonMpfRows: [] };
 
     const includedEntries = this.csvEntries.filter(entry => includedRoles.has(entry.role));
+    // "Facility" sections aren't part of MPF production — exclude them from the shortage calculator.
+    const mpfSections = this.getSections().filter(section => !section.title.toLowerCase().includes('facility'));
     const comparison = buildComparison(
-      this.getSections(),
+      mpfSections,
       this.aggregateEntries(includedEntries),
       this.iconMapping,
       null,
