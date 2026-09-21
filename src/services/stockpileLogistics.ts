@@ -230,7 +230,7 @@ export function suggestCargoPerTrip(
 
 // Additionne deux cargaisons item par item (utilisé pour cumuler le total réel d'une mission
 // regroupant plusieurs voyages identiques).
-function mergeCargoTotals(base: TransportCargoItem[], addition: TransportCargoItem[]): TransportCargoItem[] {
+export function mergeCargoTotals(base: TransportCargoItem[], addition: TransportCargoItem[]): TransportCargoItem[] {
   const merged = base.map(item => ({ ...item }));
   for (const item of addition) {
     const existing = merged.find(candidate => candidate.itemName === item.itemName && candidate.kind === item.kind);

@@ -12,6 +12,7 @@ import {
   CargoKind,
   DEFAULT_TRANSPORT_EXCLUSIONS,
   DepotRole,
+  mergeCargoTotals,
   missionFits,
   renderTransportList,
   StockpileSnapshot,
@@ -2028,10 +2029,17 @@ export class StockpileView {
     }).filter(item => item.quantity > 0);
     const addMissionToCurrentRoute = (mission: TransportMission): void => {
       const existing = plannedRoutes.find(route => route.source === sourceName && route.destination === destinationName);
-      if (existing) {
-        existing.missions.push(mission);
-      } else {
+      if (!existing) {
         plannedRoutes.push({ source: sourceName, destination: destinationName, missions: [mission] });
+        return;
+      }
+      const lastMission = existing.missions.at(-1);
+      // Le mode 'container' n'a pas de notion de voyage/véhicule : on fusionne toujours dans la
+      // ligne existante plutôt que de dupliquer un item déjà présent sur une autre ligne.
+      if (lastMission && mission.mode === 'container' && lastMission.mode === 'container') {
+        lastMission.cargo = mergeCargoTotals(lastMission.cargo, mission.cargo);
+      } else {
+        existing.missions.push(mission);
       }
     };
     const buildRoutesWithDraft = (draft?: TransportMission): TransportRoute[] => {
@@ -2183,10 +2191,21 @@ export class StockpileView {
       for (const row of this.result?.rows ?? []) {
         if (row.itemName) targetByItemName.set(row.itemName, row.targetQty);
       }
+      // Cargaisons déjà planifiées (toutes routes confondues) vers cette destination : elles comblent le manque avant même d'arriver.
+      const plannedInboundByItemName = new Map<string, number>();
+      for (const route of plannedRoutes) {
+        if (route.destination !== destinationName) continue;
+        for (const plannedMission of route.missions) {
+          for (const cargoItem of plannedMission.cargo) {
+            plannedInboundByItemName.set(cargoItem.itemName, (plannedInboundByItemName.get(cargoItem.itemName) ?? 0) + cargoItem.quantity);
+          }
+        }
+      }
       const destinationGapFor = (itemName: string): number | null => {
         const target = targetByItemName.get(itemName);
         if (target === undefined || target === -1) return null;
-        return resolveItemQuantity(destinationItems, itemName) - target;
+        const plannedInbound = plannedInboundByItemName.get(itemName) ?? 0;
+        return resolveItemQuantity(destinationItems, itemName) + plannedInbound - target;
       };
       // Largest quantity of `targetItem` that fills this single trip to capacity alongside the
       // other rows already filled in.
@@ -2381,12 +2400,23 @@ export class StockpileView {
         const requiredTrips = neededSlots > 0 ? Math.max(1, Math.ceil(neededSlots / capacity)) : 1;
         return { mode, tripCount: requiredTrips, trainCars, cargo: rawCargo };
       };
+      // La jauge doit refléter ce que "Transport slots" contiendra une fois le brouillon ajouté,
+      // pas uniquement le petit ajout en cours : on la fusionne (aperçu) avec le dernier voyage déjà
+      // planifié sur ce trajet quand les deux partagent le mode 'container' (pas de notion de
+      // véhicule/capacité à respecter dans ce mode).
+      const previewMissionForMeter = (draft: TransportMission): TransportMission => {
+        const route = plannedRoutes.find(candidate => candidate.source === sourceName && candidate.destination === destinationName);
+        const lastMission = route?.missions.at(-1);
+        if (!lastMission || draft.mode !== 'container' || lastMission.mode !== 'container') return draft;
+        if (draft.cargo.length === 0) return lastMission;
+        return { ...lastMission, cargo: mergeCargoTotals(lastMission.cargo, draft.cargo) };
+      };
       const mission = getDraftMission();
       const selected = mission.cargo;
       const routes = buildRoutesWithDraft(mission);
       const allMissions = routes.flatMap(route => route.missions);
       const fits = allMissions.length > 0 && allMissions.every(missionFits);
-      const loadSummary = describeLoad(mission);
+      const loadSummary = describeLoad(previewMissionForMeter(mission));
       const discordText = allMissions.length > 0 ? renderTransportList({
         date: new Date(),
         notes: globalNotes.split('\n').filter(Boolean),
@@ -2513,7 +2543,7 @@ export class StockpileView {
               </div>
               </div>
               <div id="transport-load-meter" class="shrink-0 border-t border-gray-700 bg-gray-900/70 p-3">
-                ${renderLoadMeter(mission)}
+                ${renderLoadMeter(previewMissionForMeter(mission))}
               </div>
             </div>
 
@@ -2543,7 +2573,7 @@ export class StockpileView {
         const currentRoutes = buildRoutesWithDraft(currentMission);
         const currentMissions = currentRoutes.flatMap(route => route.missions);
         const currentFits = currentMissions.length > 0 && currentMissions.every(missionFits);
-        const currentLoadSummary = describeLoad(currentMission);
+        const currentLoadSummary = describeLoad(previewMissionForMeter(currentMission));
         const currentDiscordText = currentMissions.length > 0 ? renderTransportList({
           date: new Date(),
           notes: globalNotes.split('\n').filter(Boolean),
@@ -2558,7 +2588,7 @@ export class StockpileView {
         const meter = modal.querySelector<HTMLElement>('#transport-load-meter');
         const preview = modal.querySelector<HTMLTextAreaElement>('#transport-preview');
         const summary = modal.querySelector<HTMLElement>('#transport-summary');
-        if (meter) meter.innerHTML = renderLoadMeter(currentMission);
+        if (meter) meter.innerHTML = renderLoadMeter(previewMissionForMeter(currentMission));
         if (capacityLabel) {
           capacityLabel.textContent = currentLoadSummary.text;
           capacityLabel.className = currentLoadSummary.className;
