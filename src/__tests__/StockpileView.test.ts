@@ -658,6 +658,22 @@ describe('StockpileView – dépôts et transport', () => {
     expect(container.textContent).toContain('Unlisted Cargo');
   });
 
+  test('affiche les colonnes Target et Gap dans la vue Transport planning', () => {
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+
+    const headerCells = [...container.querySelectorAll('thead th')].map(th => th.textContent?.trim());
+    expect(headerCells).toContain('Target');
+    expect(headerCells).toContain('Gap');
+    expect(headerCells).toContain('Total');
+
+    const dunneRow = [...container.querySelectorAll('tbody tr')]
+      .find(tr => tr.textContent?.includes('Dunne Transport'))!;
+    const cells = [...dunneRow.querySelectorAll('td')].map(td => td.textContent?.trim());
+    // Dunne Transport: target 1, calculated total (Kirknell backline) = 3 -> gap +2
+    expect(cells).toContain('1');
+    expect(cells).toContain('+2');
+  });
+
   test('conserve les icônes et les sections repliables dans la vue par dépôt', () => {
     (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
 
@@ -707,24 +723,24 @@ describe('StockpileView – dépôts et transport', () => {
     const dunneRow = [...container.querySelectorAll('tbody tr')]
       .find(tr => tr.textContent?.includes('Dunne Transport'))!;
     const dunneCells = [...dunneRow.querySelectorAll('td')].map(td => td.textContent?.trim());
-    // Target 1, Backline (Kirknell) = 1 crate + 2 assemblés = 3, Main (Mercy) = 0, Front = 0, Stockpile B+M = 3, Gap = +2
-    expect(dunneCells[1]).toBe('1');
-    expect(dunneCells[2]).toBe('3');
+    // Backline (Kirknell) = 1 crate + 2 assemblés = 3, Main (Mercy) = 0, Front = 0, Stockpile B+M = 3, Target 1, Gap = +2
+    expect(dunneCells[1]).toBe('3');
+    expect(dunneCells[2]).toBe('0');
     expect(dunneCells[3]).toBe('0');
-    expect(dunneCells[4]).toBe('0');
-    expect(dunneCells[5]).toBe('3');
+    expect(dunneCells[4]).toBe('3');
+    expect(dunneCells[5]).toBe('1');
     expect(dunneCells[6]).toBe('+2');
     expect(dunneRow.textContent).toContain('OK');
 
     const ammoRow = [...container.querySelectorAll('tbody tr')]
       .find(tr => tr.textContent?.includes('7.92mm'))!;
     const ammoCells = [...ammoRow.querySelectorAll('td')].map(td => td.textContent?.trim());
-    // Target 100, Backline (Kirknell) = 180, Main (Mercy) = 10, Front = 0, Stockpile B+M = 190, Gap = +90
-    expect(ammoCells[1]).toBe('100');
-    expect(ammoCells[2]).toBe('180');
-    expect(ammoCells[3]).toBe('10');
-    expect(ammoCells[4]).toBe('0');
-    expect(ammoCells[5]).toBe('190');
+    // Backline (Kirknell) = 180, Main (Mercy) = 10, Front = 0, Stockpile B+M = 190, Target 100, Gap = +90
+    expect(ammoCells[1]).toBe('180');
+    expect(ammoCells[2]).toBe('10');
+    expect(ammoCells[3]).toBe('0');
+    expect(ammoCells[4]).toBe('190');
+    expect(ammoCells[5]).toBe('100');
     expect(ammoCells[6]).toBe('+90');
   });
 

@@ -1157,13 +1157,15 @@ export class StockpileView {
 
     const renderHeader = (): string => {
       const group = (sticky: boolean): string => `
-        <th class="${sticky ? 'sticky left-0 z-10' : ''} bg-gray-800 text-left px-2 py-2 w-56 border-r border-gray-700">Item / target</th>
+        <th class="${sticky ? 'sticky left-0 z-10' : ''} bg-gray-800 text-left px-2 py-2 w-56">Item</th>
         ${depots.map(depot => `
-          <th class="px-1.5 py-2 w-30 text-right border-r border-gray-700">
+          <th class="px-1.5 py-2 w-30 text-right">
             <span class="block text-gray-200 truncate">${escapeHtml(depot.name)}</span>
             <span class="block uppercase text-[10px] ${depot.role === 'front' ? 'text-cyan-400' : depot.role === 'intermediate' ? 'text-amber-400' : 'text-lime-400'}">${ROLE_LABELS[depot.role]}</span>
           </th>
         `).join('')}
+        <th class="px-2 py-2 w-16 text-right">Target</th>
+        <th class="px-2 py-2 w-16 text-right">Gap</th>
         <th class="px-2 py-2 w-20 text-right">Total</th>
       `;
       return `
@@ -1177,9 +1179,10 @@ export class StockpileView {
       `;
     };
 
-    const renderRowCells = (row: DepotMatrixRow, sticky: boolean): string => {
+    const renderRowCells = (row: DepotMatrixRow, sticky: boolean, stripe: boolean): string => {
       const target = row.targetQty === -1 ? null : row.targetQty;
       let calculatedTotal = 0;
+      const rowBg = stripe ? 'bg-gray-800/30' : '';
       const depotCells = depots.map(depot => {
         const item = depotItems.get(depot.name)?.get(row.itemName);
         const crates = item?.crates ?? 0;
@@ -1187,32 +1190,41 @@ export class StockpileView {
         if (depot.role !== 'front') calculatedTotal += crates + assembled;
         const gap = depot.role === 'intermediate' && target !== null ? crates + assembled - target : null;
         return `
-          <td class="px-1.5 py-2 text-right border-r border-gray-800 tabular-nums">
+          <td class="${rowBg} px-1.5 py-2 text-right tabular-nums">
             <span class="text-gray-200">${crates}</span><span class="text-gray-600"> cr</span>
             ${assembled > 0 ? `<span class="block text-cyan-400">${assembled} assembled</span>` : ''}
             ${gap !== null ? `<span class="block ${gap < 0 ? 'text-red-400' : 'text-green-400'}">${gap > 0 ? '+' : ''}${gap}</span>` : ''}
           </td>
         `;
       }).join('');
+      const totalGap = target !== null ? calculatedTotal - target : null;
+      const gapDisplay = totalGap === null
+        ? '<span class="text-gray-600">—</span>'
+        : totalGap === 0
+          ? '<span class="text-gray-500">0</span>'
+          : totalGap > 0
+            ? `<span class="text-blue-400">+${totalGap}</span>`
+            : `<span class="text-red-400">${totalGap}</span>`;
       return `
-        <td class="${sticky ? 'sticky left-0' : ''} bg-gray-900 px-2 py-2 border-r border-gray-700">
+        <td class="${sticky ? 'sticky left-0 z-10' : ''} ${rowBg} px-2 py-2">
           <div class="flex items-center gap-2">
             ${row.iconPath
               ? `<img src="${escapeHtml(row.iconPath)}" class="w-8 h-8 object-contain shrink-0" alt="" />`
               : `<span class="w-8 h-8 shrink-0 grid place-items-center rounded bg-gray-800 text-gray-600" aria-hidden="true">?</span>`}
             <div class="min-w-0">
               <span class="block text-gray-200 truncate">${escapeHtml(row.itemName)}</span>
-              <span class="block text-gray-600">target ${target ?? '∞'}</span>
             </div>
           </div>
         </td>
         ${depotCells}
-        <td class="px-2 py-2 text-right font-medium text-gray-200 tabular-nums">${calculatedTotal}</td>
+        <td class="${rowBg} px-2 py-2 text-right font-mono text-gray-400 tabular-nums">${target ?? '∞'}</td>
+        <td class="${rowBg} px-2 py-2 text-right tabular-nums">${gapDisplay}</td>
+        <td class="${rowBg} px-2 py-2 text-right font-medium text-gray-200 tabular-nums">${calculatedTotal}</td>
       `;
     };
 
     const renderEmptyRowCells = (): string =>
-      '<td></td>'.repeat(depots.length + 2);
+      '<td></td>'.repeat(depots.length + 4);
 
     return `
       <div class="mb-3 text-xs text-gray-500">${rows.length} item${rows.length !== 1 ? 's' : ''}</div>
@@ -1240,12 +1252,12 @@ export class StockpileView {
               <div class="rounded-lg border border-gray-700 overflow-x-auto">
                 <table class="w-full table-fixed text-xs border-collapse">
                   ${renderHeader()}
-                  <tbody class="divide-y divide-gray-800">
-                    ${pairs.map(([left, right]) => `
-                      <tr class="hover:bg-gray-800/40">
-                        ${renderRowCells(left, true)}
-                        <td class="w-px p-0 border-l-2 border-gray-600"></td>
-                        ${right ? renderRowCells(right, false) : renderEmptyRowCells()}
+                  <tbody class="divide-y divide-gray-700/50">
+                    ${pairs.map(([left, right], i) => `
+                      <tr class="hover:bg-gray-700/30 transition-colors">
+                        ${renderRowCells(left, true, i % 2 === 1)}
+                        <td class="${i % 2 === 1 ? 'bg-gray-800/30' : ''} w-px p-0 border-l-2 border-gray-600"></td>
+                        ${right ? renderRowCells(right, false, i % 2 === 1) : renderEmptyRowCells()}
                       </tr>
                     `).join('')}
                   </tbody>
@@ -1344,16 +1356,16 @@ export class StockpileView {
                 <thead>
                   <tr class="bg-gray-800 text-gray-400 text-xs">
                     <th class="text-left px-2 py-2 font-medium w-56" rowspan="2">Item</th>
-                    <th class="text-right px-2 py-2 font-medium w-16" rowspan="2">Target</th>
                     <th class="text-center px-2 py-1 font-medium border-b border-gray-700/70" colspan="3">Stockpile</th>
                     <th class="text-right px-2 py-2 font-medium w-20" rowspan="2">Stockpile<br/><span class="${ROLE_ACCENTS.backline.text}">B</span>+<span class="${ROLE_ACCENTS.intermediate.text}">M</span></th>
+                    <th class="text-right px-2 py-2 font-medium w-16" rowspan="2">Target</th>
                     <th class="text-right px-2 py-2 font-medium w-16" rowspan="2">Gap</th>
                     <th class="text-center px-2 py-2 font-medium w-24" rowspan="2">Status</th>
                     <th class="w-px p-0 border-l-2 border-gray-600" rowspan="2"></th>
                     <th class="text-left px-2 py-2 font-medium w-56" rowspan="2">Item</th>
-                    <th class="text-right px-2 py-2 font-medium w-16" rowspan="2">Target</th>
                     <th class="text-center px-2 py-1 font-medium border-b border-gray-700/70" colspan="3">Stockpile</th>
                     <th class="text-right px-2 py-2 font-medium w-20" rowspan="2">Stockpile<br/><span class="${ROLE_ACCENTS.backline.text}">B</span>+<span class="${ROLE_ACCENTS.intermediate.text}">M</span></th>
+                    <th class="text-right px-2 py-2 font-medium w-16" rowspan="2">Target</th>
                     <th class="text-right px-2 py-2 font-medium w-16" rowspan="2">Gap</th>
                     <th class="text-center px-2 py-2 font-medium w-24" rowspan="2">Status</th>
                   </tr>
@@ -1483,11 +1495,11 @@ export class StockpileView {
           <span class="truncate ${cellClass}">${itemLabel}</span>
         </div>
       </td>
-      <td class="px-2 py-1.5 text-right font-mono text-sm text-gray-400">${targetDisplay}</td>
       <td class="px-2 py-1.5 text-right font-mono text-xs text-gray-500">${roleQtyDisplay('backline')}</td>
       <td class="px-2 py-1.5 text-right font-mono text-xs text-gray-500">${roleQtyDisplay('intermediate')}</td>
       <td class="px-2 py-1.5 text-right font-mono text-xs text-gray-500">${roleQtyDisplay('front')}</td>
       <td class="px-2 py-1.5 text-right font-mono text-sm ${cellClass}">${stockpileDisplay}</td>
+      <td class="px-2 py-1.5 text-right font-mono text-sm text-gray-400">${targetDisplay}</td>
       <td class="px-2 py-1.5 text-right font-mono text-sm ${cellClass}">${gapDisplay}</td>
       <td class="px-2 py-1.5 text-center">${statusBadge}</td>
     `;
