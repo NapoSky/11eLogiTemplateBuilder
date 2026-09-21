@@ -1113,6 +1113,7 @@ export class StockpileView {
     const rowsByName = new Map<string, DepotMatrixRow>(
       this.result.rows
         .filter((row): row is StockpileRow & { itemName: string } => row.itemName !== null)
+        .filter(row => !row.sectionTitle.toLowerCase().includes('facility'))
         .map(row => [row.itemName, row]),
     );
     for (const items of depotItems.values()) {
@@ -1277,7 +1278,7 @@ export class StockpileView {
     const roleMaps = this.getRoleItemMaps();
 
     // Group rows by section title (preserving order) — "Facility" sections hold facility-only
-    // gear that isn't part of MPF production, so they're hidden here (Transport planning still shows them).
+    // gear that isn't part of MPF production, so they're hidden everywhere in this view.
     const sectionOrder: string[] = [];
     const bySection = new Map<string, StockpileRow[]>();
     for (const row of this.result.rows) {
