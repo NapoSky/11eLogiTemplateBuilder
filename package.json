@@ -32,7 +32,7 @@
     "vite": "^8.3.0"
   },
   "dependencies": {
-    "html2canvas-pro": "^2.4.3",
+    "html2canvas-pro": "^2.4.5",
     "interactjs": "^1.10.28",
     "sortablejs": "^1.15.7"
   }
