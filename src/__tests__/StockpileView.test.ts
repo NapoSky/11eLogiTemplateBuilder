@@ -13,6 +13,7 @@ import { parseCSV, buildComparison, iconPathToMappingKey, isCrateSubtype, Stockp
 import { store } from '../store';
 import { Section } from '../types';
 import { localStorageMock } from './setup';
+import { dismissCautionNotice } from '../services/actionGate';
 import { TextDecoder, TextEncoder } from 'util';
 
 // ─── Polyfills jsdom ──────────────────────────────────────────────────────────
@@ -570,6 +571,7 @@ describe('StockpileView – dépôts et transport', () => {
     container = document.createElement('div');
     document.body.appendChild(container);
     view = new StockpileView();
+    dismissCautionNotice(); // "Generate Todolist" affiche une notice pédagogique — pas testée ici
     store.setMpfData([
       {
         iconFilename: 'UI/VehicleIcons/TruckVehicleIcon.png',

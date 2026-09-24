@@ -6,6 +6,7 @@ import { fullOrderCost } from '../services/mpfCalculator';
 import { translateFrenchItemName } from '../services/frenchItemNames';
 import { showToast } from '../services/toast';
 import { confirmDialog } from '../services/confirmDialog';
+import { withActionGate } from '../services/actionGate';
 import {
   aggregateStockpileItems,
   buildBacklineCargo,
@@ -2753,7 +2754,16 @@ export class StockpileView {
     });
 
     this.container.querySelector('#btn-prepare-transport')?.addEventListener('click', () => {
-      this.showTransportModal();
+      withActionGate('Prepare Transport', [
+        {
+          en: "Planning a transport route only works from the stockpile numbers currently loaded — a stale or incomplete snapshot can make the plan miss what's actually needed.",
+          fr: 'Planifier un trajet de transport ne se base que sur les chiffres de stock actuellement chargés — un relevé périmé ou incomplet peut fausser ce qui est réellement nécessaire.',
+        },
+        {
+          en: 'Recognizing which needs truly belong in the Main stockpile — versus what can wait — takes experience. The same goes for the Front: oversupplying a Front stockpile is never free, it adds risk if that position is overrun or has to be evacuated.',
+          fr: 'Savoir reconnaître les besoins qui doivent réellement atterrir dans le stockpile Main — plutôt que d’attendre — demande de l’expérience. Il en va de même pour le Front : sur-approvisionner un stockpile Front n’est jamais gratuit, cela ajoute un risque si la position est prise ou doit être évacuée.',
+        },
+      ], () => this.showTransportModal());
     });
 
     this.container.querySelectorAll<HTMLInputElement>('.depot-group-name-input').forEach(input => {
@@ -2807,7 +2817,16 @@ export class StockpileView {
 
     // Generate Todolist modal
     this.container.querySelector('#btn-generate-todolist')?.addEventListener('click', () => {
-      this.showTodolistModal();
+      withActionGate('Generate Todolist', [
+        {
+          en: "Generating a plan simply applies a template on top of a stockpile snapshot — that snapshot isn't guaranteed to be up to date, complete, or aware of the current state of the war. Blindly trusting the result can lead to logistics decisions that hurt the regiment.",
+          fr: 'Générer un plan ne fait qu’appliquer un template à un relevé de stock : ce relevé n’est pas forcément représentatif à l’instant T, ni complet, ni conscient de l’état actuel de la guerre. Un usage aveugle du résultat peut donc desservir le régiment.',
+        },
+        {
+          en: 'If you\'re not familiar with MPF orders yet, consider using the "MPF Todolist" section first to learn how to plan them by hand before relying on automatic generation.',
+          fr: 'Si les ordres MPF ne vous sont pas encore familiers, utilisez d’abord la section « MPF Todolist » pour apprendre à les planifier à la main avant de vous fier à la génération automatique.',
+        },
+      ], () => this.showTodolistModal());
     });
 
     // Sort by gap toggle
