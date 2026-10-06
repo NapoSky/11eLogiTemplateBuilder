@@ -127,7 +127,7 @@ async function main() {
    * Find the best icon filename for a given foxhole itemName.
    * Strategy:
    *  1. exact normalized match
-   *  2. icon displayName starts with itemName (e.g. "T3 \"Xiphos\" Armoured Car" matches "T3 \"Xiphos\"")
+  *  2. One name starts with the other (e.g. Foxhole may append a weapon class)
    *  3. icon displayName contains itemName as substring (normalized)
    *  4. loose normalization (strip all punctuation): icon contains foxhole name
    * Among candidates of fallback steps, prefer the shortest displayName (closest to base name).
@@ -140,7 +140,11 @@ async function main() {
       return { candidates: exact, ambiguous: exact.length > 1 };
     }
     // 2. Prefix
-    const prefix = allEntries.filter(e => e.normalized.startsWith(key + ' ') || e.normalized === key);
+    const prefix = allEntries.filter(e =>
+      e.normalized.startsWith(key + ' ') ||
+      key.startsWith(e.normalized + ' ') ||
+      e.normalized === key
+    );
     if (prefix.length > 0) {
       prefix.sort((a, b) => a.normalized.length - b.normalized.length);
       const top = prefix[0];
