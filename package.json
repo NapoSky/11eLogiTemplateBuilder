@@ -15,24 +15,24 @@
   },
   "devDependencies": {
     "@interactjs/types": "^1.10.28",
-    "@swc/core": "^1.16.2",
+    "@swc/core": "^1.16.18",
     "@swc/jest": "^0.2.39",
     "@tailwindcss/vite": "^4.3.3",
     "@types/jest": "^30.0.0",
-    "@types/node": "^26.6.2",
+    "@types/node": "^26.6.5",
     "@types/sortablejs": "^1.15.9",
     "autoprefixer": "^10.6.1",
     "jest": "^30.5.2",
     "jest-environment-jsdom": "^30.5.2",
     "jest-junit": "^17.0.0",
     "jsdom": "^29.1.1",
-    "postcss": "^8.5.28",
+    "postcss": "^8.5.30",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
-    "vite": "^8.3.0"
+    "vite": "^8.3.4"
   },
   "dependencies": {
-    "html2canvas-pro": "^2.4.5",
+    "html2canvas-pro": "^2.5.2",
     "interactjs": "^1.10.28",
     "sortablejs": "^1.15.7"
   }
