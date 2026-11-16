@@ -24,6 +24,7 @@ const mpfFixture: MpfDataEntry[] = [
 function resetStore() {
   store.setMpfData([]);
   store.clearTodoList();
+  store.setProductionWorkspace('todolist');
 }
 
 beforeEach(() => {
@@ -54,6 +55,13 @@ function openModal(): void {
 // ============================================================
 
 describe('TodoListLoadModal – mount & open', () => {
+  test('does not open a regiment import while the personal run is active', () => {
+    const { container } = mountModal();
+    store.setProductionWorkspace('run');
+    openModal();
+    expect(container.innerHTML).toBe('');
+    store.setProductionWorkspace('todolist');
+  });
   test('le container est vide avant l\'événement', () => {
     const { container } = mountModal();
     expect(container.innerHTML).toBe('');

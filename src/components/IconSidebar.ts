@@ -1,5 +1,7 @@
-import { store } from '../store';
-import { CATEGORIES, IconCategory, Icon, MpfDataEntry } from '../types';
+import { store, type SidebarCategory } from '../store';
+import { CATEGORIES, TODO_CATEGORIES, TODO_CATEGORY_LABELS, Icon, FactionFilter } from '../types';
+
+const PRODUCTION_MENU_LABELS = { ...TODO_CATEGORY_LABELS, supplies: 'Resources', shipables: 'Structures' };
 
 const escapeHtml = (value: string): string => value.replace(/[&<>"']/g, char =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]!));
@@ -20,14 +22,16 @@ export class IconSidebar {
 
   private render(): void {
     if (!this.container) return;
+    const availableCategories = new Set<string>(store.availableIconCategories);
+    const faction = store.viewMode === 'todolist' ? store.productionDocument.faction : store.templateFaction;
 
     // Check if we already have the structure, if so just update the icon grid
     const existingGrid = this.container.querySelector('#icon-grid');
     const existingSearchInput = this.container.querySelector('#search-input') as HTMLInputElement;
     
-    // If the faction block presence doesn't match the current viewMode, force a full rebuild.
+    // Both production and Template use the same faction controls.
     const existingFactionBlock = this.container.querySelector('[data-faction]');
-    const factionBlockShouldExist = store.viewMode === 'template';
+    const factionBlockShouldExist = store.viewMode === 'template' || store.viewMode === 'todolist';
     if (existingGrid && existingSearchInput && (!!existingFactionBlock === factionBlockShouldExist)) {
       // Just update the icon grid and category buttons without touching the search input
       existingGrid.innerHTML = store.filteredIcons.map(icon => this.renderIcon(icon)).join('');
@@ -38,6 +42,7 @@ export class IconSidebar {
       // Update category button states
       this.container.querySelectorAll('[data-category]').forEach(btn => {
         const cat = btn.getAttribute('data-category');
+        (btn as HTMLButtonElement).hidden = cat !== 'Toutes' && !availableCategories.has(cat!);
         if (cat === store.selectedCategory) {
           btn.className = 'px-2 py-1 text-xs rounded bg-blue-600';
         } else {
@@ -45,13 +50,11 @@ export class IconSidebar {
         }
       });
 
-      // Update faction button states (template mode only)
-      if (store.viewMode === 'template') {
-        this.container.querySelectorAll('[data-faction]').forEach(btn => {
-          const f = btn.getAttribute('data-faction');
-          (btn as HTMLElement).className = this.factionButtonClass(f === store.templateFaction);
-        });
-      }
+      this.container.querySelectorAll('[data-faction]').forEach(btn => {
+        const active = btn.getAttribute('data-faction') === faction;
+        (btn as HTMLElement).className = this.factionButtonClass(active);
+        btn.setAttribute('aria-pressed', String(active));
+      });
       
       // Re-attach drag events for new icons
       this.attachIconDragEvents();
@@ -69,11 +72,12 @@ export class IconSidebar {
         />
       </div>
 
-      ${store.viewMode === 'template' ? `
-      <div class="px-2 pt-2 pb-1 border-b border-gray-700 flex gap-1">
-        <button data-faction="all"      class="${this.factionButtonClass(store.templateFaction === 'all')}">All</button>
-        <button data-faction="warden"   class="${this.factionButtonClass(store.templateFaction === 'warden')}">Warden</button>
-        <button data-faction="colonial" class="${this.factionButtonClass(store.templateFaction === 'colonial')}">Colonial</button>
+      ${factionBlockShouldExist ? `
+      <div role="group" aria-label="Faction" class="px-2 pt-2 pb-1 border-b border-gray-700 flex gap-1">
+        ${(['all', 'warden', 'colonial'] as FactionFilter[]).map(value => `
+          <button type="button" data-faction="${value}" aria-pressed="${faction === value}"
+            class="${this.factionButtonClass(faction === value)}">${value === 'all' ? 'All' : value === 'warden' ? 'Warden' : 'Colonial'}</button>
+        `).join('')}
       </div>` : ''}
       
       <div class="p-2 border-b border-gray-700 flex flex-wrap gap-1">
@@ -81,11 +85,13 @@ export class IconSidebar {
           data-category="Toutes"
           class="px-2 py-1 text-xs rounded ${store.selectedCategory === 'Toutes' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}"
         >All</button>
-        ${CATEGORIES.map(cat => `
+        ${[...CATEGORIES.map(category => ({ value: category, label: category })),
+          ...TODO_CATEGORIES.map(category => ({ value: category, label: PRODUCTION_MENU_LABELS[category] }))].map(({ value, label }) => `
           <button
-            data-category="${cat}"
-            class="px-2 py-1 text-xs rounded ${store.selectedCategory === cat ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}"
-          >${cat}</button>
+            data-category="${value}"
+            ${availableCategories.has(value) ? '' : 'hidden'}
+            class="px-2 py-1 text-xs rounded ${store.selectedCategory === value ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}"
+          >${label}</button>
         `).join('')}
       </div>
       
@@ -105,12 +111,10 @@ export class IconSidebar {
   }
 
   private renderIcon(icon: Icon): string {
-    const mpfEntry: MpfDataEntry | undefined = store.viewMode === 'todolist'
-      ? store.mpfData.find(e => e.iconFilename === icon.filename)
-      : undefined;
-    const tooltipTitle = mpfEntry
-      ? `${icon.displayName} — ${mpfEntry.numberProduced} items/crate`
-      : icon.displayName;
+    const contents = store.viewMode !== 'todolist' ? undefined : store.productionWorkspace === 'run' && store.productionRunSource === 'factory'
+      ? store.itemData.find(item => item.iconFilename === icon.filename)?.unitsPerCrate
+      : store.mpfData.find(entry => entry.iconFilename === icon.filename)?.numberProduced;
+    const tooltipTitle = contents ? `${icon.displayName} — ${contents} items/crate` : icon.displayName;
     return `
       <div
         class="sidebar-icon aspect-square bg-gray-800 rounded p-1 cursor-grab hover:bg-gray-700 flex items-center justify-center"
@@ -131,6 +135,11 @@ export class IconSidebar {
     
     // Drag start for icons
     this.container.querySelectorAll('.sidebar-icon').forEach(el => {
+      if (store.viewMode === 'todolist') {
+        el.addEventListener('dblclick', () => {
+          store.addTodoListItemFromIcon((el as HTMLElement).dataset.iconFilename!, store.productionWorkspace);
+        });
+      }
       el.addEventListener('dragstart', (e) => {
         const target = e.currentTarget as HTMLElement;
         const iconData = {
@@ -157,16 +166,17 @@ export class IconSidebar {
     // Category buttons
     this.container.querySelectorAll('[data-category]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const cat = btn.getAttribute('data-category') as IconCategory | 'Toutes';
+        const cat = btn.getAttribute('data-category') as SidebarCategory;
         store.setCategory(cat);
       });
     });
 
-    // Faction buttons (template mode only)
+    // The shared control targets only the currently visible document.
     this.container.querySelectorAll('[data-faction]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const f = btn.getAttribute('data-faction') as 'all' | 'warden' | 'colonial';
-        store.setTemplateFaction(f);
+        const f = btn.getAttribute('data-faction') as FactionFilter;
+        if (store.viewMode === 'todolist') store.setTodoListFaction(f, store.productionWorkspace);
+        else store.setTemplateFaction(f);
       });
     });
 

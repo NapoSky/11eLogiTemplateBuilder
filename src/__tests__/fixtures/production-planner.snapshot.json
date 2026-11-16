@@ -1,0 +1,221 @@
+{
+  "_comment": "Frozen accepted 2026-11-16 inputs for calculation regressions; live balance changes must not rewrite these scenarios.",
+  "itemData": [
+    {
+      "iconFilename": "Textures/UI/ItemIcons/BasicMaterialsIcon.png",
+      "itemName": "Basic Materials",
+      "legacyItemName": "Basic Materials",
+      "kind": "item",
+      "faction": [
+        "colonial",
+        "warden"
+      ],
+      "unitsPerCrate": 100,
+      "uncratedStockUnit": "units",
+      "aliases": [
+        "Basic Materials"
+      ]
+    },
+    {
+      "iconFilename": "Textures/UI/ItemIcons/ClothItemIcon.png",
+      "itemName": "Soldier Supplies",
+      "legacyItemName": "Soldier Supplies",
+      "kind": "item",
+      "faction": [
+        "colonial",
+        "warden"
+      ],
+      "unitsPerCrate": 10,
+      "uncratedStockUnit": "units",
+      "aliases": [
+        "Soldier Supplies"
+      ],
+      "factory": {
+        "cost": {
+          "bmat": 80
+        },
+        "maxCrates": 4
+      }
+    },
+    {
+      "iconFilename": "Textures/UI/ItemIcons/ExplosiveMaterialIcon.png",
+      "itemName": "Explosive Powder",
+      "legacyItemName": "Explosive Powder",
+      "kind": "item",
+      "faction": [
+        "colonial",
+        "warden"
+      ],
+      "unitsPerCrate": 40,
+      "uncratedStockUnit": "units",
+      "aliases": [
+        "Explosive Powder"
+      ]
+    },
+    {
+      "iconFilename": "Textures/UI/ItemIcons/ExplosiveTripodIcon.png",
+      "itemName": "Havoc Charge",
+      "legacyItemName": "Havoc Charge",
+      "kind": "item",
+      "faction": [
+        "colonial",
+        "warden"
+      ],
+      "unitsPerCrate": 5,
+      "uncratedStockUnit": "units",
+      "aliases": [
+        "Havoc Charge"
+      ],
+      "factory": {
+        "cost": {
+          "bmat": 75,
+          "hemat": 40
+        },
+        "maxCrates": 4
+      }
+    },
+    {
+      "iconFilename": "Textures/UI/ItemIcons/Facilities/HeavyExplosiveMaterialsIcon.png",
+      "itemName": "Heavy Explosive Powder",
+      "legacyItemName": "Heavy Explosive Powder",
+      "kind": "item",
+      "faction": [
+        "colonial",
+        "warden"
+      ],
+      "unitsPerCrate": 30,
+      "uncratedStockUnit": "units",
+      "aliases": [
+        "Heavy Explosive Powder"
+      ]
+    },
+    {
+      "iconFilename": "Textures/UI/ItemIcons/FirstAidKitItem.png",
+      "itemName": "First Aid Kit",
+      "legacyItemName": "First Aid Kit",
+      "kind": "item",
+      "faction": [
+        "colonial",
+        "warden"
+      ],
+      "unitsPerCrate": 10,
+      "uncratedStockUnit": "units",
+      "aliases": [
+        "First Aid Kit"
+      ],
+      "factory": {
+        "cost": {
+          "bmat": 60
+        },
+        "maxCrates": 4
+      }
+    },
+    {
+      "iconFilename": "Textures/UI/ItemIcons/RefinedMaterialsIcon.png",
+      "itemName": "Refined Materials",
+      "legacyItemName": "Refined Materials",
+      "kind": "item",
+      "faction": [
+        "colonial",
+        "warden"
+      ],
+      "unitsPerCrate": 20,
+      "uncratedStockUnit": "units",
+      "aliases": [
+        "Refined Materials"
+      ]
+    },
+    {
+      "iconFilename": "Textures/UI/ItemIcons/ATAmmoIcon.png",
+      "itemName": "68mm",
+      "legacyItemName": "68mm",
+      "kind": "item",
+      "faction": [
+        "colonial",
+        "warden"
+      ],
+      "unitsPerCrate": 20,
+      "uncratedStockUnit": "units",
+      "aliases": [
+        "68mm"
+      ],
+      "factory": {
+        "cost": {
+          "bmat": 120,
+          "emat": 240
+        },
+        "maxCrates": 4
+      }
+    }
+  ],
+  "mpfData": [
+    {
+      "iconFilename": "Textures/UI/VehicleIcons/WardenMediumTankIcon.png",
+      "itemName": "Silverhand - Mk. IV",
+      "itemCategory": "vehicles",
+      "faction": [
+        "neutral",
+        "warden"
+      ],
+      "cost": {
+        "rmat": 480
+      },
+      "numberProduced": 3,
+      "maxCrates": 5
+    },
+    {
+      "iconFilename": "Textures/UI/ItemIcons/ATAmmoIcon.png",
+      "itemName": "68mm",
+      "itemCategory": "heavy_ammunition",
+      "faction": [
+        "neutral",
+        "colonial",
+        "warden"
+      ],
+      "cost": {
+        "bmat": 120,
+        "emat": 240
+      },
+      "numberProduced": 20,
+      "maxCrates": 9
+    }
+  ],
+  "icons": [
+    {
+      "filename": "Textures/UI/ItemIcons/ExplosiveTripodIcon.png",
+      "category": "Utility"
+    },
+    {
+      "filename": "Textures/UI/ItemIcons/ClothItemIcon.png",
+      "category": "Medical"
+    },
+    {
+      "filename": "Textures/UI/ItemIcons/FirstAidKitItem.png",
+      "category": "Medical"
+    },
+    {
+      "filename": "Textures/UI/ItemIcons/BasicMaterialsIcon.png",
+      "category": "Resources"
+    },
+    {
+      "filename": "Textures/UI/ItemIcons/RefinedMaterialsIcon.png",
+      "category": "Resources"
+    },
+    {
+      "filename": "Textures/UI/ItemIcons/ExplosiveMaterialIcon.png",
+      "category": "Resources"
+    },
+    {
+      "filename": "Textures/UI/ItemIcons/Facilities/HeavyExplosiveMaterialsIcon.png",
+      "category": "Resources"
+    },
+    {
+      "filename": "Textures/UI/VehicleIcons/WardenMediumTankIcon.png",
+      "category": "Vehicles"
+    },
+    {
+      "filename": "Textures/UI/ItemIcons/ATAmmoIcon.png",
+      "category": "Heavy Ammunition"
+    }
+  ]
+}

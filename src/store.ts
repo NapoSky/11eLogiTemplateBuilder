@@ -1,15 +1,29 @@
-import { Icon, Section, Template, IconCategory, generateId, Subtype, SectionIcon, IconScale, ICON_SCALES, ViewMode, MpfDataEntry, TodoList, TodoListItem, FactionFilter, TextBlock, TextAnchor, TemplateBackground, BackgroundPreset, DEFAULT_BACKGROUND, isValidBackground } from './types';
+import { Icon, Section, Template, IconCategory, CATEGORIES, generateId, Subtype, SectionIcon, IconScale, ICON_SCALES, ViewMode, MpfDataEntry, TodoList, TodoListItem, TodoProductionEntry, TodoCategory, TODO_CATEGORIES, ProductionSource, ProductionWorkspace, FactionFilter, TextBlock, TextAnchor, TemplateBackground, BackgroundPreset, DEFAULT_BACKGROUND, isValidBackground } from './types';
 import { getBaseUrl } from './config';
 import type { ItemDataEntry, QuantityMode } from './services/gameData';
 import { canonicalIconFilename, migrateSectionIcon, migrateTodoListItem } from './services/iconPaths';
+import { factoryTodoEntries, LoadingTransport } from './services/productionPlanner';
+import { orderCrateCount, productionSource } from './services/mpfCalculator';
 
 export type { IconScale };
 export { ICON_SCALES };
+// Transient menu selection only; icon and saved document categories stay unchanged.
+export type SidebarCategory = IconCategory | TodoCategory | 'Toutes';
 
 // Simple event emitter pattern
 type Listener = () => void;
 
 const TODOLIST_STORAGE_KEY = 'todolist';
+const RUN_STORAGE_KEY = 'productionRun';
+const RUN_QUEUE_BACKUP_KEY = 'productionRun_beforeSingleQueue';
+const RUN_ORDER_BACKUP_KEY = 'productionRun_beforeSingleOrder';
+
+/** One queue per category, containing one order. Keep the latest selected item. */
+function singleQueueItems(items: TodoListItem[]): TodoListItem[] {
+  const selected = new Map<TodoListItem['category'], TodoListItem>();
+  for (const item of items) selected.set(item.category, item.orderCount === 1 ? item : { ...item, orderCount: 1 });
+  return [...selected.values()];
+}
 
 function defaultTodoList(): TodoList {
   return {
@@ -21,6 +35,20 @@ function defaultTodoList(): TodoList {
   };
 }
 
+function defaultProductionRun(source: ProductionSource = 'factory'): TodoList {
+  return { ...defaultTodoList(), title: source === 'factory' ? 'Factory run' : 'MPF run', autoDate: false, productionSource: source };
+}
+
+function readProductionRun(value: unknown, source: ProductionSource): TodoList {
+  const document = value as TodoList;
+  if (!document || typeof document !== 'object' || !Array.isArray(document.items) ||
+    (document.textBlocks !== undefined && !Array.isArray(document.textBlocks))) throw new Error('Invalid production run');
+  return {
+    ...defaultProductionRun(source), ...document, productionSource: source,
+    items: document.items.map(migrateTodoListItem), textBlocks: document.textBlocks ?? [],
+  };
+}
+
 class Store {
   private listeners: Set<Listener> = new Set();
   
@@ -28,7 +56,7 @@ class Store {
   icons: Icon[] = [];
   subtypes: Subtype[] = [];
   sections: Section[] = [];
-  selectedCategory: IconCategory | 'Toutes' = 'Toutes';
+  selectedCategory: SidebarCategory = 'Toutes';
   searchQuery: string = '';
   iconScale: IconScale = 'medium'; // Taille globale des icônes
 
@@ -42,6 +70,18 @@ class Store {
   itemData: ItemDataEntry[] = [];
   quantityMode: QuantityMode = 'legacy';
   todolist: TodoList = defaultTodoList();
+  private productionRuns = { factory: defaultProductionRun('factory'), mpf: defaultProductionRun('mpf') };
+  productionRun: TodoList = this.productionRuns.factory;
+  productionWorkspace: ProductionWorkspace = 'todolist';
+  private mpfRunTransport: LoadingTransport = 'truck';
+
+  get productionRunSource(): ProductionSource {
+    return this.productionRun.productionSource === 'mpf' ? 'mpf' : 'factory';
+  }
+
+  get productionRunTransport(): LoadingTransport {
+    return this.productionRunSource === 'factory' ? 'truck' : this.mpfRunTransport;
+  }
 
   // Template faction filter (persisted)
   templateFaction: FactionFilter = 'all';
@@ -71,7 +111,7 @@ class Store {
     this.emit();
   }
   
-  setCategory(category: IconCategory | 'Toutes'): void {
+  setCategory(category: SidebarCategory): void {
     this.selectedCategory = category;
     this.emit();
   }
@@ -292,6 +332,9 @@ class Store {
   setViewMode(mode: ViewMode): void {
     if (this.viewMode === mode) return;
     this.viewMode = mode;
+    if (this.selectedCategory !== 'Toutes' && !this.availableIconCategories.includes(this.selectedCategory)) {
+      this.selectedCategory = 'Toutes';
+    }
     localStorage.setItem('viewMode', mode);
     this.emit();
   }
@@ -318,22 +361,71 @@ class Store {
     this.emit();
   }
 
-  setTodoListTitle(title: string): void {
-    this.todolist = { ...this.todolist, title };
-    this.saveTodoList();
+  getProductionDocument(workspace: ProductionWorkspace): TodoList {
+    return workspace === 'run' ? this.productionRun : this.todolist;
+  }
+
+  get productionDocument(): TodoList {
+    return this.getProductionDocument(this.productionWorkspace);
+  }
+
+  /** Existing callers target the regiment todo unless a workspace is explicit. */
+  private updateProductionDocument(workspace: ProductionWorkspace, update: (document: TodoList) => TodoList): void {
+    const updated = update(this.getProductionDocument(workspace));
+    const document = workspace === 'run' ? { ...updated, items: singleQueueItems(updated.items) } : updated;
+    if (workspace === 'run') this.productionRun = document; else this.todolist = document;
+    this.saveTodoList(workspace);
     this.emit();
   }
 
-  setTodoListAutoDate(autoDate: boolean): void {
-    this.todolist = { ...this.todolist, autoDate };
-    this.saveTodoList();
+  setProductionWorkspace(workspace: ProductionWorkspace): void {
+    this.productionWorkspace = workspace;
+    this.selectedCategory = 'Toutes';
+    this.searchQuery = '';
+    localStorage.setItem('productionWorkspace', workspace);
     this.emit();
   }
 
-  setTodoListFaction(faction: FactionFilter): void {
-    this.todolist = { ...this.todolist, faction };
-    this.saveTodoList();
+  setProductionRunTransport(transport: LoadingTransport): void {
+    if (this.productionRunSource !== 'mpf') return;
+    this.mpfRunTransport = transport;
+    this.saveTodoList('run');
     this.emit();
+  }
+
+  setTodoListTitle(title: string, workspace: ProductionWorkspace = 'todolist'): void {
+    this.updateProductionDocument(workspace, document => ({ ...document, title }));
+  }
+
+  setTodoListAutoDate(autoDate: boolean, workspace: ProductionWorkspace = 'todolist'): void {
+    this.updateProductionDocument(workspace, document => ({ ...document, autoDate }));
+  }
+
+  setTodoListFaction(faction: FactionFilter, workspace: ProductionWorkspace = 'todolist'): void {
+    this.updateProductionDocument(workspace, document => ({ ...document, faction }));
+  }
+
+  setTodoListProductionSource(source: ProductionSource, workspace: ProductionWorkspace = 'todolist'): void {
+    if (workspace !== 'run') return;
+    this.productionRuns[this.productionRunSource] = this.productionRun;
+    this.productionRun = this.productionRuns[source];
+    this.selectedCategory = 'Toutes';
+    this.searchQuery = '';
+    this.saveTodoList('run');
+    this.emit();
+  }
+
+  get factoryTodoData(): TodoProductionEntry[] {
+    return factoryTodoEntries(this.itemData, this.icons, this.mpfData);
+  }
+
+  get todoProductionData(): TodoProductionEntry[] {
+    return this.productionDataFor(this.productionWorkspace);
+  }
+
+  private productionDataFor(workspace: ProductionWorkspace): TodoProductionEntry[] {
+    return workspace === 'run' && this.productionRunSource === 'factory' ? this.factoryTodoData
+      : this.mpfData.map(entry => ({ ...entry, category: entry.itemCategory }));
   }
 
   setTemplateFaction(faction: FactionFilter): void {
@@ -343,72 +435,77 @@ class Store {
   }
 
   /** Returns 'added' on success, 'not-mpf' if not craftable, 'wrong-faction' if blocked by current faction filter. */
-  addTodoListItemFromIcon(iconFilename: string): 'added' | 'not-mpf' | 'wrong-faction' {
-    const entry = this.mpfData.find(e => canonicalIconFilename(e.iconFilename) === canonicalIconFilename(iconFilename));
+  addTodoListItemFromIcon(iconFilename: string, workspace: ProductionWorkspace = 'todolist'): 'added' | 'not-mpf' | 'wrong-faction' {
+    const document = this.getProductionDocument(workspace);
+    const source = workspace === 'run' ? this.productionRunSource : 'mpf';
+    const entry = this.productionDataFor(workspace).find(e => canonicalIconFilename(e.iconFilename) === canonicalIconFilename(iconFilename));
     if (!entry) return 'not-mpf';
-    const f = this.todolist.faction;
+    const f = document.faction;
     if (f !== 'all' && !entry.faction.includes(f)) {
       return 'wrong-faction';
     }
-    const existing = this.todolist.items.find(i => canonicalIconFilename(i.iconFilename) === canonicalIconFilename(iconFilename));
+    const existing = document.items.find(i => canonicalIconFilename(i.iconFilename) === canonicalIconFilename(iconFilename) && productionSource(i) === source);
     if (existing) {
-      this.setTodoListOrderCount(existing.id, existing.orderCount + 1);
+      if (workspace === 'todolist') this.setTodoListOrderCount(existing.id, existing.orderCount + 1, workspace);
       return 'added';
     }
     const item: TodoListItem = {
       id: generateId(),
       iconFilename: entry.iconFilename,
       itemName: entry.itemName,
-      category: entry.itemCategory,
-      faction: entry.faction,
-      cost: entry.cost,
+      category: entry.category,
+      faction: [...entry.faction],
+      cost: { ...entry.cost },
       maxCrates: entry.maxCrates,
       numberProduced: entry.numberProduced,
       crateBonus: entry.crateBonus,
       subtypeFilename: entry.subtypeFilename,
       orderCount: 1,
+      ...(source === 'factory' ? { productionSource: source } : {}),
     };
-    this.todolist = { ...this.todolist, items: [...this.todolist.items, item] };
-    this.saveTodoList();
-    this.emit();
+    this.updateProductionDocument(workspace, current => ({ ...current, items: [...current.items, item] }));
     return 'added';
   }
 
-  setTodoListOrderCount(itemId: string, count: number): void {
+  setTodoListOrderCount(itemId: string, count: number, workspace: ProductionWorkspace = 'todolist'): void {
+    if (workspace === 'run' || !Number.isFinite(count)) return;
     const orderCount = Math.max(1, Math.floor(count));
-    this.todolist = {
-      ...this.todolist,
-      items: this.todolist.items.map(i => i.id === itemId ? { ...i, orderCount } : i),
-    };
-    this.saveTodoList();
-    this.emit();
+    this.updateProductionDocument(workspace, document => ({
+      ...document, items: document.items.map(i => i.id === itemId ? { ...i, orderCount } : i),
+    }));
   }
 
-  removeTodoListItem(itemId: string): void {
-    this.todolist = {
-      ...this.todolist,
-      items: this.todolist.items.filter(i => i.id !== itemId),
-    };
-    this.saveTodoList();
-    this.emit();
+  setTodoListCratesPerOrder(itemId: string, count: number, workspace: ProductionWorkspace = 'todolist'): void {
+    if (workspace !== 'run' || !Number.isFinite(count)) return;
+    this.updateProductionDocument(workspace, document => ({
+      ...document,
+      items: document.items.map(item => item.id === itemId
+        ? { ...item, cratesPerOrder: orderCrateCount({ ...item, cratesPerOrder: count }) } : item),
+    }));
   }
 
-  reorderTodoListItems(category: string, orderedIds: string[]): void {
-    const inCategory = this.todolist.items.filter(i => i.category === category);
-    const others = this.todolist.items.filter(i => i.category !== category);
+  removeTodoListItem(itemId: string, workspace: ProductionWorkspace = 'todolist'): void {
+    this.updateProductionDocument(workspace, document => ({ ...document, items: document.items.filter(i => i.id !== itemId) }));
+  }
+
+  reorderTodoListItems(category: string, orderedIds: string[], workspace: ProductionWorkspace = 'todolist'): void {
+    const document = this.getProductionDocument(workspace);
+    const inCategory = document.items.filter(i => i.category === category);
+    const others = document.items.filter(i => i.category !== category);
     const reordered = orderedIds
       .map(id => inCategory.find(i => i.id === id))
       .filter((i): i is TodoListItem => i !== undefined);
     const missing = inCategory.filter(i => !orderedIds.includes(i.id));
-    this.todolist = { ...this.todolist, items: [...others, ...reordered, ...missing] };
-    this.saveTodoList();
-    this.emit();
+    this.updateProductionDocument(workspace, current => ({ ...current, items: [...others, ...reordered, ...missing] }));
   }
 
   clearTodoList(): void {
-    this.todolist = defaultTodoList();
-    this.saveTodoList();
-    this.emit();
+    this.updateProductionDocument('todolist', () => defaultTodoList());
+  }
+
+  clearProductionRun(): void {
+    const source = this.productionRunSource;
+    this.updateProductionDocument('run', () => defaultProductionRun(source));
   }
 
   /**
@@ -422,6 +519,7 @@ class Store {
       autoDate: tl.autoDate,
       items: tl.items.map(migrateTodoListItem),
       textBlocks: tl.textBlocks,
+      productionSource: tl.productionSource ?? 'mpf',
     };
     this.saveTodoList();
     this.emit();
@@ -454,9 +552,18 @@ class Store {
     this.emit();
   }
 
-  private saveTodoList(): void {
-    this.todolist = { ...this.todolist, items: this.todolist.items.map(migrateTodoListItem) };
-    localStorage.setItem(TODOLIST_STORAGE_KEY, JSON.stringify(this.todolist));
+  private saveTodoList(workspace: ProductionWorkspace = 'todolist'): void {
+    const current = this.getProductionDocument(workspace);
+    const document = { ...current, items: current.items.map(migrateTodoListItem) };
+    if (workspace === 'run') this.productionRun = document; else this.todolist = document;
+    if (workspace === 'run') {
+      this.productionRuns[this.productionRunSource] = document;
+      localStorage.setItem(RUN_STORAGE_KEY, JSON.stringify({
+        version: 2, source: this.productionRunSource, runs: this.productionRuns, mpfTransport: this.mpfRunTransport,
+      }));
+    } else {
+      localStorage.setItem(TODOLIST_STORAGE_KEY, JSON.stringify(document));
+    }
   }
 
   private loadTodoList(): void {
@@ -478,15 +585,69 @@ class Store {
     } catch (e) {
       console.error('Failed to load todolist:', e);
     }
+    // A damaged personal draft must never prevent restoring the regiment todo.
+    this.productionRuns = { factory: defaultProductionRun('factory'), mpf: defaultProductionRun('mpf') };
+    this.productionRun = this.productionRuns.factory;
+    this.mpfRunTransport = localStorage.getItem('productionRunTransport') === 'container' ? 'container' : 'truck';
+    try {
+      const raw = localStorage.getItem(RUN_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.version === 2 && parsed.runs) {
+          for (const source of ['factory', 'mpf'] as const) {
+            try {
+              this.productionRuns[source] = readProductionRun(parsed.runs[source], source);
+            } catch (error) {
+              console.error(`Failed to load ${source} run:`, error);
+            }
+          }
+          this.mpfRunTransport = parsed.mpfTransport === 'container' ? 'container' : 'truck';
+        } else {
+          // Preserve the old mixed draft, splitting by each recorded recipe.
+          for (const source of ['factory', 'mpf'] as const) {
+            const document = readProductionRun(parsed, source);
+            this.productionRuns[source] = {
+              ...document, items: document.items.filter(item => productionSource(item) === source),
+            };
+          }
+        }
+        const hasDuplicateQueues = Object.values(this.productionRuns).some(run => singleQueueItems(run.items).length !== run.items.length);
+        const hasMultipleOrders = Object.values(this.productionRuns).some(run => run.items.some(item => item.orderCount !== 1));
+        for (const [needed, key] of [[hasDuplicateQueues, RUN_QUEUE_BACKUP_KEY], [hasMultipleOrders, RUN_ORDER_BACKUP_KEY]] as const) {
+          if (needed && !localStorage.getItem(key)) {
+            try {
+              localStorage.setItem(key, raw);
+            } catch (error) {
+              console.warn('Could not back up previous production queues:', error);
+            }
+          }
+        }
+        for (const run of Object.values(this.productionRuns)) run.items = singleQueueItems(run.items);
+        this.productionRun = this.productionRuns[parsed.productionSource === 'mpf' || parsed.source === 'mpf' ? 'mpf' : 'factory'];
+      }
+    } catch (error) {
+      console.error('Failed to load production run:', error);
+    }
+    const workspace = localStorage.getItem('productionWorkspace');
+    this.productionWorkspace = workspace === 'run' ? 'run' : 'todolist';
   }
 
   // Filtered icons getter
+  get availableIconCategories(): Array<IconCategory | TodoCategory> {
+    if (this.viewMode !== 'todolist') return CATEGORIES;
+    // Keep the menu stable while searching or changing faction. Its categories
+    // describe the selected building's catalogue, not the current search result.
+    const filenames = new Set(this.icons.map(icon => canonicalIconFilename(icon.filename)));
+    const present = new Set(this.todoProductionData.filter(item => filenames.has(canonicalIconFilename(item.iconFilename))).map(item => item.category));
+    return TODO_CATEGORIES.filter(category => present.has(category));
+  }
+
   get filteredIcons(): Icon[] {
     // Keep alternate facilities artwork addressable for saved documents and the future module.
     const facilitiesOnly = new Set(this.itemData.filter(item => item.iconUsage === 'facilities').map(item => item.iconFilename));
     let filtered = this.icons.filter(icon => !facilitiesOnly.has(icon.filename));
     
-    if (this.selectedCategory !== 'Toutes') {
+    if (this.viewMode !== 'todolist' && this.selectedCategory !== 'Toutes') {
       filtered = filtered.filter(i => i.category === this.selectedCategory);
     }
     
@@ -500,10 +661,12 @@ class Store {
 
     // In todolist mode, restrict to MPF-craftable icons. Apply faction filter on top.
     if (this.viewMode === 'todolist') {
-      const f = this.todolist.faction;
+      const f = this.productionDocument.faction;
+      const entries = this.todoProductionData;
       filtered = filtered.filter(i => {
-        const entry = this.mpfData.find(e => e.iconFilename === i.filename);
+        const entry = entries.find(e => canonicalIconFilename(e.iconFilename) === canonicalIconFilename(i.filename));
         if (!entry) return false;
+        if (this.selectedCategory !== 'Toutes' && entry.category !== this.selectedCategory) return false;
         if (f === 'all') return true;
         return entry.faction.includes(f);
       });

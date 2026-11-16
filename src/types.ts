@@ -174,6 +174,14 @@ export const MPF_CATEGORY_LABELS: Record<MpfCategory, string> = {
   supplies: 'Supplies',
 };
 
+export type ProductionSource = 'mpf' | 'factory';
+export type ProductionWorkspace = 'todolist' | 'run';
+export type TodoCategory = MpfCategory | 'utility' | 'medical';
+export const TODO_CATEGORIES: TodoCategory[] = [...MPF_CATEGORIES, 'utility', 'medical'];
+export const TODO_CATEGORY_LABELS: Record<TodoCategory, string> = {
+  ...MPF_CATEGORY_LABELS, utility: 'Utility', medical: 'Medical',
+};
+
 export interface MpfDataEntry {
   iconFilename: string;
   itemName: string;
@@ -191,15 +199,20 @@ export interface TodoListItem {
   id: string;
   iconFilename: string;
   itemName: string;
-  category: MpfCategory;
+  category: TodoCategory;
   faction: Faction[];
   cost: { bmat?: number; rmat?: number; emat?: number; hemat?: number };
-  maxCrates: 9 | 5;
+  maxCrates: 9 | 5 | 4;
   numberProduced: number;
   crateBonus?: number;
   subtypeFilename?: string; // Subtype overlay icon
-  orderCount: number; // nombre de full orders MPF (chaque order = maxCrates caisses)
+  orderCount: number; // Independent orders in MPF Todolist; always 1 in Logi Calculator.
+  /** Absent in historical documents: a full MPF order at its recorded cost. */
+  productionSource?: ProductionSource;
+  cratesPerOrder?: number;
 }
+
+export type TodoProductionEntry = Omit<TodoListItem, 'id' | 'orderCount' | 'cratesPerOrder'> & { aliases?: string[] };
 
 export interface TodoList {
   title: string;        // libre, par défaut "TODOLIST"
@@ -207,6 +220,8 @@ export interface TodoList {
   faction: FactionFilter;
   items: TodoListItem[];
   textBlocks: TextBlock[];
+  /** Catalogue used for adding items; never converts existing lines. */
+  productionSource?: ProductionSource;
 }
 
 // =====================================================================
@@ -215,7 +230,7 @@ export interface TodoList {
 
 export type TextAnchor =
   | { kind: 'top' }
-  | { kind: 'category'; category: MpfCategory }
+  | { kind: 'category'; category: TodoCategory }
   | { kind: 'footer' };
 
 export interface TextBlock {

@@ -12,7 +12,7 @@ import { displayedCost } from '../services/mpfCalculator';
 import { parseTodoList } from '../services/todoListParser';
 import { renderTodoList } from '../services/todoListExporter';
 import { store } from '../store';
-import { MpfDataEntry, Template, TodoList, TodoListItem } from '../types';
+import { MPF_CATEGORIES, MpfDataEntry, Template, TodoList, TodoListItem } from '../types';
 import { migrateTemplateAssets, migrateTodoListItem, resolveIconPath } from '../services/iconPaths';
 
 jest.mock('interactjs', () => {
@@ -148,6 +148,7 @@ describe('historical TodoList contracts', () => {
     const { result, warnings } = parseTodoList(discord, clone(fixture.mpfData));
     expect(warnings).toEqual([]);
     expect(result.items).toHaveLength(1);
+    expect(MPF_CATEGORIES).toContain(result.items[0].category);
     expect(result.items[0]).toMatchObject({
       iconFilename: 'UI/ItemIcons/ATMortarItemIcon.png', category: 'heavy_arms',
       cost: { bmat: 100, rmat: 25 }, maxCrates: 9, numberProduced: 5, orderCount: 2,

@@ -20,7 +20,7 @@ A stockpile template generator for the game Foxhole, designed for the 11eRC-FL r
 - **Quantity management**: Click to edit the quantity of each item
 - **PNG export**: High-quality 1920×1080 image ready to use
 - **JSON save**: Save and reload your templates
-- **MPF TodoList**: Generate a Discord-ready shortage order list from your template
+- **Production**: Independent regiment todolist with Discord export and personal Factory/MPF run with loading calculations
 - **Stockpile comparison**: Compare a Foxhole CSV export against a template to spot gaps
 - **Keyboard shortcuts**: Quick navigation with Ctrl+S, Ctrl+O, Ctrl+E
 - **Help menu**: `?` button to view all shortcuts
@@ -49,20 +49,28 @@ pnpm run build
 5. **Click** an icon to edit its quantity
 6. **Export** as PNG or save as JSON
 
-## 📋 MPF TodoList
+## 📋 Production
 
-The **MPF TodoList** mode lets you build a shortage order list to share on Discord.
+The **Production** tab has two independent workspaces: **MPF Todolist** keeps the regiment's MPF list and Discord preview; **Logi Calculator** has separate personal **Factory** and **MPF** drafts. Loading uses only the displayed building's draft, never the regiment shortage or the other building's contents.
 
 ### Workflow
 
-1. Switch to **📋 MPF TodoList** mode in the toolbar
-2. **Drag** any MPF-craftable icon from the sidebar into the list
-3. Set the **order count** for each item using the counter field
-4. Use **+ Text** to insert free-text blocks (Discord Markdown supported)
-5. Filter by **faction** (Warden / Colonial / Neutral) to hide irrelevant items
-6. Click **📋 Copy** or **⬇️ .txt** to export the formatted list for Discord
+1. Switch to **📋 Production**, then choose **MPF Todolist** or **Logi Calculator**. The regiment list, Factory draft and MPF draft retain independent factions, items and quantities. Only MPF Todolist has a title field.
+2. **MPF Todolist** always uses the MPF catalogue. **Logi Calculator → Building → Factory / MPF** switches between separate saved drafts. Drag or double-click sidebar items to add an order. The Production sidebar groups items by their existing production categories, with **Resources** and **Structures** menu labels. Only eligible categories are shown; searching does not remove category buttons. This menu grouping leaves `categoryMapping.json`, icon categories, saved documents and Template/Stockpile unchanged.
+3. **MPF Todolist** keeps its **× order count**. In **Logi Calculator**, each line instead has a directly editable **Crates** field with **− / +** buttons: Factory **1–4** (default **4**), MPF **3–9** (default **9**) or **3–5** for vehicles/shippables (default **5**). Each category contains one queue, with no order multiplier. Costs and loading update immediately. MPF discounts apply within that queue; splitting a five-crate order into separate orders of three and two is not valid.
+4. A **Logi Calculator** has one line per production category (one queue). Choosing another item in that category replaces its current line. Other categories and the other building's draft are retained. The MPF Todolist keeps its usual multiple-item ordering workflow.
+5. Filter with **All / Warden / Colonial** below the sidebar search, using the same buttons as Template. Template, MPF Todolist, Factory run and MPF run keep independent faction choices. In **MPF Todolist**, **+ Text** inserts free-text blocks (Discord Markdown supported).
+6. In **Logi Calculator**, **Loading → Check transport capacity** shows a **standard truck** for either building (15 slots, loose stacks of 100 per material). **MPF only** also offers a **flatbed + shipping container** (60 material crates). Factory has no loading pad and only offers loose truck inputs. Truck totals show stacks/slots; container totals show material crates. Materials are summed before rounding each material into crates/stacks.
+7. Loading plans input materials, separately from the Stockpile planner for shipping finished goods. Crate capacities come from the item catalogue, with current game values as offline fallbacks.
+8. In **MPF Todolist**, click **📋 Copy** or **⬇️ .txt** in **Discord Preview** to export the regiment list. Historical Factory or partial lines remain readable/exportable at their recorded quantities and prices. **Load** imports into the regiment todo only; it is hidden in the personal run.
 
-> The list title auto-inserts the current date when **Auto-date** is enabled.
+> The regiment list title auto-inserts the current date when **Auto-date** is enabled. **Clear calculator** clears only the displayed building's draft; **Clear** in MPF Todolist clears only the regiment list.
+
+The existing `todolist` storage key remains the regiment list, with no automatic copy or reinterpretation. `productionRun` stores a version 2 envelope with separate `factory`/`mpf` drafts, the selected building and the MPF transport choice. Older mixed drafts are split by each recorded recipe, retaining their prices, crates per order and identifiers. Reading an old cache does not overwrite it; the next run edit or building switch writes the new format. Historical saved todos retain their recorded values and full-order Discord format. Editing or clearing a run does not overwrite the other run or the cached regiment todo.
+
+Older production drafts with several lines in one category keep the last selected line per category. Their original cache is retained once under `productionRun_beforeSingleQueue` before normalization; the regiment todo is unaffected.
+
+Calculator drafts always store `orderCount: 1`: only the selected crate quantity affects the load. Old run multipliers are normalized to one order, with their previous cache retained once under `productionRun_beforeSingleOrder`. The regiment todolist's multipliers are unchanged.
 
 ---
 
@@ -239,4 +247,4 @@ See the [LICENSE](LICENSE) file for details.
 
 ---
 
-**v2.2** - Made with ❤️ for the 11eRC-FL
+**v2.3** - Made with ❤️ for the 11eRC-FL

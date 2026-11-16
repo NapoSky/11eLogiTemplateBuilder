@@ -14,12 +14,15 @@ export class Toolbar {
     // Re-render on store changes (mostly viewMode), then re-update scale buttons
     let prevMode = store.viewMode;
     let prevTplSource = store.stockpileTplSource;
+    let prevProductionWorkspace = store.productionWorkspace;
     store.subscribe(() => {
       const modeChanged = store.viewMode !== prevMode;
       const tplSourceChanged = store.stockpileTplSource !== prevTplSource;
-      if (modeChanged || tplSourceChanged) {
+      const workspaceChanged = store.productionWorkspace !== prevProductionWorkspace;
+      if (modeChanged || tplSourceChanged || workspaceChanged) {
         prevMode = store.viewMode;
         prevTplSource = store.stockpileTplSource;
+        prevProductionWorkspace = store.productionWorkspace;
         this.render();
       } else {
         this.updateScaleButtons();
@@ -35,6 +38,7 @@ export class Toolbar {
 
     const isTemplate = store.viewMode === 'template';
     const isTodolist = store.viewMode === 'todolist';
+    const isRun = isTodolist && store.productionWorkspace === 'run';
     const isStockpile = store.viewMode === 'stockpile';
 
     const tplSource = store.stockpileTplSource;
@@ -57,7 +61,7 @@ export class Toolbar {
         <!-- Mode toggle -->
         <div class="flex items-center rounded overflow-hidden border border-gray-600">
           <button id="btn-mode-template" class="px-3 py-1.5 text-xs ${activeTab(isTemplate)} transition-colors">🎨 Template</button>
-          <button id="btn-mode-todolist" class="px-3 py-1.5 text-xs ${activeTab(isTodolist)} transition-colors">📋 MPF TodoList</button>
+          <button id="btn-mode-todolist" class="px-3 py-1.5 text-xs ${activeTab(isTodolist)} transition-colors">📋 Production</button>
           <button id="btn-mode-stockpile" class="px-3 py-1.5 text-xs ${activeTab(isStockpile)} transition-colors">📦 Stockpile</button>
         </div>
 
@@ -85,7 +89,7 @@ export class Toolbar {
           </svg>
           Background
         </button>
-        ` : isTodolist ? `
+        ` : isTodolist && !isRun ? `
         <button id="btn-add-text" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm flex items-center gap-1" title="Add text block">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -155,7 +159,7 @@ export class Toolbar {
           Load
         </button>
         ` : ''}
-        ${isTodolist ? `
+        ${isTodolist && !isRun ? `
         <button id="btn-tl-load" class="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 rounded text-sm flex items-center gap-1" title="Import a Discord todolist">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
@@ -165,7 +169,7 @@ export class Toolbar {
         ` : ''}
         ${!isStockpile ? `
         <button id="btn-clear" class="px-3 py-1.5 bg-red-600/50 hover:bg-red-600 rounded text-sm">
-          Clear
+          ${isRun ? 'Clear calculator' : 'Clear'}
         </button>
         ` : `
         <button id="btn-clear-tpl" class="px-3 py-1.5 bg-red-600/50 hover:bg-red-600 rounded text-sm">
@@ -204,7 +208,7 @@ export class Toolbar {
 
           <div class="mt-5 pt-4 border-t border-gray-700 space-y-2">
             <div class="text-center">
-              <span class="text-xs text-gray-500">11eRC-FL Template Builder v2.2</span>
+              <span class="text-xs text-gray-500">11eRC-FL Template Builder v2.3</span>
             </div>
             <div class="text-center">
               <a href="https://github.com/NapoSky/11eLogiTemplateBuilder" target="_blank" rel="noopener noreferrer" class="text-xs text-blue-400 hover:text-blue-300 underline transition-colors">
@@ -257,12 +261,17 @@ export class Toolbar {
       return `
         <div class="space-y-3 text-sm">
           <div>
-            <h3 class="font-semibold text-gray-200 mb-2">📋 ${fr ? 'Todolist MPF' : 'MPF Todolist'}</h3>
+            <h3 class="font-semibold text-gray-200 mb-2">📋 Production</h3>
             <ul class="text-gray-400 space-y-1.5">
-              <li>• ${fr ? 'Glissez un item MPF pour l’ajouter.' : 'Drag an MPF item to add it.'}</li>
-              <li>• ${fr ? 'Réglez le nombre d’ordres avec le compteur.' : 'Set the number of orders with the counter.'}</li>
-              <li>• <span class="text-gray-200">+ Text</span> ${fr ? 'ajoute une note Markdown Discord.' : 'adds a Discord Markdown note.'}</li>
-              <li>• <span class="text-gray-200">Copy / .txt</span> ${fr ? 'exporte la liste.' : 'exports the list.'}</li>
+              <li>• <span class="text-gray-200">MPF Todolist</span> ${fr ? 'conserve la liste du régiment et son export Discord. Le catalogue est limité à la MPF.' : 'keeps the regiment list and its Discord export. Its catalogue is MPF-only.'}</li>
+              <li>• <span class="text-gray-200">Logi Calculator</span> ${fr ? 'possède un brouillon Factory et un brouillon MPF indépendants, conservés en changeant de bâtiment.' : 'has independent Factory and MPF drafts, retained when switching buildings.'}</li>
+              <li>• ${fr ? 'Une seule ligne par catégorie de production : choisir un autre objet remplace la ligne de cette catégorie.' : 'One line per production category: choosing another item replaces that category’s line.'}</li>
+              <li>• ${fr ? 'Dans Logi Calculator, choisissez Factory ou MPF, puis glissez une icône ou faites un double-clic dessus.' : 'In Logi Calculator, choose Factory or MPF, then drag or double-click an icon.'}</li>
+              <li>• ${fr ? 'Dans MPF Todolist, le compteur × indique le nombre de commandes complètes.' : 'In MPF Todolist, the × counter sets the number of full orders.'}</li>
+              <li>• <span class="text-gray-200">Crates − / +</span> ${fr ? 'règle directement les caisses d’une seule queue dans Logi Calculator : Factory 1–4, MPF 3–9 (3–5 pour véhicules et shippables).' : 'directly sets crates for one queue in Logi Calculator: Factory 1–4, MPF 3–9 (3–5 for vehicles and shippables).'}</li>
+              <li>• <span class="text-gray-200">Loading</span> ${fr ? 'autorise le camion pour Factory et MPF ; le flatbed avec conteneur est réservé à la MPF.' : 'allows a truck for Factory and MPF; a flatbed with container is MPF-only.'}</li>
+              <li>• <span class="text-gray-200">+ Text</span> ${fr ? 'ajoute une note Markdown Discord dans MPF Todolist.' : 'adds a Discord Markdown note in MPF Todolist.'}</li>
+              <li>• <span class="text-gray-200">Discord → Copy / .txt</span> ${fr ? 'exporte la todolist. Clear calculator efface uniquement le brouillon du bâtiment affiché.' : 'exports the todolist. Clear calculator clears only the displayed building’s draft.'}</li>
             </ul>
           </div>
           ${shortcuts}
@@ -413,8 +422,10 @@ export class Toolbar {
     // Clear
     this.container.querySelector('#btn-clear')?.addEventListener('click', () => {
       if (store.viewMode === 'todolist') {
-        if (confirm('Clear the entire todolist?')) {
-          store.clearTodoList();
+        const isRun = store.productionWorkspace === 'run';
+        const building = store.productionRunSource === 'factory' ? 'Factory' : 'MPF';
+        if (confirm(isRun ? `Clear your ${building} calculator draft? The other building’s draft and MPF Todolist will stay unchanged.` : 'Clear the entire MPF todolist? Your Logi Calculator drafts will stay unchanged.')) {
+          if (isRun) store.clearProductionRun(); else store.clearTodoList();
         }
       } else if (store.viewMode === 'template') {
         if (confirm('Clear the entire template?')) {

@@ -1,4 +1,4 @@
-import { TodoListItem, MPF_CATEGORY_LABELS } from '../types';
+import { TodoListItem, MPF_CATEGORY_LABELS, TODO_CATEGORY_LABELS, ProductionSource } from '../types';
 
 /**
  * MPF cost calculator.
@@ -32,8 +32,13 @@ export function fullOrderCost(
   baseCost: { bmat?: number; rmat?: number; emat?: number; hemat?: number },
   maxCrates: 9 | 5,
 ): { bmat: number; rmat: number; emat: number; hemat: number } {
+  return mpfOrderCost(baseCost, maxCrates);
+}
+
+/** Cost of one MPF order. Each order starts again at the first discount tier. */
+function mpfOrderCost(baseCost: TodoListItem['cost'], crates: number) {
   const totals = { bmat: 0, rmat: 0, emat: 0, hemat: 0 };
-  for (let i = 0; i < maxCrates; i++) {
+  for (let i = 0; i < crates; i++) {
     // Use integer arithmetic (×numerator then ÷10) to avoid floating-point
     // precision errors (e.g. 0.1 * 3 = 0.30000000000000004 in JS).
     const numerator = 10 - discountTenthsForCrateIndex(i);
@@ -48,12 +53,26 @@ export function fullOrderCost(
 /**
  * Displayed cost for a TodoList row.
  *
- * Per the user spec, this is *always* the cost of a single full MPF order;
- * `orderCount` is purely a presentational suffix and is intentionally NOT
- * multiplied here.
+ * One order, independently of orderCount. Historical documents without a crate
+ * quantity or production source keep their recorded full MPF order calculation.
  */
 export function displayedCost(item: TodoListItem): { bmat: number; rmat: number; emat: number; hemat: number } {
-  return fullOrderCost(item.cost, item.maxCrates);
+  const crates = orderCrateCount(item);
+  if (productionSource(item) === 'mpf') return mpfOrderCost(item.cost, crates);
+  return {
+    bmat: (item.cost.bmat ?? 0) * crates, rmat: (item.cost.rmat ?? 0) * crates,
+    emat: (item.cost.emat ?? 0) * crates, hemat: (item.cost.hemat ?? 0) * crates,
+  };
+}
+
+export function productionSource(item: TodoListItem): ProductionSource {
+  return item.productionSource ?? (item.maxCrates === 4 ? 'factory' : 'mpf');
+}
+
+export function orderCrateCount(item: TodoListItem): number {
+  const minimum = productionSource(item) === 'factory' ? 1 : 3;
+  return Math.max(minimum, Math.min(item.maxCrates,
+    Number.isFinite(item.cratesPerOrder) ? Math.floor(item.cratesPerOrder!) : item.maxCrates));
 }
 
 /** Total crates produced for one full order (used for stats). */
@@ -63,5 +82,6 @@ export function cratesPerOrder(item: TodoListItem): number {
 }
 
 export function categoryLabel(cat: string): string {
-  return MPF_CATEGORY_LABELS[cat as keyof typeof MPF_CATEGORY_LABELS] ?? cat;
+  return MPF_CATEGORY_LABELS[cat as keyof typeof MPF_CATEGORY_LABELS]
+    ?? TODO_CATEGORY_LABELS[cat as keyof typeof TODO_CATEGORY_LABELS] ?? cat;
 }

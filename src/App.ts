@@ -109,6 +109,7 @@ export class App {
     const mainView = this.container?.querySelector('#main-view') as HTMLElement | null;
     const sidebar  = this.container?.querySelector('#sidebar')   as HTMLElement | null;
     if (!mainView) return;
+    this.container?.classList.toggle('production-planner', store.viewMode === 'todolist');
 
     // Unmount previous view cleanly
     if (previous === 'todolist') {

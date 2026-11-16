@@ -16,6 +16,7 @@ export class TodoListLoadModal {
 
   private open(): void {
     if (!this.container) return;
+    if (store.productionWorkspace === 'run') return;
     this.isOpen = true;
     this.render('');
     this.attachEvents();
@@ -57,7 +58,7 @@ export class TodoListLoadModal {
 
           <p class="text-xs text-gray-400 mb-2">
             Paste the content of a Discord todolist here (export format <code>.txt</code>).
-            Costs are recalculated from <code>mpfData.json</code>. The current faction filter is preserved.
+            Costs are recalculated from the production catalogue. Factory and partial MPF orders keep their quantities. The current faction filter is preserved.
           </p>
 
           <textarea
@@ -104,7 +105,7 @@ export class TodoListLoadModal {
       return;
     }
 
-    const { result, warnings } = parseTodoList(raw, store.mpfData);
+    const { result, warnings } = parseTodoList(raw, store.mpfData, store.factoryTodoData);
 
     if (result.items.length === 0 && result.textBlocks.length === 0) {
       this.showWarnings(['No item or text block recognized. Check the format.', ...warnings]);

@@ -78,11 +78,6 @@ describe('TodoListView – rendu initial', () => {
     expect(titleInput.value).toBe('Ma Liste');
   });
 
-  test('le sélecteur de faction est présent', () => {
-    const { container } = mountView();
-    expect(container.querySelector('#tl-faction')).toBeTruthy();
-  });
-
   test('le message placeholder est affiché quand la liste est vide', () => {
     const { container } = mountView();
     expect(container.textContent).toMatch(/No items|Drag an icon/i);
@@ -142,10 +137,8 @@ describe('TodoListView – réactivité', () => {
 
     store.addTodoListItemFromIcon('UI/ItemIcons/RifleCItemIcon.png');
 
-    // Trouver le div de résumé (sous la preview Discord) qui contient le total
-    const summaryDivs = Array.from(container.querySelectorAll('.text-sm.text-blue-200'));
-    const summary = summaryDivs.find(el => el.textContent?.includes('asset') && el.textContent?.includes('total'));
-    expect(summary?.textContent).toContain('Bmat');
+    expect(container.querySelector('#tl-preview')?.textContent).toContain('550 Bmats');
+    expect(container.querySelector('#tl-loading-summary')).toBeNull();
   });
 });
 
@@ -191,14 +184,6 @@ describe('TodoListView – interactions UI', () => {
     titleInput.value = 'Via Change';
     titleInput.dispatchEvent(new Event('change'));
     expect(store.todolist.title).toBe('Via Change');
-  });
-
-  test('changement de faction met à jour le store', () => {
-    const { container } = mountView();
-    const factionSelect = container.querySelector('#tl-faction') as HTMLSelectElement;
-    factionSelect.value = 'colonial';
-    factionSelect.dispatchEvent(new Event('change'));
-    expect(store.todolist.faction).toBe('colonial');
   });
 
   test('changement d\'autoDate met à jour le store', () => {

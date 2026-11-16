@@ -1,5 +1,5 @@
-import { TodoList, TodoListItem, MPF_CATEGORIES, MPF_CATEGORY_LABELS, MpfCategory, TextBlock } from '../types';
-import { displayedCost } from './mpfCalculator';
+import { TodoList, TodoListItem, TODO_CATEGORIES, TODO_CATEGORY_LABELS, TodoCategory, TextBlock } from '../types';
+import { displayedCost, orderCrateCount, productionSource } from './mpfCalculator';
 
 /**
  * Letter allocator: returns 🇦, 🇧, 🇨, ... regional indicator emoji (Discord renders flags).
@@ -25,7 +25,11 @@ function formatItemLine(item: TodoListItem, letter: string): string {
 
   const matsStr = matsParts.length > 0 ? ` – ${formatMatPart(matsParts)}` : '';
   const orderSuffix = item.orderCount > 1 ? ` (x${item.orderCount})` : '';
-  return `${letter}・${item.itemName}${matsStr}${orderSuffix}`;
+  const source = productionSource(item);
+  const crates = orderCrateCount(item);
+  const details = source === 'factory' || crates !== item.maxCrates
+    ? ` [${source === 'factory' ? 'Factory' : 'MPF'}: ${crates} crates/order]` : '';
+  return `${letter}・${item.itemName}${details}${matsStr}${orderSuffix}`;
 }
 
 function formatDateDDMM(d: Date): string {
@@ -50,9 +54,9 @@ export function renderTodoList(todolist: TodoList, now: Date = new Date()): stri
   const textBlocks: TextBlock[] = todolist.textBlocks ?? [];
   const topBlocks = textBlocks.filter(b => b.anchor.kind === 'top');
   const footerBlocks = textBlocks.filter(b => b.anchor.kind === 'footer');
-  const blocksByCat: Record<MpfCategory, TextBlock[]> = {
+  const blocksByCat: Record<TodoCategory, TextBlock[]> = {
     small_arms: [], heavy_arms: [], heavy_ammunition: [],
-    vehicles: [], shipables: [], uniforms: [], supplies: [],
+    vehicles: [], shipables: [], uniforms: [], supplies: [], utility: [], medical: [],
   };
   for (const b of textBlocks) {
     if (b.anchor.kind === 'category') blocksByCat[b.anchor.category].push(b);
@@ -66,19 +70,19 @@ export function renderTodoList(todolist: TodoList, now: Date = new Date()): stri
   for (const b of topBlocks) pushBlock(b);
 
   // Group items by category
-  const grouped: Record<MpfCategory, TodoListItem[]> = {
+  const grouped: Record<TodoCategory, TodoListItem[]> = {
     small_arms: [], heavy_arms: [], heavy_ammunition: [],
-    vehicles: [], shipables: [], uniforms: [], supplies: [],
+    vehicles: [], shipables: [], uniforms: [], supplies: [], utility: [], medical: [],
   };
   for (const item of todolist.items) {
     grouped[item.category]?.push(item);
   }
 
-  for (const cat of MPF_CATEGORIES) {
+  for (const cat of TODO_CATEGORIES) {
     const items = grouped[cat];
     const catBlocks = blocksByCat[cat];
     if ((!items || items.length === 0) && catBlocks.length === 0) continue;
-    lines.push(`__${MPF_CATEGORY_LABELS[cat]}__`);
+    lines.push(`__${TODO_CATEGORY_LABELS[cat]}__`);
     for (const b of catBlocks) pushBlock(b);
     if (items && items.length > 0) {
       items.forEach((item, idx) => {

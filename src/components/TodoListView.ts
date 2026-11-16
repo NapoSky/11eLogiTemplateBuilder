@@ -1,10 +1,11 @@
 import { store } from '../store';
-import { TodoListItem, MPF_CATEGORIES, MPF_CATEGORY_LABELS, MpfCategory, FactionFilter, TextBlock, TextAnchor } from '../types';
-import { displayedCost } from '../services/mpfCalculator';
+import { TodoListItem, TODO_CATEGORIES, TODO_CATEGORY_LABELS, TodoCategory, TextBlock, TextAnchor, ProductionSource, ProductionWorkspace } from '../types';
+import { categoryLabel, displayedCost, orderCrateCount, productionSource } from '../services/mpfCalculator';
 import { renderTodoList } from '../services/todoListExporter';
 import { getBaseUrl } from '../config';
 import { showToast } from '../services/toast';
 import { iconAssetUrl } from '../services/iconPaths';
+import { MATERIALS, MATERIAL_KEYS, loadingSummary, producedCrates, truckPredeposit, LoadingTransport } from '../services/productionPlanner';
 
 const BASE_URL = getBaseUrl();
 
@@ -75,6 +76,9 @@ export class TodoListView {
   private unsubscribe: (() => void) | null = null;
   private focusBlockHandler: ((e: Event) => void) | null = null;
   private pendingFocusBlockId: string | null = null;
+  private transportOpen = true;
+  private renderedContext: 'todolist' | ProductionSource | null = null;
+  private scrollByContext = { todolist: 0, factory: 0, mpf: 0 };
 
   mount(container: HTMLElement): void {
     this.container = container;
@@ -93,6 +97,8 @@ export class TodoListView {
   }
 
   unmount(): void {
+    this.rememberScroll();
+    this.renderedContext = null;
     this.unsubscribe?.();
     this.unsubscribe = null;
     if (this.focusBlockHandler) {
@@ -116,12 +122,14 @@ export class TodoListView {
 
   private render(): void {
     if (!this.container) return;
-    const tl = store.todolist;
+    const tl = store.productionDocument;
+    const isRun = store.productionWorkspace === 'run';
+    const context = isRun ? store.productionRunSource : 'todolist';
 
     // Group items by category, preserving insertion order within categories
-    const grouped: Record<MpfCategory, TodoListItem[]> = {
+    const grouped: Record<TodoCategory, TodoListItem[]> = {
       small_arms: [], heavy_arms: [], heavy_ammunition: [],
-      vehicles: [], shipables: [], uniforms: [], supplies: [],
+      vehicles: [], shipables: [], uniforms: [], supplies: [], utility: [], medical: [],
     };
     for (const item of tl.items) grouped[item.category]?.push(item);
 
@@ -134,71 +142,78 @@ export class TodoListView {
     // Group text blocks by anchor for fast lookup
     const topBlocks = tl.textBlocks.filter(b => b.anchor.kind === 'top');
     const footerBlocks = tl.textBlocks.filter(b => b.anchor.kind === 'footer');
-    const blocksByCategory: Record<MpfCategory, TextBlock[]> = {
+    const blocksByCategory: Record<TodoCategory, TextBlock[]> = {
       small_arms: [], heavy_arms: [], heavy_ammunition: [],
-      vehicles: [], shipables: [], uniforms: [], supplies: [],
+      vehicles: [], shipables: [], uniforms: [], supplies: [], utility: [], medical: [],
     };
     for (const b of tl.textBlocks) {
       if (b.anchor.kind === 'category') blocksByCategory[b.anchor.category].push(b);
     }
 
-    const exportText = renderTodoList(tl);
+    const exportText = isRun ? '' : renderTodoList(tl);
 
     // Sauvegarder la position de scroll du wrapper interne avant de re-rendre
-    const prevScrollTop = (this.container.firstElementChild as HTMLElement | null)?.scrollTop ?? 0;
+    this.rememberScroll();
+    const prevScrollTop = this.scrollByContext[context];
+    this.renderedContext = context;
 
     // Wrapper interne : ne jamais toucher this.container.className (partagé avec Canvas)
-    this.container.innerHTML = `<div class="h-full overflow-auto p-6 bg-gray-900 text-gray-100">
-      <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
+    this.container.innerHTML = `<div class="h-full overflow-auto p-3 sm:p-6 bg-gray-900 text-gray-100">
+      <div class="max-w-6xl mx-auto mb-5 py-2 sticky top-0 z-20 bg-gray-900 flex flex-wrap items-center justify-between gap-3">
+        <div role="tablist" aria-label="Production workspace" class="inline-flex bg-gray-800 border border-gray-700 rounded-lg p-1 gap-1">
+          ${(['todolist', 'run'] as const).map(workspace => `<button type="button" id="tl-workspace-${workspace}" data-workspace="${workspace}"
+            role="tab" aria-selected="${store.productionWorkspace === workspace}" aria-controls="tl-workspace-content"
+            tabindex="${store.productionWorkspace === workspace ? 0 : -1}"
+            class="px-4 py-1.5 rounded text-sm transition-colors ${store.productionWorkspace === workspace ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'}">${workspace === 'run' ? 'Logi Calculator' : 'MPF Todolist'}</button>`).join('')}
+        </div>
+        ${!isRun ? '<span class="text-xs text-gray-500">Regiment list</span>' : ''}
+      </div>
+      <div id="tl-workspace-content" role="tabpanel" aria-labelledby="tl-workspace-${store.productionWorkspace}">
+      <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)] gap-6">
 
         <!-- LEFT: builder -->
-        <div id="todolist-dropzone" class="space-y-4">
+        <div id="todolist-dropzone" class="space-y-4 min-w-0">
           <!-- Header controls -->
           <div class="bg-gray-800 rounded-lg border border-gray-700 p-4 flex flex-wrap gap-4 items-end">
-            <div class="flex-1 min-w-[180px]">
+            ${!isRun ? `<div class="flex-1 min-w-[180px]">
               <label class="block text-xs text-gray-400 mb-1">Title</label>
               <input id="tl-title" type="text" value="${escapeHtml(tl.title)}"
                 class="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500" />
-            </div>
-            <label class="flex items-center gap-2 text-sm cursor-pointer">
+            </div>` : ''}
+            ${!isRun ? `<label class="flex items-center gap-2 text-sm cursor-pointer">
               <input id="tl-autodate" type="checkbox" ${tl.autoDate ? 'checked' : ''} class="accent-blue-500" />
               <span>Auto date (DD/MM)</span>
-            </label>
-            <div>
-              <label class="block text-xs text-gray-400 mb-1">Faction</label>
-              <select id="tl-faction" class="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-sm">
-                <option value="all" ${tl.faction === 'all' ? 'selected' : ''}>All</option>
-                <option value="colonial" ${tl.faction === 'colonial' ? 'selected' : ''}>Colonial</option>
-                <option value="warden" ${tl.faction === 'warden' ? 'selected' : ''}>Warden</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Drop hint -->
-          <div class="bg-blue-900/20 border border-blue-700/40 rounded-lg p-3 text-sm text-blue-200">
-            👉 Drag an MPF-craftable icon from the sidebar to add it to the todolist.
-            <div class="mt-1 text-xs text-blue-300/70">Each order is capped at <strong>9 crates</strong> — <strong>5</strong> for Vehicles &amp; Shippables. (e.g. ordering 2× Booker produces <strong>18 crates</strong>.)</div>
+            </label>` : ''}
+            ${isRun ? `<div role="group" aria-label="Production building" class="grid grid-cols-2 gap-3 w-full">
+                ${(['factory', 'mpf'] as ProductionSource[]).map(source => `
+                  <button type="button" data-production-source="${source}" aria-pressed="${(tl.productionSource ?? 'mpf') === source}"
+                    class="flex items-center justify-center gap-2 min-h-14 px-4 py-3 rounded-lg border text-base font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-blue-400 focus-visible:outline-offset-2 ${(tl.productionSource ?? 'mpf') === source ? 'bg-blue-600 border-blue-500 text-white' : 'bg-gray-700 border-gray-600 text-gray-200 hover:bg-gray-600'}">
+                    <span aria-hidden="true" class="w-4">${(tl.productionSource ?? 'mpf') === source ? '✓' : ''}</span>
+                    ${source === 'factory' ? 'Factory' : 'MPF'}
+                  </button>
+                `).join('')}
+            </div>` : ''}
           </div>
 
           ${topBlocks.map(b => this.renderTextBlock(b)).join('')}
 
           ${tl.items.length === 0 && tl.textBlocks.length === 0 ? `
             <div class="text-center py-12 text-gray-500 italic border-2 border-dashed border-gray-700 rounded-lg">
-              No items. Drag an icon here, or click &ldquo;+ Text&rdquo;.
+              ${isRun ? 'No items. Drag an icon here or double-click an icon in the sidebar.' : 'No items. Drag an icon here, or click &ldquo;+ Text&rdquo;.'}
             </div>
-          ` : MPF_CATEGORIES.map(cat => {
+          ` : TODO_CATEGORIES.map(cat => {
             const items = grouped[cat];
             const catBlocks = blocksByCategory[cat];
             if ((!items || items.length === 0) && catBlocks.length === 0) return '';
             return `
               <section class="bg-gray-800 rounded-lg border border-gray-700">
                 <header class="px-4 py-2 border-b border-gray-700 font-semibold text-gray-200">
-                  ${MPF_CATEGORY_LABELS[cat]}
+                  ${categoryLabel(cat)}
                   ${(() => {
                     const assetCount = items.length;
                     const lineCount = items.reduce((s, i) => s + i.orderCount, 0);
                     const assetLabel = assetCount !== 1 ? 'assets' : 'asset';
-                    const lineLabel = lineCount !== 1 ? 'lines' : 'line';
+                    const lineLabel = isRun ? (lineCount !== 1 ? 'queues' : 'queue') : (lineCount !== 1 ? 'orders' : 'order');
                     return `<span class="text-xs text-gray-500 ml-2">(${assetCount} ${assetLabel}, ${lineCount} ${lineLabel})</span>`;
                   })()}
                 </header>
@@ -212,32 +227,30 @@ export class TodoListView {
           }).join('')}
 
           ${footerBlocks.map(b => this.renderTextBlock(b)).join('')}
+          <div class="text-xs text-gray-500 flex flex-wrap justify-between gap-2">
+            <span>${isRun ? 'One item per production category. Choosing another replaces the current line.' : 'Drag or double-click sidebar items to add an order.'}</span>
+            <span>${isRun ? 'Costs for selected crates' : 'Costs shown per order'}</span>
+          </div>
         </div>
 
-        <!-- RIGHT: preview -->
-        <div class="space-y-3 lg:sticky lg:top-4 self-start">
+          <!-- Each workspace has its own document and purpose. -->
+        <div class="space-y-3 lg:sticky lg:top-20 self-start min-w-0">
           <div class="bg-gray-800 rounded-lg border border-gray-700">
-            <header class="px-4 py-2 border-b border-gray-700 font-semibold text-gray-200 flex items-center justify-between">
-              <span>Discord Preview</span>
-              <div class="flex items-center gap-2">
+            <h2 class="px-4 py-3 border-b border-gray-700 text-sm">${isRun ? 'Loading' : 'Discord Preview'}</h2>
+            ${isRun ? `<div id="tl-panel-loading">
+              ${this.renderLoading()}
+            </div>` : `<div id="tl-panel-discord">
+              <div class="px-4 py-3 flex flex-wrap items-center gap-2 border-b border-gray-700">
                 <span id="tl-char-count" class="text-xs font-mono ${exportText.length > 4000 ? 'text-red-400 font-bold' : 'text-gray-400'}">${exportText.length} / 4000</span>
-                <button id="tl-copy" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs">📋 Copy</button>
+                <button id="tl-copy" class="ml-auto px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs">📋 Copy</button>
                 <button id="tl-download" class="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs">⬇️ .txt</button>
               </div>
-            </header>
-            <pre id="tl-preview" data-raw="${escapeHtml(exportText)}" class="p-4 text-xs whitespace-pre-wrap font-mono text-gray-200 max-h-[70vh] overflow-auto">${renderPreviewHtml(exportText)}</pre>
+              <pre id="tl-preview" data-raw="${escapeHtml(exportText)}" class="p-4 text-xs whitespace-pre-wrap break-words font-mono text-gray-200 max-h-[65vh] overflow-auto">${renderPreviewHtml(exportText)}</pre>
+            </div>`}
           </div>
-          <div class="bg-blue-900/20 border border-blue-700/40 rounded-lg p-3 text-sm text-blue-200">
-            ${(() => {
-              const totalAssets = tl.items.length;
-              const totalLines = tl.items.reduce((s, i) => s + i.orderCount, 0);
-              const assetLabel = totalAssets !== 1 ? 'assets' : 'asset';
-              const lineLabel = totalLines !== 1 ? 'lines' : 'line';
-              return `📦 ${totalAssets} ${assetLabel}, ${totalLines} ${lineLabel} — total = <strong>${this.computeGrandTotal()}</strong>.`;
-            })()}
-            <div class="mt-1 text-xs text-blue-300/70">${this.computeCratesSummary()}</div>
-          </div>
+          ${isRun && tl.items.length ? `<div class="text-xs text-gray-500">Produces ${producedCrates(tl.items)} ${producedCrates(tl.items) === 1 ? 'crate' : 'crates'}</div>` : ''}
         </div>
+      </div>
       </div>
     </div>
     `;
@@ -251,6 +264,12 @@ export class TodoListView {
     this.attachEvents();
   }
 
+  private rememberScroll(): void {
+    if (this.renderedContext && this.container?.firstElementChild) {
+      this.scrollByContext[this.renderedContext] = (this.container.firstElementChild as HTMLElement).scrollTop;
+    }
+  }
+
   private renderItemRow(item: TodoListItem, idx: number, warnFaction: boolean): string {
     const cost = displayedCost(item);
     const matsParts: string[] = [];
@@ -260,16 +279,20 @@ export class TodoListView {
     if (cost.hemat > 0) matsParts.push(`${cost.hemat} HEmats`);
     const matsHtml = escapeHtml(matsParts.join(' – '));
     const letter = regionalIndicator(idx);
+    const crates = orderCrateCount(item);
+    const source = productionSource(item);
+    const isRun = store.productionWorkspace === 'run';
+    const minimumCrates = source === 'factory' ? 1 : 3;
     const factionBadge = warnFaction
       ? `<span title="This item does not belong to the selected faction" class="text-amber-400 text-xs">⚠️</span>`
       : '';
 
     return `
-      <li class="flex items-center gap-3 px-3 py-2 hover:bg-gray-700/30" data-item-id="${item.id}" data-category="${item.category}" draggable="true">
-        <span class="cursor-grab text-gray-500 hover:text-gray-300 select-none text-base leading-none px-0.5" title="Drag to reorder">⠿</span>
-        <span class="text-lg select-none w-7 text-center">${letter}</span>
+      <li class="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2 hover:bg-gray-700/30" data-item-id="${item.id}" data-category="${item.category}" draggable="${!isRun}">
+        ${!isRun ? `<span class="cursor-grab text-gray-500 hover:text-gray-300 select-none text-base leading-none px-0.5" title="Drag to reorder">⠿</span>
+        <span class="text-lg select-none w-7 text-center">${letter}</span>` : ''}
         <div class="relative w-8 h-8 shrink-0" title="${item.numberProduced} items/crate">
-          <img src="${iconAssetUrl(item.iconFilename, BASE_URL)}" alt=""
+          <img src="${iconAssetUrl(item.iconFilename, BASE_URL)}" alt="" draggable="false"
                class="w-8 h-8 object-contain"
                onerror="this.style.visibility='hidden'" />
           ${item.subtypeFilename
@@ -277,19 +300,35 @@ export class TodoListView {
                     class="absolute bottom-0 right-0 w-4 h-4 object-contain pointer-events-none" />`
             : ''}
         </div>
-        <div class="flex-1 min-w-0">
+        <div class="flex-1 ${isRun ? 'min-w-[140px]' : 'min-w-0'}">
           <div class="flex items-center gap-2">
             <span class="font-medium text-sm truncate">${escapeHtml(item.itemName)}</span>
             ${factionBadge}
           </div>
           <div class="text-xs text-gray-400 truncate">${matsHtml || '<span class="italic text-gray-600">no cost data</span>'}</div>
+          ${!isRun && (crates < item.maxCrates || source === 'factory')
+            ? `<div class="text-xs text-gray-400">Saved order: ${crates} crates</div>` : ''}
         </div>
-        <label class="text-xs text-gray-400 flex items-center gap-1">
+        ${isRun ? `<div class="shrink-0 ml-auto">
+          <label for="tl-crates-${item.id}" class="block text-xs text-gray-400 mb-1">Crates</label>
+          <div class="inline-flex items-center rounded border border-gray-600 bg-gray-900" role="group" aria-label="Crates of ${escapeHtml(item.itemName)}">
+            <button type="button" data-action="decrease-crates" ${crates <= minimumCrates ? 'disabled' : ''}
+              aria-label="Decrease ${escapeHtml(item.itemName)} crates"
+              class="px-2 py-1 hover:bg-gray-700 rounded-l disabled:opacity-40 disabled:cursor-not-allowed">−</button>
+            <input id="tl-crates-${item.id}" type="number" inputmode="numeric" min="${minimumCrates}" max="${item.maxCrates}" step="1" value="${crates}"
+              data-action="set-crates" aria-label="Crates of ${escapeHtml(item.itemName)}"
+              class="production-crate-input w-10 bg-transparent text-center text-sm tabular-nums py-1 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+            <button type="button" data-action="increase-crates" ${crates >= item.maxCrates ? 'disabled' : ''}
+              aria-label="Increase ${escapeHtml(item.itemName)} crates"
+              class="px-2 py-1 hover:bg-gray-700 rounded-r disabled:opacity-40 disabled:cursor-not-allowed">+</button>
+          </div>
+        </div>` : `<label class="text-xs text-gray-400 flex items-center gap-1">
           x
           <input type="number" min="1" value="${item.orderCount}"
             data-action="set-count"
+            aria-label="Number of ${escapeHtml(item.itemName)} orders"
             class="w-14 bg-gray-900 border border-gray-700 rounded px-1 py-0.5 text-sm" />
-        </label>
+        </label>`}
         <button data-action="delete" class="text-red-400 hover:text-red-300 text-sm" title="Delete">✕</button>
       </li>
     `;
@@ -305,9 +344,9 @@ export class TodoListView {
     const currentValue = this.anchorValue(block.anchor);
     const options = [
       `<option value="top" ${currentValue === 'top' ? 'selected' : ''}>↑ Header</option>`,
-      ...MPF_CATEGORIES.map(c => {
+      ...TODO_CATEGORIES.map(c => {
         const v = `cat:${c}`;
-        return `<option value="${v}" ${currentValue === v ? 'selected' : ''}>↳ Before ${MPF_CATEGORY_LABELS[c]}</option>`;
+        return `<option value="${v}" ${currentValue === v ? 'selected' : ''}>↳ Before ${TODO_CATEGORY_LABELS[c]}</option>`;
       }),
       `<option value="footer" ${currentValue === 'footer' ? 'selected' : ''}>↓ Footer</option>`,
     ].join('');
@@ -374,59 +413,117 @@ export class TodoListView {
     if (value === 'top') return { kind: 'top' };
     if (value === 'footer') return { kind: 'footer' };
     if (value.startsWith('cat:')) {
-      const cat = value.slice(4) as MpfCategory;
-      if ((MPF_CATEGORIES as string[]).includes(cat)) return { kind: 'category', category: cat };
+      const cat = value.slice(4) as TodoCategory;
+      if ((TODO_CATEGORIES as string[]).includes(cat)) return { kind: 'category', category: cat };
     }
     return null;
   }
 
-  private computeGrandTotal(): string {
-    const total = { bmat: 0, rmat: 0, emat: 0, hemat: 0 };
-    for (const item of store.todolist.items) {
-      const c = displayedCost(item);
-      total.bmat += c.bmat * item.orderCount;
-      total.rmat += c.rmat * item.orderCount;
-      total.emat += c.emat * item.orderCount;
-      total.hemat += c.hemat * item.orderCount;
-    }
-    const parts: string[] = [];
-    if (total.bmat) parts.push(`${total.bmat} Bmats`);
-    if (total.rmat) parts.push(`${total.rmat} Rmats`);
-    if (total.emat) parts.push(`${total.emat} Emats`);
-    if (total.hemat) parts.push(`${total.hemat} HEmats`);
-    return parts.length ? parts.join(' / ') : '—';
-  }
-
-  private computeCratesSummary(): string {
-    const total = { bmat: 0, rmat: 0, emat: 0, hemat: 0 };
-    for (const item of store.todolist.items) {
-      const c = displayedCost(item);
-      total.bmat += c.bmat * item.orderCount;
-      total.rmat += c.rmat * item.orderCount;
-      total.emat += c.emat * item.orderCount;
-      total.hemat += c.hemat * item.orderCount;
-    }
-    const parts: string[] = [];
-    if (total.bmat) parts.push(`${Math.ceil(total.bmat / 100)} Bmat crate(s)`);
-    if (total.rmat) parts.push(`${Math.ceil(total.rmat / 20)} Rmat crate(s)`);
-    if (total.emat) parts.push(`${Math.ceil(total.emat / 40)} Emat crate(s)`);
-    if (total.hemat) parts.push(`${Math.ceil(total.hemat / 30)} HEmat crate(s)`);
-    return parts.length ? `≈ ${parts.join(' / ')}` : '';
+  private renderLoading(): string {
+    const summary = loadingSummary(store.productionDocument.items, store.productionRunTransport, store.itemData);
+    const isFactory = store.productionRunSource === 'factory';
+    const isTruck = store.productionRunTransport === 'truck';
+    const unit = isTruck ? 'slots' : 'crates';
+    const over = summary.used > summary.capacity;
+    const deposit = isTruck && over ? truckPredeposit(summary.totals) : null;
+    return `<div class="p-4" id="tl-loading-summary">
+      <h3 class="text-sm font-medium mb-3">Materials to load</h3>
+      <div aria-live="polite">
+        ${MATERIAL_KEYS.filter(material => summary.totals[material] > 0).map(material => {
+          const metadata = MATERIALS[material];
+          const icon = store.itemData.find(item => item.itemName === metadata.name)?.iconFilename ?? metadata.iconFilename;
+          return `<div class="flex items-center gap-2 py-2 border-b border-gray-700" data-loading-material="${material}">
+            <img src="${iconAssetUrl(icon, BASE_URL)}" alt="" class="w-7 h-7 object-contain shrink-0">
+            <span class="text-sm">${metadata.label}</span>
+            <div class="ml-auto text-right tabular-nums">
+              ${!isFactory && !isTruck ? `
+                <div class="text-sm font-semibold">${summary.loads[material]} ${summary.loads[material] === 1 ? 'crate' : 'crates'}</div>
+                <div class="text-xs text-gray-400" data-material-total>${summary.totals[material].toLocaleString('en-GB')} units</div>
+              ` : `
+                <div class="text-sm" data-material-total>${summary.totals[material].toLocaleString('en-GB')}</div>
+                <div class="text-xs text-gray-400">${summary.loads[material]} ${summary.loads[material] === 1 ? 'stack' : 'stacks'}</div>
+              `}
+            </div>
+          </div>`;
+        }).join('') || '<div class="text-xs text-gray-500 py-2">No production orders yet.</div>'}
+        <div class="flex justify-between gap-2 text-sm pt-3">
+          <span>${isTruck ? 'Total truck slots' : 'Total crates'}</span>
+          <div class="flex items-center gap-2 ${!isTruck && over ? 'text-amber-300' : ''}">
+            <strong id="tl-total-load" data-unit="${unit}" class="tabular-nums">${summary.used}</strong>
+          </div>
+        </div>
+      </div>
+      <details id="tl-transport-details" ${this.transportOpen ? 'open' : ''} class="mt-4 pt-3 border-t border-gray-700">
+        <summary class="text-xs text-blue-300 hover:text-blue-200 cursor-pointer">Check transport capacity</summary>
+        ${isFactory ? '<div class="text-xs text-gray-300 mt-3">Standard Truck</div>' : `<label class="sr-only" for="tl-transport">Transport</label>
+        <select id="tl-transport" class="w-full bg-gray-900 border border-gray-600 rounded px-2 py-2 text-xs mt-3">
+          <option value="container" ${store.productionRunTransport === 'container' ? 'selected' : ''}>Flatbed + Shipping Container</option>
+          <option value="truck" ${store.productionRunTransport === 'truck' ? 'selected' : ''}>Standard Truck</option>
+        </select>`}
+        <div class="flex justify-between gap-2 text-xs mt-3 text-gray-400">
+          <span>${store.productionRunTransport === 'truck' ? 'Truck inventory' : 'Container capacity'}</span>
+          <span id="tl-transport-capacity" class="text-gray-200 tabular-nums">${summary.used} / ${summary.capacity} ${unit}</span>
+        </div>
+        <div role="progressbar" aria-label="Transport capacity used" aria-valuemin="0" aria-valuemax="${summary.capacity}"
+          aria-valuenow="${Math.min(summary.used, summary.capacity)}" aria-valuetext="${summary.used} of ${summary.capacity} ${unit}"
+          class="h-1.5 rounded-full bg-gray-700 overflow-hidden mt-2">
+          <div class="h-full rounded-full ${over ? 'bg-amber-400' : 'bg-blue-400'}" style="width:${Math.min(100, summary.used / summary.capacity * 100)}%"></div>
+        </div>
+        <p id="tl-transport-status" aria-live="polite" class="text-xs mt-2 ${over ? 'text-amber-300' : 'text-gray-400'}">
+          ${over ? `${summary.used - summary.capacity} ${summary.used - summary.capacity === 1 ? isTruck ? 'slot' : 'crate' : unit} over capacity` : `Fits · ${summary.capacity - summary.used} ${unit} available`}
+        </p>
+        ${deposit ? `<p id="tl-predeposit" class="text-xs text-amber-300 mt-2">Deposit ${MATERIAL_KEYS.filter(material => deposit[material] > 0).map(material => `${deposit[material].toLocaleString('en-GB')} ${MATERIALS[material].label}`).join(' + ')} in the ${isFactory ? 'Factory' : 'MPF'} inventory beforehand so the remaining load fits in your truck.</p>` : ''}
+        ${store.productionRunTransport === 'truck' ? `<div class="text-xs text-gray-500 mt-2">${MATERIAL_KEYS.filter(material => summary.loads[material]).map(material => `${summary.loads[material]} ${MATERIALS[material].label} ${summary.loads[material] === 1 ? 'stack' : 'stacks'}`).join(' · ')}<br>100 loose materials per stack · 15 slots</div>` : ''}
+      </details>
+    </div>`;
   }
 
   private attachEvents(): void {
     if (!this.container) return;
+    const workspace = store.productionWorkspace;
+
+    const selectWorkspace = (target: ProductionWorkspace) => {
+      store.setProductionWorkspace(target);
+      this.container?.querySelector<HTMLButtonElement>(`#tl-workspace-${target}`)?.focus();
+    };
+    this.container.querySelectorAll<HTMLButtonElement>('[data-workspace]').forEach(button => {
+      button.addEventListener('click', () => selectWorkspace(button.dataset.workspace as ProductionWorkspace));
+      button.addEventListener('keydown', event => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        selectWorkspace(event.key === 'Home' ? 'todolist' : event.key === 'End' ? 'run' : workspace === 'todolist' ? 'run' : 'todolist');
+      });
+    });
+    this.container.querySelectorAll<HTMLButtonElement>('[data-production-source]').forEach(button => {
+      button.addEventListener('click', () => {
+        const source = button.dataset.productionSource as ProductionSource;
+        store.setTodoListProductionSource(source, workspace);
+        this.container?.querySelector<HTMLButtonElement>(`[data-production-source="${source}"]`)?.focus();
+      });
+    });
+    const transportDetails = this.container.querySelector<HTMLDetailsElement>('#tl-transport-details');
+    transportDetails?.addEventListener('toggle', () => {
+      if (transportDetails.isConnected) this.transportOpen = transportDetails.open;
+    });
+    const transport = this.container.querySelector<HTMLSelectElement>('#tl-transport');
+    transport?.addEventListener('change', () => {
+      this.transportOpen = true;
+      store.setProductionRunTransport(transport.value as LoadingTransport);
+      this.container?.querySelector<HTMLSelectElement>('#tl-transport')?.focus();
+    });
 
     // Header controls
     const titleInput = this.container.querySelector('#tl-title') as HTMLInputElement | null;
-    titleInput?.addEventListener('change', () => store.setTodoListTitle(titleInput.value));
-    titleInput?.addEventListener('blur', () => store.setTodoListTitle(titleInput.value));
+    const commitTitle = () => {
+      if (titleInput && titleInput.value !== store.getProductionDocument(workspace).title) {
+        store.setTodoListTitle(titleInput.value, workspace);
+      }
+    };
+    titleInput?.addEventListener('change', commitTitle);
+    titleInput?.addEventListener('blur', commitTitle);
 
     const autoDate = this.container.querySelector('#tl-autodate') as HTMLInputElement | null;
-    autoDate?.addEventListener('change', () => store.setTodoListAutoDate(autoDate.checked));
-
-    const faction = this.container.querySelector('#tl-faction') as HTMLSelectElement | null;
-    faction?.addEventListener('change', () => store.setTodoListFaction(faction.value as FactionFilter));
+    autoDate?.addEventListener('change', () => store.setTodoListAutoDate(autoDate.checked, workspace));
 
     // Item rows: count + delete + drag reorder
     let dragSrcId: string | null = null;
@@ -443,13 +540,39 @@ export class TodoListView {
       const id = liEl.dataset.itemId!;
       const category = liEl.dataset.category!;
 
+      const crateInput = li.querySelector<HTMLInputElement>('[data-action="set-crates"]');
+      const updateCrates = (value: number, focusAction?: string) => {
+        const item = store.getProductionDocument(workspace).items.find(item => item.id === id);
+        if (!item || !Number.isFinite(value)) return;
+        const crates = orderCrateCount({ ...item, cratesPerOrder: value });
+        if (crates !== orderCrateCount(item)) store.setTodoListCratesPerOrder(id, crates, workspace);
+        const row = this.container?.querySelector<HTMLElement>(`[data-item-id="${id}"]`);
+        const input = row?.querySelector<HTMLInputElement>('[data-action="set-crates"]');
+        if (input) input.value = String(crates);
+        if (focusAction) {
+          const control = row?.querySelector<HTMLButtonElement | HTMLInputElement>(`[data-action="${focusAction}"]`);
+          if (control && !control.disabled) control.focus(); else input?.focus();
+        }
+      };
+      crateInput?.addEventListener('input', () => updateCrates(crateInput.valueAsNumber, 'set-crates'));
+      crateInput?.addEventListener('change', () => {
+        const item = store.getProductionDocument(workspace).items.find(item => item.id === id);
+        if (item) updateCrates(Number.isFinite(crateInput.valueAsNumber) ? crateInput.valueAsNumber : orderCrateCount(item));
+      });
+      for (const [action, delta] of [['decrease-crates', -1], ['increase-crates', 1]] as const) {
+        li.querySelector(`[data-action="${action}"]`)?.addEventListener('click', () => {
+          const item = store.getProductionDocument(workspace).items.find(item => item.id === id);
+          if (item) updateCrates(orderCrateCount(item) + delta, action);
+        });
+      }
+
       const countInput = li.querySelector('input[data-action="set-count"]') as HTMLInputElement | null;
       countInput?.addEventListener('change', () => {
         const v = parseInt(countInput.value, 10);
-        if (Number.isFinite(v) && v >= 1) store.setTodoListOrderCount(id, v);
+        if (Number.isFinite(v) && v >= 1) store.setTodoListOrderCount(id, v, workspace);
       });
       li.querySelector('[data-action="delete"]')?.addEventListener('click', () => {
-        store.removeTodoListItem(id);
+        store.removeTodoListItem(id, workspace);
       });
 
       // Drag to reorder within the same category
@@ -492,7 +615,7 @@ export class TodoListView {
         if (!dragSrcId || dragSrcCategory !== category) return;
         e.preventDefault();
         e.stopPropagation();
-        const items = store.todolist.items.filter(i => i.category === category);
+        const items = store.productionDocument.items.filter(i => i.category === category);
         const orderedIds = items.map(i => i.id);
         const srcIndex = orderedIds.indexOf(dragSrcId);
         const dstIndex = orderedIds.indexOf(id);
@@ -505,7 +628,7 @@ export class TodoListView {
         orderedIds.splice(srcIndex, 1);
         const newDstIndex = orderedIds.indexOf(id);
         orderedIds.splice(insertBefore ? newDstIndex : newDstIndex + 1, 0, dragSrcId);
-        store.reorderTodoListItems(category, orderedIds);
+        store.reorderTodoListItems(category, orderedIds, workspace);
         clearDropIndicators();
       });
     });
@@ -550,9 +673,9 @@ export class TodoListView {
         try {
           const payload = JSON.parse(data) as { filename?: string; displayName?: string };
           if (!payload.filename) return;
-          const result = store.addTodoListItemFromIcon(payload.filename);
+          const result = store.addTodoListItemFromIcon(payload.filename, workspace);
           if (result === 'not-mpf') {
-            showToast(`"${payload.displayName ?? payload.filename}" is not MPF-craftable.`, { type: 'error' });
+            showToast(`"${payload.displayName ?? payload.filename}" cannot be produced in ${store.productionDocument.productionSource === 'factory' ? 'a Factory' : 'an MPF'}.`, { type: 'error' });
           } else if (result === 'wrong-faction') {
             showToast(`"${payload.displayName ?? payload.filename}" belongs to the opposing faction.`, { type: 'error' });
           }
@@ -588,8 +711,8 @@ export class TodoListView {
           autoresize();
           if (previewEl) {
             const tlSnapshot = {
-              ...store.todolist,
-              textBlocks: store.todolist.textBlocks.map(b =>
+              ...store.productionDocument,
+              textBlocks: store.productionDocument.textBlocks.map(b =>
                 b.id === id ? { ...b, content: ta.value } : b
               ),
             };

@@ -2,8 +2,9 @@ import {
   TodoList,
   TodoListItem,
   MpfDataEntry,
-  MpfCategory,
-  MPF_CATEGORY_LABELS,
+  TodoCategory,
+  TodoProductionEntry,
+  TODO_CATEGORY_LABELS,
   TextBlock,
   TextAnchor,
   generateId,
@@ -19,9 +20,9 @@ function normalize(s: string): string {
   return normalizeGameName(s).toLowerCase();
 }
 
-function buildCategoryMap(): Map<string, MpfCategory> {
-  const m = new Map<string, MpfCategory>();
-  for (const [cat, label] of Object.entries(MPF_CATEGORY_LABELS) as [MpfCategory, string][]) {
+function buildCategoryMap(): Map<string, TodoCategory> {
+  const m = new Map<string, TodoCategory>();
+  for (const [cat, label] of Object.entries(TODO_CATEGORY_LABELS) as [TodoCategory, string][]) {
     m.set(normalize(label), cat);
   }
   return m;
@@ -32,6 +33,7 @@ const TITLE_RE = /^__\*\*(.+?)\*\*__\s*$/;
 const ITEM_PREFIX_RE = /^(?:[\u{1F1E6}-\u{1F1FF}]|[A-Za-z])(?:・|-)\s*/u;
 const ORDER_COUNT_RE = /\(x(\d+)\)\s*$/i;
 const DATE_SUFFIX_RE = /\s+(\d{2}\/\d{2})\s*$/;
+const PRODUCTION_RE = /\[(Factory|MPF):\s*(\d+)\s+crates\/order\]/i;
 
 /**
  * Extract category text from various markdown formatting patterns:
@@ -82,13 +84,16 @@ function convertEmojiNames(text: string): string {
  * Parse a Discord-formatted todolist text back into a TodoList structure.
  * Costs are ignored (recomputed from mpfData). Faction is not deduced.
  */
-export function parseTodoList(raw: string, mpfData: MpfDataEntry[]): ParseTodoListResult {
+export function parseTodoList(raw: string, mpfData: MpfDataEntry[], factoryData: TodoProductionEntry[] = []): ParseTodoListResult {
   const warnings: string[] = [];
   const lines = raw.split(/\r?\n/);
   const categoryMap = buildCategoryMap();
 
   // Sort canonical names and explicit aliases together, longest first.
-  const sortedNames = mpfData.flatMap(entry =>
+  const entries: TodoProductionEntry[] = [
+    ...mpfData.map(entry => ({ ...entry, category: entry.itemCategory })), ...factoryData,
+  ];
+  const sortedNames = entries.flatMap(entry =>
     [entry.itemName, ...(entry.aliases ?? [])].map(name => ({ entry, name: normalize(name) })),
   ).sort((a, b) => b.name.length - a.name.length);
 
@@ -99,7 +104,7 @@ export function parseTodoList(raw: string, mpfData: MpfDataEntry[]): ParseTodoLi
     textBlocks: [],
   };
 
-  let currentCategory: MpfCategory | null = null;
+  let currentCategory: TodoCategory | null = null;
   let textBuffer: string[] = [];
   let textAnchor: TextAnchor = { kind: 'top' };
   let titleSeen = false;
@@ -122,9 +127,10 @@ export function parseTodoList(raw: string, mpfData: MpfDataEntry[]): ParseTodoLi
     });
   };
 
-  const findEntry = (body: string): MpfDataEntry | undefined => {
+  const findEntry = (body: string, source: 'mpf' | 'factory'): TodoProductionEntry | undefined => {
     const normBody = normalize(body);
-    return sortedNames.find(({ name: n }) => {
+    return sortedNames.find(({ name: n, entry }) => {
+      if ((entry.productionSource ?? 'mpf') !== source) return false;
       if (normBody === n) return true;
       // Allow trailing separators after the name (space, hyphen, em-dash, parenthesis).
       return (
@@ -191,7 +197,15 @@ export function parseTodoList(raw: string, mpfData: MpfDataEntry[]): ParseTodoLi
       body = body.replace(ORDER_COUNT_RE, '').replace(/\s+$/, '');
     }
 
-    const entry = findEntry(body);
+    const production = body.match(PRODUCTION_RE);
+    const source = production?.[1].toLowerCase() === 'factory' ? 'factory' : 'mpf';
+    const crates = production ? Number(production[2]) : undefined;
+    const entry = findEntry(body, source);
+
+    if (entry && crates !== undefined && (crates < (source === 'factory' ? 1 : 3) || crates > entry.maxCrates)) {
+      warnings.push(`Invalid ${source === 'factory' ? 'Factory' : 'MPF'} crate count: "${body}"`);
+      continue;
+    }
 
     if (entry && currentCategory) {
       flushTextBuffer();
@@ -199,7 +213,7 @@ export function parseTodoList(raw: string, mpfData: MpfDataEntry[]): ParseTodoLi
         id: generateId(),
         iconFilename: entry.iconFilename,
         itemName: entry.itemName,
-        category: entry.itemCategory,
+        category: entry.category,
         faction: entry.faction,
         cost: entry.cost,
         maxCrates: entry.maxCrates,
@@ -207,6 +221,7 @@ export function parseTodoList(raw: string, mpfData: MpfDataEntry[]): ParseTodoLi
         crateBonus: entry.crateBonus,
         subtypeFilename: entry.subtypeFilename,
         orderCount,
+        ...(production ? { productionSource: source, cratesPerOrder: crates } : {}),
       });
       continue;
     }

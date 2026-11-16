@@ -1,5 +1,40 @@
 @import "tailwindcss";
 
+.production-crate-input {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.production-crate-input::-webkit-inner-spin-button,
+.production-crate-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Keep the production list usable when its catalogue cannot sit beside it. */
+@media (max-width: 767px) {
+  .production-planner #toolbar,
+  .production-planner #toolbar > div {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .production-planner > main {
+    flex-direction: column;
+  }
+
+  .production-planner #sidebar {
+    width: 100%;
+    max-height: 16rem;
+    border-right: 0;
+    border-bottom: 1px solid #374151;
+  }
+
+  .production-planner #icon-grid {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+}
+
 [data-quantity-tooltip], [data-production-tooltip] {
   cursor: help;
 }
