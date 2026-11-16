@@ -1,12 +1,14 @@
 {
   "name": "11e-template-builder",
-  "version": "2.0.0",
+  "version": "2.2.0",
   "packageManager": "pnpm@12.5.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "pnpm run build:mpf && tsc && vite build",
     "build:mpf": "node --experimental-strip-types scripts/buildMpfData.ts",
+    "data:preview": "node --experimental-strip-types scripts/buildWikiCatalog.ts",
+    "data:sync": "node --experimental-strip-types scripts/syncWikiData.ts",
     "preview": "vite preview",
     "test": "NODE_OPTIONS='--experimental-vm-modules' jest --silent",
     "test:watch": "NODE_OPTIONS='--experimental-vm-modules' jest --watch --silent",
@@ -15,24 +17,24 @@
   },
   "devDependencies": {
     "@interactjs/types": "^1.10.28",
-    "@swc/core": "^1.16.18",
+    "@swc/core": "^1.16.22",
     "@swc/jest": "^0.2.39",
-    "@tailwindcss/vite": "^4.3.3",
+    "@tailwindcss/vite": "^4.3.5",
     "@types/jest": "^30.0.0",
-    "@types/node": "^26.6.5",
+    "@types/node": "^26.6.6",
     "@types/sortablejs": "^1.15.9",
-    "autoprefixer": "^10.6.1",
+    "autoprefixer": "^10.6.2",
     "jest": "^30.5.2",
     "jest-environment-jsdom": "^30.5.2",
     "jest-junit": "^17.0.0",
     "jsdom": "^29.1.1",
-    "postcss": "^8.5.30",
-    "tailwindcss": "^4.3.3",
+    "postcss": "^8.5.33",
+    "tailwindcss": "^4.3.5",
     "typescript": "^7.0.2",
-    "vite": "^8.3.4"
+    "vite": "^8.3.8"
   },
   "dependencies": {
-    "html2canvas-pro": "^2.5.2",
+    "html2canvas-pro": "^2.6.4",
     "interactjs": "^1.10.28",
     "sortablejs": "^1.15.7"
   }

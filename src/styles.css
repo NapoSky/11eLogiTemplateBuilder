@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+[data-quantity-tooltip], [data-production-tooltip] {
+  cursor: help;
+}
+
+[data-quantity-tooltip]:focus-visible, [data-production-tooltip]:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 /* SortableJS classes - ne peuvent pas avoir d'espaces */
 .sortable-ghost {
   opacity: 0.4;

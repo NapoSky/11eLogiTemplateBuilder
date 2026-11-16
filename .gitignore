@@ -8,6 +8,9 @@ yarn.lock
 # Build output
 dist/
 
+# Offline wiki comparison output (source snapshot remains versioned)
+data/wiki-preview/
+
 # Vite
 .vite/
 

@@ -1,0 +1,150 @@
+{
+  "capturedOn": "2026-11-16",
+  "purpose": "Historical inputs captured before wiki migration; existing labels and quantity semantics are intentionally retained as fixtures, not approved canonical identities.",
+  "iconMapping": {
+    "UI/VehicleIcons/MortarTankVehicleIcon.png": "85K-b \"Falchion\" Mortar Tank",
+    "UI/VehicleIcons/ColonialMediumTankIcon.png": "Falchion Cruiser Tank",
+    "UI/ItemIcons/RifleCItemIcon.png": "Argenti r.II Rifle",
+    "UI/ItemIcons/ATMortarItemIcon.png": "Bonesaw MK.3",
+    "UI/ItemIcons/MortarAmmoIconFlare.png": "Flare Mortar Shell",
+    "UI/ItemIcons/AssaultRifleHeavyCItemIcon.png": "\"Dusk\" ce.III"
+  },
+  "mpfData": [
+    {
+      "iconFilename": "UI/ItemIcons/ATMortarItemIcon.png",
+      "itemName": "Bonesaw MK.3",
+      "itemCategory": "heavy_arms",
+      "faction": [
+        "neutral",
+        "warden"
+      ],
+      "cost": {
+        "bmat": 100,
+        "rmat": 25
+      },
+      "numberProduced": 5,
+      "maxCrates": 9
+    },
+    {
+      "iconFilename": "UI/ItemIcons/MortarAmmoIconFlare.png",
+      "itemName": "Mortar Flare Shell",
+      "itemCategory": "heavy_arms",
+      "faction": [
+        "neutral",
+        "colonial",
+        "warden"
+      ],
+      "cost": {
+        "bmat": 60,
+        "emat": 15
+      },
+      "numberProduced": 15,
+      "maxCrates": 9
+    },
+    {
+      "iconFilename": "UI/ItemIcons/AssaultRifleHeavyCItemIcon.png",
+      "itemName": "\"Dusk\" ce.III",
+      "itemCategory": "small_arms",
+      "faction": [
+        "neutral",
+        "colonial"
+      ],
+      "cost": {
+        "rmat": 15
+      },
+      "numberProduced": 20,
+      "maxCrates": 9
+    },
+    {
+      "iconFilename": "UI/ItemIcons/RifleCItemIcon.png",
+      "itemName": "Argenti r.II Rifle",
+      "itemCategory": "small_arms",
+      "faction": [
+        "neutral",
+        "colonial"
+      ],
+      "cost": {
+        "bmat": 100
+      },
+      "numberProduced": 20,
+      "maxCrates": 9
+    },
+    {
+      "iconFilename": "UI/VehicleIcons/MortarTankVehicleIcon.png",
+      "itemName": "85K-b \"Falchion\"",
+      "itemCategory": "vehicles",
+      "faction": [
+        "neutral",
+        "colonial"
+      ],
+      "cost": {
+        "rmat": 405
+      },
+      "numberProduced": 5,
+      "crateBonus": 2,
+      "maxCrates": 5
+    }
+  ],
+  "template": {
+    "sections": [
+      {
+        "id": "legacy-section",
+        "title": "Legacy mixed stock",
+        "color": "#3b82f6",
+        "x": 20,
+        "y": 30,
+        "width": 500,
+        "height": 220,
+        "icons": [
+          {
+            "id": "legacy-icon-0",
+            "iconId": "MortarTankVehicleIcon.png",
+            "filename": "MortarTankVehicleIcon.png",
+            "path": "/assets/icons/UI/VehicleIcons/MortarTankVehicleIcon.png",
+            "quantity": 20,
+            "gridRow": 0,
+            "gridCol": 0
+          },
+          {
+            "id": "legacy-icon-1",
+            "iconId": "MortarTankVehicleIcon.png",
+            "filename": "MortarTankVehicleIcon.png",
+            "path": "/assets/icons/UI/VehicleIcons/MortarTankVehicleIcon.png",
+            "quantity": 5,
+            "gridRow": 0,
+            "gridCol": 1,
+            "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
+          },
+          {
+            "id": "legacy-icon-2",
+            "iconId": "RifleCItemIcon.png",
+            "filename": "RifleCItemIcon.png",
+            "path": "/assets/icons/UI/ItemIcons/RifleCItemIcon.png",
+            "quantity": 0,
+            "gridRow": 0,
+            "gridCol": 2
+          },
+          {
+            "id": "legacy-icon-3",
+            "iconId": "RifleCItemIcon.png",
+            "filename": "RifleCItemIcon.png",
+            "path": "/assets/icons/UI/ItemIcons/RifleCItemIcon.png",
+            "quantity": -1,
+            "gridRow": 0,
+            "gridCol": 3
+          },
+          {
+            "id": "legacy-icon-4",
+            "iconId": "RifleCItemIcon.png",
+            "filename": "RifleCItemIcon.png",
+            "path": "/assets/icons/UI/ItemIcons/RifleCItemIcon.png",
+            "quantity": 1,
+            "gridRow": 0,
+            "gridCol": 4
+          }
+        ]
+      }
+    ],
+    "iconScale": "medium"
+  }
+}

@@ -1,0 +1,74 @@
+name: Wiki data update
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '37 5 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wiki-data-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Collect and validate wiki changes
+        run: pnpm run data:sync
+      - name: Generate compatible runtime datasets
+        run: pnpm run build:mpf
+      - name: Detect a data change
+        id: diff
+        run: |
+          if git diff --quiet -- scripts/data/wiki.snapshot.json public/mpfData.json public/iconMapping.json public/itemData.json; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Validate proposed data
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          pnpm run test:ci
+          pnpm run build
+          pnpm run data:preview
+      - name: Upload comparison for review
+        if: steps.diff.outputs.changed == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: wiki-data-comparison
+          path: data/wiki-preview/comparison.json
+          retention-days: 30
+      - name: Create or update the data pull request
+        if: steps.diff.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v8
+        with:
+          branch: chore/wiki-data-update
+          title: 'chore(data): update Foxhole wiki snapshot'
+          commit-message: 'chore(data): update Foxhole wiki snapshot'
+          add-paths: |
+            scripts/data/wiki.snapshot.json
+            public/mpfData.json
+            public/iconMapping.json
+            public/itemData.json
+          body: |
+            Refresh the accepted Foxhole Wiki Cargo snapshot and regenerate the compatible MPF, icon and item datasets.
+
+            When data changes, this workflow runs the test suite and production build before proposing the update. The comparison artifact lists image bindings that need review and differing labels. Saved template calculations are selected by their quantity-mode marker; historical files retain their previous calculation.
+
+            Data provenance: https://foxhole.wiki.gg (CC BY-NC-SA 4.0).

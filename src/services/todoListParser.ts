@@ -8,6 +8,7 @@ import {
   TextAnchor,
   generateId,
 } from '../types';
+import { normalizeGameName } from './gameData';
 
 export interface ParseTodoListResult {
   result: Omit<TodoList, 'faction'>;
@@ -15,7 +16,7 @@ export interface ParseTodoListResult {
 }
 
 function normalize(s: string): string {
-  return s.toLowerCase().replace(/\s+/g, ' ').trim();
+  return normalizeGameName(s).toLowerCase();
 }
 
 function buildCategoryMap(): Map<string, MpfCategory> {
@@ -86,10 +87,10 @@ export function parseTodoList(raw: string, mpfData: MpfDataEntry[]): ParseTodoLi
   const lines = raw.split(/\r?\n/);
   const categoryMap = buildCategoryMap();
 
-  // Sort longest names first so prefix matching prefers more specific entries.
-  const sortedEntries = [...mpfData].sort(
-    (a, b) => b.itemName.length - a.itemName.length
-  );
+  // Sort canonical names and explicit aliases together, longest first.
+  const sortedNames = mpfData.flatMap(entry =>
+    [entry.itemName, ...(entry.aliases ?? [])].map(name => ({ entry, name: normalize(name) })),
+  ).sort((a, b) => b.name.length - a.name.length);
 
   const tl: Omit<TodoList, 'faction'> = {
     title: 'TODOLIST',
@@ -123,8 +124,7 @@ export function parseTodoList(raw: string, mpfData: MpfDataEntry[]): ParseTodoLi
 
   const findEntry = (body: string): MpfDataEntry | undefined => {
     const normBody = normalize(body);
-    return sortedEntries.find(e => {
-      const n = normalize(e.itemName);
+    return sortedNames.find(({ name: n }) => {
       if (normBody === n) return true;
       // Allow trailing separators after the name (space, hyphen, em-dash, parenthesis).
       return (
@@ -133,7 +133,7 @@ export function parseTodoList(raw: string, mpfData: MpfDataEntry[]): ParseTodoLi
         normBody.startsWith(n + '–') ||
         normBody.startsWith(n + '(')
       );
-    });
+    })?.entry;
   };
 
   for (const rawLine of lines) {

@@ -1,5 +1,7 @@
 import { Icon, Section, Template, IconCategory, generateId, Subtype, SectionIcon, IconScale, ICON_SCALES, ViewMode, MpfDataEntry, TodoList, TodoListItem, FactionFilter, TextBlock, TextAnchor, TemplateBackground, BackgroundPreset, DEFAULT_BACKGROUND, isValidBackground } from './types';
 import { getBaseUrl } from './config';
+import type { ItemDataEntry, QuantityMode } from './services/gameData';
+import { canonicalIconFilename, migrateSectionIcon, migrateTodoListItem } from './services/iconPaths';
 
 export type { IconScale };
 export { ICON_SCALES };
@@ -37,6 +39,8 @@ class Store {
   // TodoList builder state
   viewMode: ViewMode = 'template';
   mpfData: MpfDataEntry[] = [];
+  itemData: ItemDataEntry[] = [];
+  quantityMode: QuantityMode = 'legacy';
   todolist: TodoList = defaultTodoList();
 
   // Template faction filter (persisted)
@@ -303,6 +307,17 @@ class Store {
     this.emit();
   }
 
+  setItemData(data: ItemDataEntry[]): void {
+    this.itemData = data;
+    this.emit();
+  }
+
+  useCrateEquivalentQuantities(): void {
+    this.quantityMode = 'crate-equivalents-v1';
+    this.save();
+    this.emit();
+  }
+
   setTodoListTitle(title: string): void {
     this.todolist = { ...this.todolist, title };
     this.saveTodoList();
@@ -329,13 +344,13 @@ class Store {
 
   /** Returns 'added' on success, 'not-mpf' if not craftable, 'wrong-faction' if blocked by current faction filter. */
   addTodoListItemFromIcon(iconFilename: string): 'added' | 'not-mpf' | 'wrong-faction' {
-    const entry = this.mpfData.find(e => e.iconFilename === iconFilename);
+    const entry = this.mpfData.find(e => canonicalIconFilename(e.iconFilename) === canonicalIconFilename(iconFilename));
     if (!entry) return 'not-mpf';
     const f = this.todolist.faction;
     if (f !== 'all' && !entry.faction.includes(f)) {
       return 'wrong-faction';
     }
-    const existing = this.todolist.items.find(i => i.iconFilename === iconFilename);
+    const existing = this.todolist.items.find(i => canonicalIconFilename(i.iconFilename) === canonicalIconFilename(iconFilename));
     if (existing) {
       this.setTodoListOrderCount(existing.id, existing.orderCount + 1);
       return 'added';
@@ -405,7 +420,7 @@ class Store {
       ...this.todolist,
       title: tl.title,
       autoDate: tl.autoDate,
-      items: tl.items,
+      items: tl.items.map(migrateTodoListItem),
       textBlocks: tl.textBlocks,
     };
     this.saveTodoList();
@@ -440,6 +455,7 @@ class Store {
   }
 
   private saveTodoList(): void {
+    this.todolist = { ...this.todolist, items: this.todolist.items.map(migrateTodoListItem) };
     localStorage.setItem(TODOLIST_STORAGE_KEY, JSON.stringify(this.todolist));
   }
 
@@ -451,7 +467,7 @@ class Store {
         this.todolist = {
           ...defaultTodoList(),
           ...parsed,
-          items: parsed.items ?? [],
+          items: (parsed.items ?? []).map(migrateTodoListItem),
           textBlocks: parsed.textBlocks ?? [],
         };
       }
@@ -466,7 +482,9 @@ class Store {
 
   // Filtered icons getter
   get filteredIcons(): Icon[] {
-    let filtered = this.icons;
+    // Keep alternate facilities artwork addressable for saved documents and the future module.
+    const facilitiesOnly = new Set(this.itemData.filter(item => item.iconUsage === 'facilities').map(item => item.iconFilename));
+    let filtered = this.icons.filter(icon => !facilitiesOnly.has(icon.filename));
     
     if (this.selectedCategory !== 'Toutes') {
       filtered = filtered.filter(i => i.category === this.selectedCategory);
@@ -496,9 +514,10 @@ class Store {
     if (this.viewMode === 'template' && this.templateFaction !== 'all') {
       const f = this.templateFaction;
       filtered = filtered.filter(i => {
+        const metadata = this.itemData.find(e => e.iconFilename === i.filename);
+        if (metadata?.faction) return metadata.faction.includes(f);
         const entry = this.mpfData.find(e => e.iconFilename === i.filename);
-        if (!entry) return true; // no mpfData → always show
-        return entry.faction.includes(f);
+        return !entry || entry.faction.includes(f);
       });
     }
     
@@ -507,7 +526,7 @@ class Store {
   
   // Persistence
   save(): void {
-    const template: Template = { sections: this.sections };
+    const template: Template = { sections: this.sections, ...(this.quantityMode !== 'legacy' ? { quantityMode: this.quantityMode } : {}) };
     localStorage.setItem('template', JSON.stringify(template));
   }  
   load(): void {
@@ -541,12 +560,15 @@ class Store {
       const data = localStorage.getItem('template');
       if (data) {
         const template: Template = JSON.parse(data);
+        this.quantityMode = template.quantityMode === 'crate-equivalents-v1' ? 'crate-equivalents-v1' : 'legacy';
         // Migrer les anciennes icônes sans gridRow/gridCol
         this.sections = (template.sections || []).map(section => ({
           ...section,
           icons: this.migrateIcons(section.icons, section.width)
         }));
         this.emit();
+      } else {
+        this.quantityMode = 'crate-equivalents-v1';
       }
       this.loadTodoList();
     } catch (e) {
@@ -561,7 +583,8 @@ class Store {
     const maxCols = Math.max(1, Math.floor((sectionWidth - PADDING * 2) / CELL_SIZE));
     const occupied = new Set<string>();
     
-    return icons.map((icon, index) => {
+    return icons.map((original, index) => {
+      const icon = migrateSectionIcon(original, getBaseUrl());
       // Si l'icône a déjà des positions valides, la garder
       if (typeof icon.gridRow === 'number' && typeof icon.gridCol === 'number') {
         occupied.add(`${icon.gridRow},${icon.gridCol}`);
@@ -601,13 +624,16 @@ class Store {
           : icon.subtype
       }))
     }));
-    const template: Template = { sections: normalizedSections, iconScale: this.iconScale, background: this.background };
+    const template: Template = { sections: normalizedSections, iconScale: this.iconScale, background: this.background,
+      ...(this.quantityMode !== 'legacy' ? { quantityMode: this.quantityMode } : {}) };
     return JSON.stringify(template, null, 2);
   }
   
   importJSON(json: string): boolean {
     try {
       const template: Template = JSON.parse(json);
+      if (template.quantityMode !== undefined && template.quantityMode !== 'legacy' && template.quantityMode !== 'crate-equivalents-v1') return false;
+      this.quantityMode = template.quantityMode === 'crate-equivalents-v1' ? 'crate-equivalents-v1' : 'legacy';
       const baseUrl = getBaseUrl();
       // Restaurer la taille des icônes si présente dans le template
       const validScales: IconScale[] = ['small', 'medium', 'large', 'xlarge', 'xxlarge'];

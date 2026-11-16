@@ -1,0 +1,221 @@
+{
+  "schemaVersion": 1,
+  "description": "Explicit identity associations from the wiki audit; old labels of other vehicles are not treated as interchangeable aliases.",
+  "aliases": {
+    "250mm “Fury” Shell": [
+      "250mm \"Fury\" Shell"
+    ],
+    "250mm “Purity” Shell": [
+      "250mm \"Purity\" Shell"
+    ],
+    "“Molten Wind” v.II Flame Torch": [
+      "\"Molten Wind\" v.II Flame Torch"
+    ],
+    "“Typhon” ra.XII": [
+      "\"Typhon\" ra.XII"
+    ],
+    "AP⧸RPG": [
+      "AP/RPG"
+    ],
+    "ARC⧸RPG": [
+      "ARC/RPG"
+    ],
+    "Flare Mortar Shell": [
+      "Mortar Flare Shell"
+    ],
+    "Shrapnel Mortar Shell": [
+      "Mortar Shrapnel Shell"
+    ],
+    "50-500 “Thunderbolt” Cannon": [
+      "50-500 \"Thunderbolt\" Cannon"
+    ],
+    "DAE 1b-2 “Serra”": [
+      "DAE 1b-2 \"Serra\""
+    ],
+    "DAE 1o-3 “Polybolos”": [
+      "DAE 1o-3 \"Polybolos\""
+    ],
+    "DAE 5b “Zeal”": [
+      "DAE 5b \"Zeal\""
+    ],
+    "Leary Snare Trap 20": [
+      "Leary Snare Trap 127"
+    ],
+    "Material Pallet": [
+      "Material pallet"
+    ],
+    "“Dusk” ce.III": [
+      "\"Dusk\" ce.III"
+    ],
+    "“Lionclaw” mc.VIII": [
+      "\"Lionclaw\" mc.VIII"
+    ],
+    "“The Pitch Gun” mc.V": [
+      "\"The Pitch Gun\" mc. V"
+    ],
+    "No.2B Hawthorne": [
+      "No. 2B Hawthorne"
+    ],
+    "No.1 “The Liar” Submachine Gun": [
+      "No.1 \"The Liar\" Submachine Gun",
+      "No.1 \"The Liar\" Submachinegun"
+    ],
+    "03MM “Caster”": [
+      "03MM \"Caster\""
+    ],
+    "120-68 “Koronides” Field Gun": [
+      "120-68 \"Koronides\" Field Gun"
+    ],
+    "30-250 “Tisiphone” Field Cannon": [
+      "30-250 \"Tisiphone\" Field Cannon"
+    ],
+    "85K-b “Falchion”": [
+      "85K-b \"Falchion\""
+    ],
+    "86K-a “Bardiche”": [
+      "86K-a \"Bardiche\""
+    ],
+    "90T-v “Nemesis”": [
+      "90T-v \"Nemesis\""
+    ],
+    "AB-8 “Acheron”": [
+      "AB-8 \"Acheron\""
+    ],
+    "BMS - Universal Assembly Rig": [
+      "BMS - Universal Assembly Rig (Construction Vehicle)",
+      "BMS - Universal Assemly Rig"
+    ],
+    "Dunne Caravaner 2f": [
+      "Dunne Caravaner 2F"
+    ],
+    "G40 “Sagittarii”": [
+      "G40 \"Sagittarii\""
+    ],
+    "H-5 “Hatchet”": [
+      "H-5 \"Hatchet\"",
+      "H5 \"Hatchet\""
+    ],
+    "HA-1 “Sagaris”": [
+      "HA-1 \"Sagaris\""
+    ],
+    "HC-2 “Scorpion”": [
+      "HC-2 \"Scorpion\""
+    ],
+    "HH-a “Javelin”": [
+      "HH-a \"Javelin\""
+    ],
+    "K-81e “Sombre”": [
+      "K-81e \"Sombre\""
+    ],
+    "O'Brien V.110": [
+      "O'Brien v.110"
+    ],
+    "O'Brien V.190 Knave": [
+      "O'Brien v.190 Knave"
+    ],
+    "R-12 - “Salus” Ambulance": [
+      "r-12 - \"Salus\" Ambulance"
+    ],
+    "R-15 - “Chariot”": [
+      "R-15 - \"Chariot\""
+    ],
+    "R-5 “Atlas” Hauler": [
+      "R-5 \"Atlas\" Hauler"
+    ],
+    "RR-3 “Stolon” Tanker": [
+      "RR-3 \"Stolon\" Tanker."
+    ],
+    "T12 “Actaeon” Tankette": [
+      "T12 \"Actaeon\" Tankette"
+    ],
+    "T3 “Xiphos”": [
+      "T3 \"Xiphos\""
+    ],
+    "Type B - “Lucian”": [
+      "Type B - \"Lucian\""
+    ],
+    "Type C - “Charon”": [
+      "Type C - \"Charon\""
+    ],
+    "UV-05a “Argonaut”": [
+      "UV-05a \"Argonaut\""
+    ],
+    "E681-B Hullbreaker Mine": [
+      "E6881-B Hullbreaker Mine"
+    ],
+    "Shatter Missile": [
+      "Shatter Missle"
+    ],
+    "Neville Anti-Tank Rifle": [
+      "135 Neville Anti-Tank Rifle"
+    ],
+    "RPG": [
+      "R.P.G Shell"
+    ],
+    ".44 Mag": [
+      ".44"
+    ],
+    "9mm": [
+      "9mm SMG"
+    ],
+    "Naval Buoy": [
+      "Naval Bouy"
+    ]
+  },
+  "assetOverrides": {
+    "Textures/UI/ItemIcons/MortarAmmoIconFire.png": {
+      "pageId": 8191,
+      "kind": "item",
+      "name": "Incendiary Mortar Shell",
+      "reason": "Retained local mortar variant: MortarAmmoIcon.png with the incendiary marker, visually reviewed. The supplied pack has only the common mortar shell; Cargo names the incendiary image MortarAmmoIconFlame.png."
+    },
+    "Textures/UI/ItemIcons/FacilityOil1Icon.png": {
+      "pageId": 4016,
+      "kind": "item",
+      "name": "Heavy Oil",
+      "reason": "Visual comparison with File:HeavyOilIcon.png confirms the same triangular canister; Cargo codename FacilityOil1 independently confirms identity. Only local styling differs."
+    },
+    "Textures/UI/ItemIcons/FacilityOil2Icon.png": {
+      "pageId": 1192,
+      "kind": "item",
+      "name": "Enriched Oil",
+      "reason": "Visual comparison with File:EnrichedOilIcon.png confirms the same pump canister; Cargo codename FacilityOil2 independently confirms identity. Only local styling differs."
+    },
+    "Textures/UI/StructureIcons/FortGarrisonStationIcon.png": {
+      "pageId": 10170,
+      "kind": "structure",
+      "name": "Underground Fortress",
+      "reason": "Visual comparison confirms the fortress graphic, and the local UND.FORT label plus FortGarrisonStation codename identify the deployed structure. The Underground Fortress Parts wiki page explicitly documents that it incorrectly reuses this icon."
+    }
+  },
+  "assetAnnotations": {
+    "Textures/UI/ItemIcons/FacilityMaterials4Icon.png": {
+      "classification": "generic",
+      "displayName": "Assembly Materials",
+      "reason": "Visual comparison with AssemblyMaterials1Icon.png through AssemblyMaterials5Icon.png confirms the common sheet-metal base without their variant markers. User confirms it is generic; the historical IV label is retained only for legacy calculations. No grade or recipe is inferred."
+    },
+    "Textures/UI/ItemIcons/MetalBeamPlatformItemIcon.png": {
+      "classification": "retired",
+      "displayName": "Metal Beam Pallet (legacy)",
+      "reason": "Visual comparison confirms File:MetalBeamPlatformItemIcon.png. The Rare Materials wiki page documents that this pallet was removed in Update 1.50 and its old icon was reused until Rare Materials received a new icon in Update 1.66. It is not associated with current Rare Materials recipes."
+    }
+  },
+  "iconVariants": {
+    "Heavy Oil": {
+      "logistics": "Textures/UI/ItemIcons/FacilityOil1Icon.png",
+      "facilities": "Textures/UI/ItemIcons/Facilities/HeavyOilIcon.png"
+    },
+    "Enriched Oil": {
+      "logistics": "Textures/UI/ItemIcons/FacilityOil2Icon.png",
+      "facilities": "Textures/UI/ItemIcons/Facilities/EnrichedOilIcon.png"
+    },
+    "Rare Metal": {
+      "logistics": "Textures/UI/ItemIcons/RareMaterialsIcon.png",
+      "facilities": "Textures/UI/ItemIcons/Facilities/RareMaterialsIcon.png"
+    },
+    "Water": {
+      "logistics": "Textures/UI/ItemIcons/WaterIcon.png",
+      "facilities": "Textures/UI/ItemIcons/Facilities/WaterIcon.png"
+    }
+  }
+}

@@ -4,6 +4,7 @@ import { displayedCost } from '../services/mpfCalculator';
 import { renderTodoList } from '../services/todoListExporter';
 import { getBaseUrl } from '../config';
 import { showToast } from '../services/toast';
+import { iconAssetUrl } from '../services/iconPaths';
 
 const BASE_URL = getBaseUrl();
 
@@ -268,7 +269,7 @@ export class TodoListView {
         <span class="cursor-grab text-gray-500 hover:text-gray-300 select-none text-base leading-none px-0.5" title="Drag to reorder">⠿</span>
         <span class="text-lg select-none w-7 text-center">${letter}</span>
         <div class="relative w-8 h-8 shrink-0" title="${item.numberProduced} items/crate">
-          <img src="${BASE_URL}assets/icons/${item.iconFilename}" alt=""
+          <img src="${iconAssetUrl(item.iconFilename, BASE_URL)}" alt=""
                class="w-8 h-8 object-contain"
                onerror="this.style.visibility='hidden'" />
           ${item.subtypeFilename

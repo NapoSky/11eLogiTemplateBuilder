@@ -7,7 +7,7 @@ import { TodoListItem, MPF_CATEGORY_LABELS } from '../types';
  * Discord message in current_examples/TODOLIST_1.txt):
  *
  *   - Per crate within a single full order, applied to the *per-crate*
- *     base cost from foxhole.json:
+ *     base cost from the normalized MPF dataset:
  *       crate 1 → 10% off, crate 2 → 20% off, ..., crate 5+ → 50% off (cap).
  *   - Each crate cost is FLOORED to an integer.
  *   - Full-order cost = sum of all crates (9 for items, 5 for vehicles/shipables).

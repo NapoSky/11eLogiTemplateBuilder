@@ -1,5 +1,6 @@
 import { Icon, IconCategory, Subtype } from '../types';
 import { getBaseUrl } from '../config';
+import { iconAssetUrl } from './iconPaths';
 
 // Obtenir le base path pour les assets
 const BASE_URL = getBaseUrl();
@@ -58,12 +59,7 @@ function categorize(filename: string, lookup: Map<string, IconCategory>): IconCa
 
 // Extraire le chemin d'une icône (gère les sous-dossiers)
 function getIconPath(filename: string): string {
-  // Si le filename contient déjà un chemin (ex: VehicleIcons/xxx.png)
-  if (filename.includes('/')) {
-    return `${BASE_URL}assets/icons/${filename}`;
-  }
-  // Sinon, c'est une icône dans le dossier racine
-  return `${BASE_URL}assets/icons/${filename}`;
+  return iconAssetUrl(filename, BASE_URL);
 }
 
 export async function loadIcons(): Promise<Icon[]> {

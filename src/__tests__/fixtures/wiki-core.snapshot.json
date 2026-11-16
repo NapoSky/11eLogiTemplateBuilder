@@ -1,0 +1,365 @@
+{
+  "schemaVersion": 1,
+  "capturedOn": "2026-11-16",
+  "source": "https://foxhole.wiki.gg",
+  "license": "CC BY-NC-SA 4.0",
+  "description": "Selected raw fields from Cargo responses collected during the audit. No facilities chains or stockpile conversions are implemented. Values retain their original Cargo serialization.",
+  "manifest": {
+    "itemdata": {
+      "rowCount": 5
+    },
+    "vehicles": {
+      "rowCount": 6
+    },
+    "structures": {
+      "rowCount": 5
+    },
+    "Production": {
+      "rowCount": 13
+    }
+  },
+  "tables": {
+    "itemdata": [
+      {
+        "_pageID": "1556",
+        "_pageName": "7.92mm",
+        "name": "7.92mm",
+        "codename": "AssaultRifleAmmo",
+        "image": "AssaultRifleAmmoItemIcon.png",
+        "faction": "Both",
+        "crate amount": "30"
+      },
+      {
+        "_pageID": "3135",
+        "_pageName": "“Dusk” ce.III",
+        "name": "“Dusk” ce.III",
+        "codename": "AssaultRifleHeavyC",
+        "image": "AssaultRifleHeavyCItemIcon.png",
+        "faction": "Col",
+        "crate amount": "20"
+      },
+      {
+        "_pageID": "3608",
+        "_pageName": "Maintenance Supplies",
+        "name": "Maintenance Supplies",
+        "codename": "MaintenanceSupplies",
+        "image": "MaintenanceSuppliesIcon.png",
+        "faction": "Both",
+        "crate amount": "100"
+      },
+      {
+        "_pageID": "8213",
+        "_pageName": "KRF1-750 Dragonfly",
+        "name": "KRF1-750 Dragonfly",
+        "codename": "ShotgunC",
+        "image": "ShotgunCItemIcon.png",
+        "faction": "Col",
+        "crate amount": "15"
+      },
+      {
+        "_pageID": "12562",
+        "_pageName": "Flask (Lore)",
+        "name": "Flask",
+        "codename": "Lore12",
+        "image": "MaintenanceSuppliesIcon.png",
+        "faction": "Lore"
+      }
+    ],
+    "vehicles": [
+      {
+        "_pageID": "485",
+        "_pageName": "Noble Widow MK. XIV",
+        "name": "Noble Widow MK. XIV",
+        "codename": "DestroyerTankW",
+        "image": "DestroyerTankWVehicleIcon.png",
+        "faction": "War"
+      },
+      {
+        "_pageID": "2276",
+        "_pageName": "85K-b “Falchion”",
+        "name": "85K-b “Falchion”",
+        "codename": "MediumTankC",
+        "image": "ColonialMediumTankIcon.png",
+        "faction": "Col",
+        "crate amount": "5"
+      },
+      {
+        "_pageID": "2326",
+        "_pageName": "H-19 “Vulcan”",
+        "name": "H-19 “Vulcan”",
+        "codename": "LightTankFlameC",
+        "image": "LightTankFlameCIcon.png",
+        "faction": "Col"
+      },
+      {
+        "_pageID": "3003",
+        "_pageName": "HC-7 “Ballista”",
+        "name": "HC-7 “Ballista”",
+        "codename": "MortarTankC",
+        "image": "MortarTankVehicleIcon.png",
+        "faction": "Col"
+      },
+      {
+        "_pageID": "5859",
+        "_pageName": "Cnute Cliffwrest",
+        "name": "Cnute Cliffwrest",
+        "codename": "HeavyTruckW",
+        "image": "HeavyTruckWItemIcon copy.png",
+        "faction": "War"
+      },
+      {
+        "_pageID": "11580",
+        "_pageName": "Toxot-902 “Blind Silver”",
+        "name": "Toxot-902 “Blind Silver”",
+        "codename": "AircraftFighterC",
+        "image": "AircraftFigtherCIcon.png",
+        "faction": "Col"
+      }
+    ],
+    "structures": [
+      {
+        "_pageID": "2433",
+        "_pageName": "Town Base",
+        "name": "Town Center (Tier 1)",
+        "codename": "TownBase3",
+        "image": "TownBaseSquared.png",
+        "faction": "Both"
+      },
+      {
+        "_pageID": "2433",
+        "_pageName": "Town Base",
+        "name": "Town Center (Tier 2)",
+        "codename": "TownBase3",
+        "image": "TownBaseSquared.png",
+        "faction": "Both"
+      },
+      {
+        "_pageID": "2433",
+        "_pageName": "Town Base",
+        "name": "Town Center (Tier 3)",
+        "codename": "TownBase3",
+        "image": "TownBaseSquared.png",
+        "faction": "Both"
+      },
+      {
+        "_pageID": "10170",
+        "_pageName": "Underground Fortress",
+        "name": "Underground Fortress",
+        "codename": "FortGarrisonStation",
+        "image": "FortGarrisonStationIcon.png",
+        "faction": "Both"
+      },
+      {
+        "_pageID": "10257",
+        "_pageName": "Underground Fortress Parts",
+        "name": "Underground Fortress Parts",
+        "codename": "FortGarrisonStationPart",
+        "image": "FortGarrisonStationIcon.png",
+        "faction": "Both"
+      }
+    ],
+    "Production": [
+      {
+        "_pageID": "485",
+        "_pageName": "Noble Widow MK. XIV",
+        "Output": "Noble Widow MK. XIV",
+        "OutputType": "vehicle",
+        "Source": "Garage",
+        "ProductionCategory": "None",
+        "RecipeRank": "1",
+        "IsMPFable": "1",
+        "IsCrateOutput": "0",
+        "InputItem1": "Refined Materials",
+        "InputItem1Amount": "160",
+        "OutputAmount": "1"
+      },
+      {
+        "_pageID": "1556",
+        "_pageName": "7.92mm",
+        "Output": "7.92mm",
+        "OutputType": "item",
+        "Source": "Factory",
+        "ProductionCategory": "Small Arms",
+        "RecipeRank": "1",
+        "IsMPFable": "1",
+        "CrateCapacity": "30",
+        "IsCrateOutput": "1",
+        "InputItem1": "Basic Materials",
+        "InputItem1Amount": "120",
+        "OutputAmount": "1"
+      },
+      {
+        "_pageID": "2276",
+        "_pageName": "85K-b “Falchion”",
+        "Output": "85K-b “Falchion”",
+        "OutputType": "vehicle",
+        "Source": "Garage",
+        "ProductionCategory": "None",
+        "RecipeRank": "1",
+        "IsMPFable": "1",
+        "CrateCapacity": "5",
+        "IsCrateOutput": "0",
+        "InputItem1": "Refined Materials",
+        "InputItem1Amount": "135",
+        "OutputAmount": "1"
+      },
+      {
+        "_pageID": "2326",
+        "_pageName": "H-19 “Vulcan”",
+        "Output": "H-19 “Vulcan”",
+        "OutputType": "vehicle",
+        "Source": "Small Assembly Station",
+        "ProductionCategory": "Tank Factory",
+        "RecipeRank": "1",
+        "IsCrateOutput": "0",
+        "InputItem1": "Processed Construction Materials",
+        "InputItem1Amount": "8",
+        "InputItem2": "Assembly Materials II",
+        "InputItem2Amount": "20",
+        "InputItem3": "Assembly Materials III",
+        "InputItem3Amount": "5",
+        "OutputAmount": "1"
+      },
+      {
+        "_pageID": "3003",
+        "_pageName": "HC-7 “Ballista”",
+        "Output": "HC-7 “Ballista”",
+        "OutputType": "vehicle",
+        "Source": "Small Assembly Station",
+        "ProductionCategory": "Tank Factory",
+        "RecipeRank": "1",
+        "IsCrateOutput": "0",
+        "InputItem1": "Processed Construction Materials",
+        "InputItem1Amount": "15",
+        "InputItem2": "Assembly Materials II",
+        "InputItem2Amount": "15",
+        "OutputAmount": "1"
+      },
+      {
+        "_pageID": "3135",
+        "_pageName": "“Dusk” ce.III",
+        "Output": "“Dusk” ce.III",
+        "OutputType": "item",
+        "Source": "Factory",
+        "ProductionCategory": "Small Arms",
+        "RecipeRank": "1",
+        "IsMPFable": "1",
+        "CrateCapacity": "20",
+        "IsCrateOutput": "1",
+        "InputItem1": "Refined Materials",
+        "InputItem1Amount": "15",
+        "OutputAmount": "1"
+      },
+      {
+        "_pageID": "3608",
+        "_pageName": "Maintenance Supplies",
+        "Output": "Maintenance Supplies",
+        "OutputType": "item",
+        "Source": "Factory",
+        "ProductionCategory": "Resources",
+        "RecipeRank": "1",
+        "IsMPFable": "1",
+        "CrateCapacity": "100",
+        "IsCrateOutput": "1",
+        "InputItem1": "Basic Materials",
+        "InputItem1Amount": "250",
+        "OutputAmount": "1"
+      },
+      {
+        "_pageID": "3608",
+        "_pageName": "Maintenance Supplies",
+        "Output": "Maintenance Supplies",
+        "OutputType": "item",
+        "Source": "Materials Factory",
+        "ProductionCategory": "None",
+        "RecipeRank": "2",
+        "CrateCapacity": "100",
+        "IsCrateOutput": "0",
+        "InputItem1": "Salvage",
+        "InputItem1Amount": "150",
+        "OutputAmount": "20"
+      },
+      {
+        "_pageID": "5859",
+        "_pageName": "Cnute Cliffwrest",
+        "Output": "Cnute Cliffwrest",
+        "OutputType": "vehicle",
+        "Source": "Small Assembly Station",
+        "ProductionCategory": "Field Station",
+        "RecipeRank": "1",
+        "IsCrateOutput": "0",
+        "InputItem1": "Processed Construction Materials",
+        "InputItem1Amount": "40",
+        "OutputAmount": "1"
+      },
+      {
+        "_pageID": "8213",
+        "_pageName": "KRF1-750 Dragonfly",
+        "Output": "KRF1-750 Dragonfly",
+        "OutputType": "item",
+        "Source": "Factory",
+        "ProductionCategory": "Small Arms",
+        "RecipeRank": "1",
+        "IsMPFable": "1",
+        "CrateCapacity": "15",
+        "IsCrateOutput": "1",
+        "InputItem1": "Basic Materials",
+        "InputItem1Amount": "130",
+        "OutputAmount": "1"
+      },
+      {
+        "_pageID": "11580",
+        "_pageName": "Toxot-902 “Blind Silver”",
+        "Output": "Toxot-902 “Blind Silver”",
+        "OutputType": "vehicle",
+        "Source": "Large Assembly Station",
+        "ProductionCategory": "Aircraft Assembly",
+        "RecipeRank": "1",
+        "IsCrateOutput": "0",
+        "InputItem1": "Processed Construction Materials",
+        "InputItem1Amount": "40",
+        "InputItem2": "Assembly Materials III",
+        "InputItem2Amount": "50",
+        "InputItem3": "Assembly Materials IV",
+        "InputItem3Amount": "50",
+        "InputItem4": "Rare Alloys",
+        "InputItem4Amount": "2",
+        "OutputAmount": "1"
+      },
+      {
+        "_pageID": "10170",
+        "_pageName": "Underground Fortress",
+        "Output": "Underground Fortress",
+        "OutputType": "structure",
+        "Source": "Large Structure Foundation",
+        "ProductionCategory": "None",
+        "RecipeRank": "1",
+        "IsCrateOutput": "0",
+        "InputItem1": "Construction Parts",
+        "InputItem1Amount": "1",
+        "InputItem2": "Structure Parts",
+        "InputItem2Amount": "1",
+        "InputItem3": "Underground Fortress Parts",
+        "InputItem3Amount": "1",
+        "OutputAmount": "1"
+      },
+      {
+        "_pageID": "10257",
+        "_pageName": "Underground Fortress Parts",
+        "Output": "Underground Fortress Parts",
+        "OutputType": "structure",
+        "Source": "Small Assembly Station",
+        "ProductionCategory": "Advanced Structure Manufactory",
+        "RecipeRank": "1",
+        "IsCrateOutput": "0",
+        "InputItem1": "Processed Construction Materials",
+        "InputItem1Amount": "200",
+        "InputItem2": "Rare Alloys",
+        "InputItem2Amount": "5",
+        "InputItem3": "Thermal Shielding",
+        "InputItem3Amount": "35",
+        "OutputAmount": "1"
+      }
+    ]
+  }
+}

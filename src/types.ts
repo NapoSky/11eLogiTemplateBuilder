@@ -59,6 +59,8 @@ export interface Template {
   sections: Section[];
   iconScale?: IconScale;
   background?: TemplateBackground;
+  /** Absent in historical files: preserve their original comparison. */
+  quantityMode?: 'legacy' | 'crate-equivalents-v1';
 }
 
 // Background du canvas template (4 kinds)
@@ -182,6 +184,7 @@ export interface MpfDataEntry {
   crateBonus?: number;
   maxCrates: 9 | 5;
   subtypeFilename?: string; // Subtype overlay icon (e.g. SubtypeFLIcon.png)
+  aliases?: string[]; // Explicit historical names for text imports of this same entity.
 }
 
 export interface TodoListItem {

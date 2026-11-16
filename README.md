@@ -164,6 +164,60 @@ Use the **S** / **M** / **L** buttons in the toolbar to adjust the global icon s
 - **interact.js**: Section drag & resize
 - **html2canvas-pro**: PNG export (oklab/oklch support)
 
+## Game data
+
+The build generates `public/mpfData.json`, `public/iconMapping.json`, and `public/itemData.json` from the accepted [Foxhole Wiki](https://foxhole.wiki.gg) Cargo snapshot in `scripts/data/wiki.snapshot.json`. Normal builds are offline and reproducible. The old foxholelogi snapshot is no longer a build input; frozen historical names and MPF entries remain available for saved-document compatibility. Data provenance: Foxhole Wiki, CC BY-NC-SA 4.0.
+
+The catalogue matches local game asset filenames to wiki entities. Images, categories, and saved positions remain local; corrected names and general faction metadata no longer depend on MPF eligibility. Saved image paths are migrated to the current game-pack layout when loading old documents. Unresolved images stay available and are listed in the comparison report. Direct production recipes are available on Stockpile hover; the dedicated facilities planner and production-chain calculations will follow in a second phase. Run `pnpm run data:preview` to review image associations, exceptions and contextual variants.
+
+```sh
+# Regenerate runtime data from the accepted snapshot (no network)
+pnpm run build:mpf
+
+# Review asset associations and old/new labels under data/wiki-preview/
+pnpm run data:preview
+
+# Check the public wiki without replacing the accepted snapshot
+node --experimental-strip-types scripts/syncWikiData.ts --check
+
+# Accept validated source changes locally, then regenerate runtime data
+pnpm run data:sync
+pnpm run build:mpf
+```
+
+`scripts/data/iconMapping.legacy.json` is the asset registry and original-label record; retain existing keys and historical values when adding assets. Reviewed same-object aliases, image exceptions, generic/retired artwork annotations and contextual `iconVariants` belong in `scripts/data/wiki.compatibility.json`. `scripts/data/mpf.legacy.json` preserves historical Stockpile production behavior. Edit these source files rather than the generated public JSON files.
+
+### Icon pack layout
+
+Game assets live under `public/assets/icons/Textures/` and `public/assets/icons/Slate/`, preserving the supplied pack's folders and filenames. `public/assets/icons/subtypes/` is independent and unchanged. New packs can be overlaid directly onto these two folders; `public/NEW` is only an import staging location.
+
+Three local mortar compositions are absent from the supplied pack and must be retained under `Textures/UI/ItemIcons/`: `MortarAmmoIconFlare.png`, `MortarAmmoIconShrapnel.png`, and `MortarAmmoIconFire.png`. They distinguish the shell variants while keeping the existing filename-based application contract. Incendiary shells remain outside MPF eligibility, as declared by the wiki. Replacing the three entries with the common shell filename would merge distinct objects.
+
+The [path adapter](src/services/iconPaths.ts) recognizes the previous `UI/` and `Vehicles/` layouts and four reviewed aircraft filename changes. Templates, Stockpile templates and saved TodoLists migrate their image references; instance IDs, quantities, overlays, calculation mode and recorded production values are preserved. The bomber's duplicate `_copy` entry is consolidated. The new filenames also identify the Colonial carrier as **Poseidon** and the bomber as **Mergo-4 "Myrmidon"** directly through Cargo.
+
+Visually reviewed exceptions associate the alternative Heavy Oil / Enriched Oil images and the deployed Underground Fortress with their Cargo entities. The common Assembly Materials image is labelled generically, with no inferred grade or recipe; old documents retain their historical IV comparison. The old Metal Beam Pallet is labelled as legacy and receives no current Rare Materials identity. The current Rare Materials image (`FacilityMaterials12Icon.png`) is now declared from the locally supplied file, alongside Harpy, Tümmler by VAC and Overseer Sky-Hauler; the Paratrooper subtype is also available. `data:preview` distinguishes unmatched/ambiguous assets from these deliberately generic or retired graphics.
+
+The game supplies two legitimate icon variants for Heavy Oil, Enriched Oil, Rare Metal and Water. `iconVariants` declares the first images for logistics and their `Facilities/` counterparts for the future facilities module. The runtime metadata carries optional `iconUsage`; the current logistics sidebar and Stockpile depot defaults prefer logistics artwork. Both files and catalogue entries remain available, and saved templates keep whichever variant they already reference.
+
+
+### Stockpile units and compatibility
+
+Stockpile is intended for **Seaport and Storage Depot exports**. Ordinary item stacks are stored there as crates: their quantity tooltips show crates only. Vehicles and shippable structures retain the physical crate/unit breakdown and the shortage in both units and crate equivalents. Historical imports retain their recorded quantities.
+
+Hover or focus an item's icon/name in either Stockpile view to see its production recipes, in English and in the site's dark tooltip. Each option shows the building, its upgrade/category and the actual output quantity on the first line, with **Inputs:** underneath. Factory orders use four crates at the ordinary undiscounted price. Facility batches retain their own quantities and units; available Factory and facility options are shown together. Recipes include required base vehicles, crates, extra parts, power and byproducts. These are direct recipe costs; chain expansion remains for the dedicated facilities planner.
+
+Template targets are crates. CSV names ending in `(Crate)` count physical crates; bare names count unpacked units in the new calculation, including equipment and resources. Stock is converted to units using the known crate contents before comparing targets. Tables show numbers only, with the crate unit stated in the header. Displayed gaps round up in magnitude to whole crates (−0.67 → −1, −2.33 → −3); exact quantities remain in tooltips and calculations. Hover or focus a quantity to see the physical crate/unit breakdown and the shortage in both units and equivalent crates in a dark themed tooltip; Escape dismisses it. For example, a target of 10 Silverhand crates means 30 vehicles: 2 crates plus 15 assembled vehicles leave 9 vehicles missing, equivalent to 3 crates. Backline units are deducted before rounding the remaining production into whole crates and full MPF orders.
+
+New and bundled templates use the optional `quantityMode: "crate-equivalents-v1"` field. Files without it retain the previous calculation, historical labels, and MPF parameters. **Use crate equivalents** in Stockpile explicitly converts the selected template's calculation; it preserves icon paths, identifiers and target numbers. Saved TodoLists retain their recorded values. Historical Discord names are still recognized when importing text.
+
+Transport planning keeps physical packaging and its capacities. Unpacked equipment contributes to stock targets and is listed in depot totals; its transport must be planned separately, as the planner supports crates and shippable vehicles/equipment. Unknown crate contents are reported as unresolved rather than guessed.
+
+### Automatic updates
+
+The `Wiki data update` workflow runs daily or manually. It validates schemas, pagination and row counts, retries rate limits within bounds, and preserves the accepted snapshot on failure. Collection dates, Cargo row IDs and row order do not trigger a change. When data changes, it runs tests and a production build before updating one data PR; after merge, the existing CI/deployment flow publishes the result. The deployment checks out the commit validated by CI.
+
+GitHub must allow Actions to create pull requests. Depending on repository/token settings, workflows for a bot-created PR can require approval; the update workflow itself validates the proposed data before creating it. Disappearing MPF references or new MPF outputs without local assets stop the automated update for review. A successful download alone does not establish that every wiki entry reflects the latest game patch.
+
 ## 🌐 Compatibility
 
 - ✅ Chrome 90+
@@ -185,4 +239,4 @@ See the [LICENSE](LICENSE) file for details.
 
 ---
 
-**v2.1** - Made with ❤️ for the 11eRC-FL
+**v2.2** - Made with ❤️ for the 11eRC-FL

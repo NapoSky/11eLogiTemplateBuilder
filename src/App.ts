@@ -12,6 +12,7 @@ import { TemplateLoadModal } from './components/TemplateLoadModal';
 import { StockpileView } from './components/StockpileView';
 import { loadIcons, loadSubtypes } from './services/iconLoader';
 import { loadMpfData } from './services/mpfDataLoader';
+import { loadItemData } from './services/itemDataLoader';
 import { loadBackgroundPresets } from './services/backgroundLoader';
 import { ViewMode } from './types';
 
@@ -48,15 +49,17 @@ export class App {
     this.container = container;
 
     // Load icons, subtypes and MPF data in parallel
-    const [icons, subtypes, mpfData, bgPresets] = await Promise.all([
+    const [icons, subtypes, mpfData, bgPresets, itemData] = await Promise.all([
       loadIcons(),
       loadSubtypes(),
       loadMpfData(),
       loadBackgroundPresets(),
+      loadItemData(),
     ]);
     store.setIcons(icons);
     store.setSubtypes(subtypes);
     store.setMpfData(mpfData);
+    store.setItemData(itemData);
     store.setBackgroundPresets(bgPresets);
 
     // Load saved template + todolist + viewMode

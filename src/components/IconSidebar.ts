@@ -1,6 +1,9 @@
 import { store } from '../store';
 import { CATEGORIES, IconCategory, Icon, MpfDataEntry } from '../types';
 
+const escapeHtml = (value: string): string => value.replace(/[&<>"']/g, char =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]!));
+
 export class IconSidebar {
   private container: HTMLElement | null = null;
   private unsubscribe: (() => void) | null = null;
@@ -115,10 +118,10 @@ export class IconSidebar {
         data-icon-id="${icon.id}"
         data-icon-filename="${icon.filename}"
         data-icon-path="${icon.path}"
-        data-icon-name="${icon.displayName}"
-        title="${tooltipTitle}"
+        data-icon-name="${escapeHtml(icon.displayName)}"
+        title="${escapeHtml(tooltipTitle)}"
       >
-        <img src="${icon.path}" alt="${icon.displayName}" class="w-full h-full object-contain" loading="lazy" />
+        <img src="${icon.path}" alt="${escapeHtml(icon.displayName)}" class="w-full h-full object-contain" loading="lazy" />
       </div>
     `;
   }

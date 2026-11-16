@@ -7,8 +7,13 @@ import { translateFrenchItemName } from '../services/frenchItemNames';
 import { showToast } from '../services/toast';
 import { confirmDialog } from '../services/confirmDialog';
 import { withActionGate } from '../services/actionGate';
+import type { ItemDataEntry, QuantityMode } from '../services/gameData';
+import { readStockQuantities, calculateCrateShortage, formatCrateQuantity, formatGapQuantity } from '../services/stockQuantities';
+import type { StockQuantities } from '../services/stockQuantities';
+import { createStockpileTooltip } from '../services/stockpileTooltip';
+import { productionTooltip } from '../services/productionData';
+import { canonicalIconFilename, iconFilenameFromPath, migrateTemplateAssets, resolveIconPath } from '../services/iconPaths';
 import {
-  aggregateStockpileItems,
   buildBacklineCargo,
   CargoKind,
   DEFAULT_TRANSPORT_EXCLUSIONS,
@@ -45,6 +50,13 @@ interface StockpileRow {
   targetQty: number;
   stockpileQty: number;
   status: RowStatus;
+  quantities?: StockQuantities;
+}
+
+export interface ComparisonContext {
+  quantityMode: QuantityMode;
+  itemData: readonly ItemDataEntry[];
+  legacyIconMapping?: Record<string, string>;
 }
 
 interface StockpileHeader {
@@ -69,11 +81,6 @@ function escapeHtml(s: string): string {
 }
 
 const ROLE_LABELS: Record<DepotRole, string> = { backline: 'Backline', intermediate: 'Main', front: 'Front' };
-
-/** Sums the crate + plain (assembled) quantities of an item from a raw CSV items map. */
-function resolveItemQuantity(items: Map<string, number>, itemName: string): number {
-  return (items.get(`${itemName} (Crate)`) ?? 0) + (items.get(itemName) ?? 0);
-}
 
 interface RoleAccent { border: string; text: string; badgeBg: string; }
 // border-t-* (not border-*) so the accent only colors the top strip, not all 4 sides
@@ -108,14 +115,7 @@ function formatSnapshotDateRange(entries: CsvEntry[]): string {
 }
 
 export function iconPathToMappingKey(path: string): string {
-  const baseUrl = getBaseUrl();
-  // Strip base URL prefix when it's not just '/'
-  const prefix = baseUrl === '/' ? '/assets/icons/' : `${baseUrl}assets/icons/`;
-  if (path.startsWith(prefix)) return path.slice(prefix.length);
-  // Fallback: extract after 'assets/icons/'
-  const idx = path.indexOf('assets/icons/');
-  if (idx !== -1) return path.slice(idx + 'assets/icons/'.length);
-  return path;
+  return iconFilenameFromPath(path);
 }
 
 export function isCrateSubtype(subtype: string | undefined): boolean {
@@ -193,18 +193,25 @@ export function buildComparison(
   sections: Section[],
   csvItems: Map<string, number>,
   iconMapping: Record<string, string>,
-  header: StockpileHeader | null
+  header: StockpileHeader | null,
+  context?: ComparisonContext,
 ): ComparisonResult {
   const rows: StockpileRow[] = [];
   const matchedCsvKeys = new Set<string>();
+  const mode = context?.quantityMode ?? 'legacy';
+  const metadataByFilename = new Map(context?.itemData.map(item => [canonicalIconFilename(item.iconFilename), item]) ?? []);
+  const mapping = Object.fromEntries(Object.entries(mode === 'legacy' ? context?.legacyIconMapping ?? iconMapping : iconMapping)
+    .map(([filename, name]) => [canonicalIconFilename(filename), name]));
 
   for (const section of sections) {
     for (const icon of section.icons) {
       const mappingKey = iconPathToMappingKey(icon.path);
-      const itemName = iconMapping[mappingKey] ?? null;
-      const isCrateTarget = isCrateSubtype(icon.subtype);
+      const metadata = metadataByFilename.get(mappingKey);
+      const itemName = mapping[mappingKey] ?? null;
+      const isCrateTarget = mode === 'crate-equivalents-v1' || isCrateSubtype(icon.subtype);
 
       let stockpileQty = 0;
+      let quantities: StockQuantities | undefined;
       if (itemName) {
         // Côté Stockpile, on considère que tout est en crate par défaut.
         // Pour les Shippables et Vehicles, l'export peut contenir les deux formes
@@ -214,12 +221,20 @@ export function buildComparison(
         const crateQty = csvItems.get(crateKey) ?? 0;
         const plainQty = csvItems.get(plainKey) ?? 0;
         stockpileQty = crateQty + plainQty;
+        if (mode !== 'legacy') {
+          quantities = readStockQuantities(csvItems, itemName, metadata, mode);
+          stockpileQty = quantities.equivalentCrates ?? 0;
+          for (const alias of new Set([itemName, ...(metadata?.aliases ?? [])])) {
+            if (csvItems.has(alias)) matchedCsvKeys.add(alias);
+            if (csvItems.has(`${alias} (Crate)`)) matchedCsvKeys.add(`${alias} (Crate)`);
+          }
+        }
         if (crateQty > 0 || csvItems.has(crateKey)) matchedCsvKeys.add(crateKey);
         if (plainQty > 0 || csvItems.has(plainKey)) matchedCsvKeys.add(plainKey);
       }
 
       let status: RowStatus;
-      if (!itemName) {
+      if (!itemName || (mode !== 'legacy' && (!metadata?.kind || quantities?.equivalentCrates === null))) {
         status = 'unknown';
       } else if (icon.quantity === -1) {
         status = 'ok';
@@ -234,12 +249,13 @@ export function buildComparison(
       rows.push({
         sectionTitle: section.title,
         sectionColor: section.color,
-        iconPath: icon.path,
+        iconPath: resolveIconPath(icon.path, getBaseUrl()),
         itemName,
         isCrateTarget,
         targetQty: icon.quantity,
         stockpileQty,
         status,
+        ...(quantities ? { quantities } : {}),
       });
     }
   }
@@ -268,6 +284,14 @@ const CALCULATION_ROLES_KEY = 'stockpile_calculation_roles';
 const LEGACY_TODOLIST_ROLES_KEY = 'stockpile_todolist_roles';
 const DEFAULT_CALCULATION_ROLES = new Set<DepotRole>(['intermediate']);
 const DEDUCT_BACKLINE_KEY = 'stockpile_deduct_backline';
+
+function validateTemplateQuantityMode(template: Template): Template {
+  const mode = template.quantityMode;
+  if (mode !== undefined && mode !== 'legacy' && mode !== 'crate-equivalents-v1') {
+    throw new Error('Unsupported template quantity mode');
+  }
+  return template;
+}
 
 function showFrenchWarningToast(): void {
   // Remove any existing French warning before showing a new one
@@ -319,6 +343,7 @@ function showFrenchWarningToast(): void {
 
 export class StockpileView {
   private container: HTMLElement | null = null;
+  private quantityTooltipController: ReturnType<typeof createStockpileTooltip> | null = null;
   private iconMapping: Record<string, string> = {};
   private mappingLoaded = false;
 
@@ -351,6 +376,8 @@ export class StockpileView {
 
   mount(container: HTMLElement): void {
     this.container = container;
+    this.quantityTooltipController?.destroy();
+    this.quantityTooltipController = createStockpileTooltip(container);
     window.addEventListener('stockpile:load-csv',       this.onLoadCsv);
     window.addEventListener('stockpile:paste-csv',      this.onPasteCsv);
     window.addEventListener('stockpile:clear-csv',      this.onClearCsv);
@@ -371,7 +398,7 @@ export class StockpileView {
           const file = faction === 'warden' ? 'referenceTemplate.json' : 'referenceTemplateColonial.json';
           const res = await fetch(`${baseUrl}${file}`);
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          this.externalTemplate = await res.json() as Template;
+          this.externalTemplate = migrateTemplateAssets(validateTemplateQuantityMode(await res.json() as Template), getBaseUrl());
           this.officialFaction = faction;
         } catch (e) {
           console.warn('StockpileView: failed to load reference template', e);
@@ -394,6 +421,8 @@ export class StockpileView {
   }
 
   unmount(): void {
+    this.quantityTooltipController?.destroy();
+    this.quantityTooltipController = null;
     window.removeEventListener('stockpile:load-csv',       this.onLoadCsv);
     window.removeEventListener('stockpile:paste-csv',      this.onPasteCsv);
     window.removeEventListener('stockpile:clear-csv',      this.onClearCsv);
@@ -479,7 +508,7 @@ export class StockpileView {
   private restoreExternalTemplate(): void {
     try {
       const raw = localStorage.getItem(TPL_FILE_KEY);
-      if (raw) this.externalTemplate = JSON.parse(raw) as Template;
+      if (raw) this.externalTemplate = migrateTemplateAssets(validateTemplateQuantityMode(JSON.parse(raw) as Template), getBaseUrl());
       this.externalTemplateFileName = localStorage.getItem(TPL_FILENAME_KEY);
     } catch (e) {
       console.warn('StockpileView: failed to restore external template', e);
@@ -526,7 +555,7 @@ export class StockpileView {
         role: e.role ?? (index === 0 ? 'intermediate' : 'backline'),
       }));
       if (this.csvEntries.length > 0) {
-        this.result = buildComparison(this.getSections(), this.aggregateItems(), this.iconMapping, null);
+        this.result = this.compare();
       }
     } catch (e) {
       console.warn('StockpileView: failed to restore CSV data', e);
@@ -554,7 +583,7 @@ export class StockpileView {
       localStorage.removeItem('stockpile_csv_items');
       localStorage.removeItem('stockpile_csv_header');
       localStorage.removeItem('stockpile_csv_filename');
-      this.result = buildComparison(this.getSections(), this.aggregateItems(), this.iconMapping, null);
+      this.result = this.compare();
     } catch (e) {
       console.warn('StockpileView: failed to migrate old CSV data', e);
     }
@@ -564,19 +593,103 @@ export class StockpileView {
     return this.externalTemplate?.sections ?? store.sections;
   }
 
+  private getQuantityMode(): QuantityMode {
+    return this.externalTemplate
+      ? this.externalTemplate.quantityMode === 'crate-equivalents-v1' ? 'crate-equivalents-v1' : 'legacy'
+      : store.quantityMode;
+  }
+
+  private comparisonContext(): ComparisonContext {
+    return {
+      quantityMode: this.getQuantityMode(), itemData: store.itemData,
+      legacyIconMapping: store.itemData.length
+        ? Object.fromEntries(store.itemData.map(item => [item.iconFilename, item.legacyItemName])) : this.iconMapping,
+    };
+  }
+
+  private compare(sections = this.getSections(), items = this.aggregateItems()): ComparisonResult {
+    return buildComparison(sections, items, this.iconMapping, null, this.comparisonContext());
+  }
+
+  private metadataFor(itemName: string, iconPath?: string): ItemDataEntry | undefined {
+    return iconPath
+      ? store.itemData.find(item => canonicalIconFilename(item.iconFilename) === iconPathToMappingKey(iconPath))
+      : store.itemData.find(item => item.iconUsage !== 'facilities' && (item.itemName === itemName || item.aliases.includes(itemName)));
+  }
+
+  private quantitiesFor(items: Map<string, number>, itemName: string, iconPath?: string): StockQuantities {
+    return readStockQuantities(items, itemName, this.metadataFor(itemName, iconPath), this.getQuantityMode());
+  }
+
+  private productionTooltipAttributes(itemName: string | null, iconPath: string): string {
+    if (!itemName) return '';
+    const tooltip = productionTooltip(this.metadataFor(itemName, iconPath || undefined));
+    return tooltip ? `tabindex="0" data-production-tooltip="${escapeHtml(tooltip)}"` : '';
+  }
+
+  private quantityTooltip(quantity: StockQuantities, target?: number | null, metadata?: ItemDataEntry): string {
+    // This module compares Seaport/Storage Depot stocks: ordinary items are held in crates.
+    // Keep unexpected loose quantities visible when restoring historical imports.
+    if (metadata?.kind === 'item' && quantity.units === 0) {
+      const crates = (amount: number): string => `${formatCrateQuantity(amount)} crate${amount === 1 ? '' : 's'}`;
+      const parts = [crates(quantity.crates)];
+      if (target !== undefined && target !== null && target !== -1) {
+        const missing = target - quantity.crates;
+        parts.push(missing > 0 ? `${crates(missing)} missing` : missing < 0 ? `${crates(-missing)} above target` : 'Target reached');
+      }
+      return parts.join('\n');
+    }
+    const parts = [`${quantity.crates} crates + ${quantity.units} unpacked units`];
+    if (quantity.totalUnits !== null && quantity.unitsPerCrate !== null) {
+      parts.push(`${quantity.totalUnits} units (${quantity.unitsPerCrate} per crate)`);
+      if (target !== undefined && target !== null && target !== -1) {
+        const missing = target * quantity.unitsPerCrate - quantity.totalUnits;
+        parts.push(missing > 0
+          ? `${missing} units missing (or ${formatCrateQuantity(missing / quantity.unitsPerCrate)} crates missing)`
+          : missing < 0 ? `${-missing} units above target` : 'Target reached');
+      }
+    } else if (quantity.equivalentCrates === null) {
+      parts.push('Crate contents unknown');
+    }
+    return parts.join('\n');
+  }
+
+  private getMpfData(): MpfDataEntry[] {
+    const legacy = store.itemData.flatMap(item => item.legacyMpf ? [item.legacyMpf] : []);
+    return this.getQuantityMode() === 'legacy' && legacy.length ? legacy : store.mpfData;
+  }
+
+  private enableCrateEquivalents(): void {
+    if (this.externalTemplate) {
+      this.externalTemplate = { ...this.externalTemplate, quantityMode: 'crate-equivalents-v1' };
+      this.saveExternalTemplate();
+    } else {
+      store.useCrateEquivalentQuantities();
+    }
+    this.rerunComparison();
+    this.render();
+  }
+
   /**
    * The MPF production needs view always counts Backline + Main stock (Front depots are
    * informational only, transport isn't guaranteed) — no user toggle needed anymore since
    * the per-role breakdown is now shown directly in the table (see renderTable/getRoleItemMaps).
    */
   private aggregateItems(): Map<string, number> {
-    return aggregateStockpileItems(this.csvEntries.filter(entry => entry.role !== 'front'));
+    return this.aggregateEntries(this.csvEntries.filter(entry => entry.role !== 'front'));
   }
 
   private aggregateEntries(entries: CsvEntry[]): Map<string, number> {
     const result = new Map<string, number>();
+    const aliases = new Map(this.getQuantityMode() === 'legacy' ? []
+      : store.itemData.flatMap(item => item.aliases.map(alias => [alias, item.itemName] as const)));
     for (const entry of entries) {
-      for (const [name, qty] of entry.items) result.set(name, (result.get(name) ?? 0) + qty);
+      for (const [name, qty] of entry.items) {
+        const crated = name.endsWith(' (Crate)');
+        const base = crated ? name.slice(0, -8) : name;
+        const key = `${aliases.get(base) ?? base}${crated ? ' (Crate)' : ''}`;
+        result.set(key, (result.get(key) ?? 0) + qty);
+      }
     }
     return result;
   }
@@ -604,14 +717,28 @@ export class StockpileView {
   }
 
   private getDirectCargoNames(): Set<string> {
-    return new Set(store.mpfData
+    if (this.getQuantityMode() !== 'legacy' && store.itemData.length) {
+      return new Set(store.itemData.filter(item => item.kind === 'vehicle' || item.kind === 'structure').map(item => item.itemName));
+    }
+    return new Set(this.getMpfData()
       .filter(entry => entry.itemCategory === 'vehicles' || entry.itemCategory === 'shipables')
       .map(entry => entry.itemName));
   }
 
+  private getLooseItemNames(): Set<string> | undefined {
+    if (this.getQuantityMode() === 'legacy') return undefined;
+    const direct = this.getDirectCargoNames();
+    const names = store.itemData.filter(item => item.kind !== 'vehicle' && item.kind !== 'structure').map(item => item.itemName);
+    for (const name of this.aggregateItems().keys()) {
+      const base = name.endsWith(' (Crate)') ? name.slice(0, -8) : name;
+      if (!direct.has(base)) names.push(base);
+    }
+    return new Set(names);
+  }
+
   private rerunComparison(): void {
     if (this.csvEntries.length === 0) return;
-    this.result = buildComparison(this.getSections(), this.aggregateItems(), this.iconMapping, null);
+    this.result = this.compare();
   }
 
   private async handleLoadCsv(file: File): Promise<void> {
@@ -638,7 +765,7 @@ export class StockpileView {
       depotName,
       role,
     });
-    this.result = buildComparison(this.getSections(), this.aggregateItems(), this.iconMapping, null);
+    this.result = this.compare();
     this.saveCSV();
     this.filterStatus = 'all';
     this.render();
@@ -701,7 +828,7 @@ export class StockpileView {
     const removed = this.csvEntries[index];
     this.csvEntries = this.csvEntries.filter(e => e.id !== id);
     this.result = this.csvEntries.length > 0
-      ? buildComparison(this.getSections(), this.aggregateItems(), this.iconMapping, null)
+      ? this.compare()
       : null;
     this.saveCSV();
     this.render();
@@ -710,7 +837,7 @@ export class StockpileView {
       actionLabel: 'Undo',
       onAction: () => {
         this.csvEntries.splice(index, 0, removed);
-        this.result = buildComparison(this.getSections(), this.aggregateItems(), this.iconMapping, null);
+        this.result = this.compare();
         this.saveCSV();
         this.render();
       },
@@ -778,7 +905,7 @@ export class StockpileView {
       const file = faction === 'warden' ? 'referenceTemplate.json' : 'referenceTemplateColonial.json';
       const res = await fetch(`${baseUrl}${file}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      this.externalTemplate = await res.json() as Template;
+      this.externalTemplate = migrateTemplateAssets(validateTemplateQuantityMode(await res.json() as Template), getBaseUrl());
       this.externalTemplateFileName = null;
       this.officialFaction = faction;
       const source = faction === 'warden' ? 'official' : 'official-colonial';
@@ -797,7 +924,7 @@ export class StockpileView {
   private async handleLoadTpl(file: File): Promise<void> {
     try {
       const text = await file.text();
-      this.externalTemplate = JSON.parse(text) as Template;
+      this.externalTemplate = migrateTemplateAssets(validateTemplateQuantityMode(JSON.parse(text) as Template), getBaseUrl());
       this.externalTemplateFileName = file.name;
       this.officialFaction = null;
       localStorage.setItem('stockpile_tpl_source', 'file');
@@ -823,6 +950,7 @@ export class StockpileView {
 
   private render(): void {
     if (!this.container) return;
+    this.quantityTooltipController?.hide();
 
     const hasResult = !!this.result;
     const sections = this.getSections();
@@ -903,8 +1031,13 @@ export class StockpileView {
         </div>
 
         <!-- Content -->
-        <div class="flex-1 overflow-y-auto p-4">
+        <div class="flex-1 overflow-y-auto p-4" data-quantity-mode="${this.getQuantityMode()}">
           ${this.renderLoadedStockpiles()}
+          ${this.getQuantityMode() === 'legacy' ? `
+            <div class="mb-3 flex flex-wrap items-center gap-3 text-xs text-gray-400">
+              <span>This saved template uses the previous quantity calculation.</span><button id="btn-use-crate-equivalents" class="px-2 py-1 rounded bg-blue-700 hover:bg-blue-600 text-white">Use crate equivalents</button>
+            </div>
+          ` : ''}
           <!-- Disclaimer -->
           <div class="mb-4 flex items-start gap-2 px-3 py-2 bg-gray-800/60 border border-gray-700 rounded-lg text-xs text-gray-400">
             <svg class="w-3.5 h-3.5 mt-0.5 shrink-0 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -949,15 +1082,13 @@ export class StockpileView {
     const intermediate = this.getDepots().find(depot => depot.role === 'intermediate');
     if (!intermediate) return '<span class="text-amber-400">No Main depot</span>';
 
-    const quantities = new Map(normalizeStockItems(
-      this.aggregateEntries(intermediate.entries),
-      this.getDirectCargoNames(),
-    ).map(item => [item.itemName, item.crates + item.assembled]));
+    const quantities = this.aggregateEntries(intermediate.entries);
     const rows = this.result.rows.filter(
       (row): row is StockpileRow & { itemName: string } => row.itemName !== null && row.targetQty !== -1,
     );
     const statuses = rows.map(row => {
-      const quantity = quantities.get(row.itemName) ?? 0;
+      const quantity = this.quantitiesFor(quantities, row.itemName, row.iconPath).equivalentCrates;
+      if (quantity === null) return 'unknown';
       if (quantity >= row.targetQty) return 'ok';
       return quantity > 0 ? 'partial' : 'missing';
     });
@@ -1015,9 +1146,10 @@ export class StockpileView {
 
     const activeIndex = Math.min(this.activeDepotTab[role] ?? 0, roleDepots.length - 1);
     const depot = roleDepots[activeIndex];
-    const totals = normalizeStockItems(this.aggregateEntries(depot.entries), directCargoNames);
+    const totals = normalizeStockItems(this.aggregateEntries(depot.entries), directCargoNames, this.getLooseItemNames());
     const totalCrates = totals.reduce((sum, item) => sum + item.crates, 0);
     const totalAssembled = totals.reduce((sum, item) => sum + item.assembled, 0);
+    const totalLoose = totals.reduce((sum, item) => sum + (item.loose ?? 0), 0);
     const location = depot.entries.find(e => e.header?.location)?.header?.location ?? null;
 
     return `
@@ -1073,6 +1205,7 @@ export class StockpileView {
             <span class="block text-lg font-semibold text-gray-100 tabular-nums">${totalAssembled}</span>
             <span class="block text-[10px] text-gray-500">vehicles &amp; equipment (unit)</span>
           </div>
+          ${totalLoose ? `<div class="col-span-2"><span class="text-sm text-cyan-300">${totalLoose}</span><span class="ml-1 text-[10px] text-gray-500">unpacked item units</span></div>` : ''}
         </div>
       </div>
     `;
@@ -1105,9 +1238,10 @@ export class StockpileView {
     type DepotMatrixRow = Pick<StockpileRow, 'itemName' | 'targetQty' | 'sectionTitle' | 'sectionColor' | 'iconPath'> & { itemName: string };
     const depotItems = new Map(depots.map(depot => [
       depot.name,
-      new Map(normalizeStockItems(this.aggregateEntries(depot.entries), directCargoNames).map(item => [item.itemName, item])),
+      new Map(normalizeStockItems(this.aggregateEntries(depot.entries), directCargoNames, this.getLooseItemNames()).map(item => [item.itemName, item])),
     ]));
-    const iconPathsByName = new Map(Object.entries(this.iconMapping).map(([path, itemName]) => [
+    const facilitiesOnly = new Set(store.itemData.filter(item => item.iconUsage === 'facilities').map(item => item.iconFilename));
+    const iconPathsByName = new Map(Object.entries(this.iconMapping).filter(([path]) => !facilitiesOnly.has(path)).map(([path, itemName]) => [
       itemName,
       `${getBaseUrl()}assets/icons/${path}`,
     ]));
@@ -1130,18 +1264,18 @@ export class StockpileView {
     }
     const sectionOrder = [...new Set([...rowsByName.values()].map(row => row.sectionTitle))];
     const intermediate = depots.find(depot => depot.role === 'intermediate');
-    const intermediateItems = intermediate ? depotItems.get(intermediate.name) : undefined;
+    const intermediateItems = intermediate ? this.aggregateEntries(intermediate.entries) : new Map<string, number>();
     const getStatus = (row: DepotMatrixRow): RowStatus => {
       if (row.targetQty === -1) return 'unknown';
-      const item = intermediateItems?.get(row.itemName);
-      const quantity = (item?.crates ?? 0) + (item?.assembled ?? 0);
+      const quantity = this.quantitiesFor(intermediateItems, row.itemName, row.iconPath || undefined).equivalentCrates;
+      if (quantity === null) return 'unknown';
       if (quantity >= row.targetQty) return 'ok';
       return quantity > 0 ? 'partial' : 'missing';
     };
     const getGap = (row: DepotMatrixRow): number => {
       if (row.targetQty === -1) return Infinity;
-      const item = intermediateItems?.get(row.itemName);
-      return (item?.crates ?? 0) + (item?.assembled ?? 0) - row.targetQty;
+      const quantity = this.quantitiesFor(intermediateItems, row.itemName, row.iconPath || undefined).equivalentCrates;
+      return quantity === null ? Infinity : quantity - row.targetQty;
     };
     let rows = [...rowsByName.values()];
     if (this.filterStatus !== 'all') rows = rows.filter(row => getStatus(row) === this.filterStatus);
@@ -1169,7 +1303,7 @@ export class StockpileView {
         `).join('')}
         <th class="px-2 py-2 w-16 text-right">Target</th>
         <th class="px-2 py-2 w-16 text-right">Gap<br/><span class="italic text-gray-500 text-[9px] whitespace-nowrap">(total missing)</span></th>
-        <th class="px-2 py-2 w-20 text-right">Total<br/><span class="${ROLE_ACCENTS.backline.text}">B</span>+<span class="${ROLE_ACCENTS.intermediate.text}">M</span></th>
+        <th class="px-2 py-2 w-20 text-right" tabindex="0" data-quantity-tooltip="${this.getQuantityMode() === 'legacy' ? 'Historical quantity calculation' : 'Quantities in crates; unpacked units count toward the target'}">Total${this.getQuantityMode() === 'legacy' ? '' : ' <span class="text-[10px] font-normal">(crates)</span>'}<br/><span class="${ROLE_ACCENTS.backline.text}">B</span>+<span class="${ROLE_ACCENTS.intermediate.text}">M</span></th>
       `;
       return `
         <thead class="bg-gray-800 text-gray-300">
@@ -1184,33 +1318,29 @@ export class StockpileView {
 
     const renderRowCells = (row: DepotMatrixRow, sticky: boolean, stripe: boolean): string => {
       const target = row.targetQty === -1 ? null : row.targetQty;
-      let calculatedTotal = 0;
+      const metadata = this.metadataFor(row.itemName, row.iconPath || undefined);
+      const totalQuantity = this.quantitiesFor(this.aggregateItems(), row.itemName, row.iconPath || undefined);
+      const calculatedTotal = totalQuantity.equivalentCrates;
       const rowBg = stripe ? 'bg-gray-800/30' : '';
       const depotCells = depots.map(depot => {
-        const item = depotItems.get(depot.name)?.get(row.itemName);
-        const crates = item?.crates ?? 0;
-        const assembled = item?.assembled ?? 0;
-        if (depot.role !== 'front') calculatedTotal += crates + assembled;
-        const gap = depot.role === 'intermediate' && target !== null ? crates + assembled - target : null;
+        const quantity = this.quantitiesFor(this.aggregateEntries(depot.entries), row.itemName, row.iconPath || undefined);
         return `
-          <td class="${rowBg} px-1.5 py-2 text-right tabular-nums">
-            <span class="text-gray-200">${crates}</span><span class="text-gray-600"> cr</span>
-            ${assembled > 0 ? `<span class="block text-cyan-400">${assembled} assembled</span>` : ''}
-            ${gap !== null ? `<span class="block ${gap < 0 ? 'text-red-400' : 'text-green-400'}">${gap > 0 ? '+' : ''}${gap}</span>` : ''}
+          <td class="${rowBg} px-1.5 py-2 text-right tabular-nums" tabindex="0" data-quantity-tooltip="${escapeHtml(this.quantityTooltip(quantity, depot.role === 'intermediate' ? target : null, metadata))}">
+            <span class="text-gray-200">${quantity.equivalentCrates === null ? '—' : formatCrateQuantity(quantity.equivalentCrates)}</span>
           </td>
         `;
       }).join('');
-      const totalGap = target !== null ? calculatedTotal - target : null;
+      const totalGap = target !== null && calculatedTotal !== null ? calculatedTotal - target : null;
       const gapDisplay = totalGap === null
         ? '<span class="text-gray-600">—</span>'
         : totalGap === 0
           ? '<span class="text-gray-500">0</span>'
           : totalGap > 0
-            ? `<span class="text-blue-400">+${totalGap}</span>`
-            : `<span class="text-red-400">${totalGap}</span>`;
+            ? `<span class="text-blue-400">+${formatGapQuantity(totalGap)}</span>`
+            : `<span class="text-red-400">${formatGapQuantity(totalGap)}</span>`;
       return `
         <td class="${sticky ? 'sticky left-0 z-10' : ''} ${rowBg} px-2 py-2">
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2" ${this.productionTooltipAttributes(row.itemName, row.iconPath)}>
             ${row.iconPath
               ? `<img src="${escapeHtml(row.iconPath)}" class="w-8 h-8 object-contain shrink-0" alt="" />`
               : `<span class="w-8 h-8 shrink-0 grid place-items-center rounded bg-gray-800 text-gray-600" aria-hidden="true">?</span>`}
@@ -1221,8 +1351,8 @@ export class StockpileView {
         </td>
         ${depotCells}
         <td class="${rowBg} px-2 py-2 text-right font-mono text-gray-400 tabular-nums">${target ?? '∞'}</td>
-        <td class="${rowBg} px-2 py-2 text-right tabular-nums">${gapDisplay}</td>
-        <td class="${rowBg} px-2 py-2 text-right font-medium text-gray-200 tabular-nums">${calculatedTotal}</td>
+        <td class="${rowBg} px-2 py-2 text-right tabular-nums" tabindex="0" data-quantity-tooltip="${escapeHtml(this.quantityTooltip(totalQuantity, target, metadata))}">${gapDisplay}</td>
+        <td class="${rowBg} px-2 py-2 text-right font-medium text-gray-200 tabular-nums" tabindex="0" data-quantity-tooltip="${escapeHtml(this.quantityTooltip(totalQuantity, null, metadata))}">${calculatedTotal === null ? '—' : formatCrateQuantity(calculatedTotal)}</td>
       `;
     };
 
@@ -1314,6 +1444,7 @@ export class StockpileView {
     };
 
     let html = '';
+    const unitLabel = this.getQuantityMode() === 'legacy' ? '' : ' <span class="text-[10px] font-normal">(crates)</span>';
 
     // Per-section collapsible tables
     for (const sectionTitle of sectionOrder) {
@@ -1359,14 +1490,14 @@ export class StockpileView {
                 <thead>
                   <tr class="bg-gray-800 text-gray-400 text-xs">
                     <th class="text-left px-2 py-2 font-medium w-56" rowspan="2">Item</th>
-                    <th class="text-center px-2 py-1 font-medium border-b border-gray-700/70" colspan="3">Stockpile</th>
+                    <th class="text-center px-2 py-1 font-medium border-b border-gray-700/70" colspan="3" tabindex="0" data-quantity-tooltip="${this.getQuantityMode() === 'legacy' ? 'Historical quantity calculation' : 'Quantities in crates; unpacked units count toward the target'}">Stockpile${unitLabel}</th>
                     <th class="text-right px-2 py-2 font-medium w-20" rowspan="2">Stockpile<br/><span class="${ROLE_ACCENTS.backline.text}">B</span>+<span class="${ROLE_ACCENTS.intermediate.text}">M</span></th>
                     <th class="text-right px-2 py-2 font-medium w-16" rowspan="2">Target</th>
                     <th class="text-right px-2 py-2 font-medium w-16" rowspan="2">Gap</th>
                     <th class="text-center px-2 py-2 font-medium w-24" rowspan="2">Status</th>
                     <th class="w-px p-0 border-l-2 border-gray-600" rowspan="2"></th>
                     <th class="text-left px-2 py-2 font-medium w-56" rowspan="2">Item</th>
-                    <th class="text-center px-2 py-1 font-medium border-b border-gray-700/70" colspan="3">Stockpile</th>
+                    <th class="text-center px-2 py-1 font-medium border-b border-gray-700/70" colspan="3" tabindex="0" data-quantity-tooltip="${this.getQuantityMode() === 'legacy' ? 'Historical quantity calculation' : 'Quantities in crates; unpacked units count toward the target'}">Stockpile${unitLabel}</th>
                     <th class="text-right px-2 py-2 font-medium w-20" rowspan="2">Stockpile<br/><span class="${ROLE_ACCENTS.backline.text}">B</span>+<span class="${ROLE_ACCENTS.intermediate.text}">M</span></th>
                     <th class="text-right px-2 py-2 font-medium w-16" rowspan="2">Target</th>
                     <th class="text-right px-2 py-2 font-medium w-16" rowspan="2">Gap</th>
@@ -1449,6 +1580,7 @@ export class StockpileView {
   private renderRowCells(row: StockpileRow, roleMaps: Record<DepotRole, Map<string, number>>): string {
     const isUnknown = row.status === 'unknown';
     const cellClass = isUnknown ? 'text-gray-600' : 'text-gray-300';
+    const metadata = row.itemName ? this.metadataFor(row.itemName, row.iconPath) : undefined;
 
     const statusBadge = isUnknown
       ? '<span class="text-sm text-gray-600">—</span>'
@@ -1459,7 +1591,7 @@ export class StockpileView {
           : '<span class="text-sm font-medium text-red-400">✗ Missing</span>';
 
     const itemLabel = row.itemName
-      ? `${escapeHtml(row.itemName)}${row.isCrateTarget ? ' <span class="text-xs text-gray-500 ml-1">(Crate)</span>' : ''}`
+      ? `${escapeHtml(row.itemName)}${row.isCrateTarget && this.getQuantityMode() === 'legacy' ? ' <span class="text-xs text-gray-500 ml-1">(Crate)</span>' : ''}`
       : `<span class="text-gray-600 text-xs font-mono" title="No mapping found">${escapeHtml(row.iconPath.split('/').pop() ?? '')}</span>`;
 
     const targetDisplay = row.targetQty === -1
@@ -1467,13 +1599,14 @@ export class StockpileView {
       : `${row.targetQty}`;
 
     const roleQtyDisplay = (role: DepotRole): string => {
-      if (isUnknown || !row.itemName) return '<span class="text-gray-600">—</span>';
-      return `${resolveItemQuantity(roleMaps[role], row.itemName)}`;
+      if (!row.itemName || (isUnknown && this.getQuantityMode() === 'legacy')) return '<span class="text-gray-600">—</span>';
+      const quantity = this.quantitiesFor(roleMaps[role], row.itemName, row.iconPath);
+      return `<span class="cursor-help" tabindex="0" data-quantity-tooltip="${escapeHtml(this.quantityTooltip(quantity, null, metadata))}">${quantity.equivalentCrates === null ? '—' : formatCrateQuantity(quantity.equivalentCrates)}</span>`;
     };
 
     const stockpileDisplay = isUnknown
       ? '<span class="text-gray-600">—</span>'
-      : `<span class="${row.status === 'ok' ? 'text-green-400' : row.status === 'partial' ? 'text-yellow-400' : 'text-red-400'}">${row.stockpileQty}</span>`;
+      : `<span class="${row.status === 'ok' ? 'text-green-400' : row.status === 'partial' ? 'text-yellow-400' : 'text-red-400'}">${formatCrateQuantity(row.stockpileQty)}</span>`;
 
     let gapDisplay: string;
     if (isUnknown || row.targetQty === -1) {
@@ -1483,15 +1616,15 @@ export class StockpileView {
       if (gap === 0) {
         gapDisplay = '<span class="text-gray-500">0</span>';
       } else if (gap > 0) {
-        gapDisplay = `<span class="text-blue-400">+${gap}</span>`;
+        gapDisplay = `<span class="text-blue-400">+${formatGapQuantity(gap)}</span>`;
       } else {
-        gapDisplay = `<span class="text-red-400">${gap}</span>`;
+        gapDisplay = `<span class="text-red-400">${formatGapQuantity(gap)}</span>`;
       }
     }
 
     return `
       <td class="px-2 py-1.5">
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2" ${this.productionTooltipAttributes(row.itemName, row.iconPath)}>
           <img src="${escapeHtml(row.iconPath)}"
                class="w-12 h-12 object-contain shrink-0 ${isUnknown ? 'opacity-25' : ''}"
                alt="" />
@@ -1501,9 +1634,9 @@ export class StockpileView {
       <td class="px-2 py-1.5 text-right font-mono text-xs text-gray-500">${roleQtyDisplay('backline')}</td>
       <td class="px-2 py-1.5 text-right font-mono text-xs text-gray-500">${roleQtyDisplay('intermediate')}</td>
       <td class="px-2 py-1.5 text-right font-mono text-xs text-gray-500">${roleQtyDisplay('front')}</td>
-      <td class="px-2 py-1.5 text-right font-mono text-sm ${cellClass}">${stockpileDisplay}</td>
+      <td class="px-2 py-1.5 text-right font-mono text-sm ${cellClass}" ${row.quantities ? `tabindex="0" data-quantity-tooltip="${escapeHtml(this.quantityTooltip(row.quantities, null, metadata))}"` : ''}>${stockpileDisplay}</td>
       <td class="px-2 py-1.5 text-right font-mono text-sm text-gray-400">${targetDisplay}</td>
-      <td class="px-2 py-1.5 text-right font-mono text-sm ${cellClass}">${gapDisplay}</td>
+      <td class="px-2 py-1.5 text-right font-mono text-sm ${cellClass}" ${row.quantities ? `tabindex="0" data-quantity-tooltip="${escapeHtml(this.quantityTooltip(row.quantities, row.targetQty, metadata))}"` : ''}>${gapDisplay}</td>
       <td class="px-2 py-1.5 text-center">${statusBadge}</td>
     `;
   }
@@ -1515,21 +1648,6 @@ export class StockpileView {
   // ─── Events ───────────────────────────────────────────────────────────────
 
   // ─── Shortage / Todolist generation ─────────────────────────────────────────
-
-  /**
-   * Sums the CSV-declared quantity of an item (crate + plain form) across all
-   * currently loaded Backline-role depots. Used to deduct existing Backline
-   * stock from the Intermediate shortfall so the MPF todolist only asks to
-   * produce what isn't already available to transport.
-   */
-  private getBacklineQty(itemName: string): number {
-    const backlineEntries = this.csvEntries.filter(entry => entry.role === 'backline');
-    if (backlineEntries.length === 0) return 0;
-    const items = this.aggregateEntries(backlineEntries);
-    const crateQty = items.get(`${itemName} (Crate)`) ?? 0;
-    const plainQty = items.get(itemName) ?? 0;
-    return crateQty + plainQty;
-  }
 
   private buildShortageData(
     includedRoles: ReadonlySet<DepotRole> = this.calculationRoles,
@@ -1543,12 +1661,8 @@ export class StockpileView {
     const includedEntries = this.csvEntries.filter(entry => includedRoles.has(entry.role));
     // "Facility" sections aren't part of MPF production — exclude them from the shortage calculator.
     const mpfSections = this.getSections().filter(section => !section.title.toLowerCase().includes('facility'));
-    const comparison = buildComparison(
-      mpfSections,
-      this.aggregateEntries(includedEntries),
-      this.iconMapping,
-      null,
-    );
+    const includedItems = this.aggregateEntries(includedEntries);
+    const comparison = this.compare(mpfSections, includedItems);
     const missingRows = comparison.rows.filter(r =>
       r.itemName !== null &&
       (r.status === 'missing' || r.status === 'partial') &&
@@ -1564,17 +1678,17 @@ export class StockpileView {
 
     for (const row of missingRows) {
       const filename = iconPathToMappingKey(row.iconPath);
-      const entry = store.mpfData.find(e => e.iconFilename === filename);
-      const gap = Math.abs(row.stockpileQty - row.targetQty);
+      const entry = this.getMpfData().find(e => canonicalIconFilename(e.iconFilename) === filename);
 
       if (entry) {
         // gap is always in crates for MPF-craftable items (Foxhole stores non-vehicles as crates)
-        const cratesNeeded = gap;
-        const backlineAvailable = shouldDeductBackline
-          ? Math.min(cratesNeeded, this.getBacklineQty(row.itemName ?? ''))
-          : 0;
-        const toProduce = Math.max(0, cratesNeeded - backlineAvailable);
-        const orderCount = Math.ceil(toProduce / (entry.maxCrates || 1));
+        const stock = this.quantitiesFor(includedItems, row.itemName!, row.iconPath);
+        const backline = shouldDeductBackline
+          ? this.quantitiesFor(this.aggregateEntries(this.csvEntries.filter(e => e.role === 'backline')), row.itemName!, row.iconPath)
+          : null;
+        const plan = calculateCrateShortage(row.targetQty, stock, backline, entry.maxCrates);
+        if (!plan) { nonMpfRows.push(row); continue; }
+        const { cratesNeeded, backlineAvailable, toProduce, orderCount } = plan;
         mpfRows.push({ row, entry, cratesNeeded, backlineAvailable, toProduce, orderCount });
       } else {
         nonMpfRows.push(row);
@@ -2014,7 +2128,7 @@ export class StockpileView {
 
     const getAvailableCargo = (): TransportCargoItem[] => {
       const source = depots.find(depot => depot.name === sourceName)!;
-      return buildBacklineCargo(this.aggregateEntries(source.entries), directCargoNames, transportExclusions);
+      return buildBacklineCargo(this.aggregateEntries(source.entries), directCargoNames, transportExclusions, this.getLooseItemNames());
     };
     const cargoKey = (item: TransportCargoItem): string => `${item.kind}:${item.itemName}`;
     const getRemainingCargo = (): TransportCargoItem[] => getAvailableCargo().map(item => {
@@ -2185,6 +2299,8 @@ export class StockpileView {
 
     const renderModal = (): void => {
       const available = getRemainingCargo();
+      const sourceDepot = depots.find(depot => depot.name === sourceName)!;
+      const hasLooseItems = normalizeStockItems(this.aggregateEntries(sourceDepot.entries), directCargoNames, this.getLooseItemNames()).some(item => (item.loose ?? 0) > 0);
       // Gap = stock actuel de la destination moins l'objectif du template ; null si l'item n'a pas
       // de cible connue (pas dans le template, ou cible infinie).
       const destinationDepot = depots.find(depot => depot.name === destinationName);
@@ -2195,11 +2311,19 @@ export class StockpileView {
       }
       // Cargaisons déjà planifiées (toutes routes confondues) vers cette destination : elles comblent le manque avant même d'arriver.
       const plannedInboundByItemName = new Map<string, number>();
+      const unknownInbound = new Set<string>();
+      const cargoEquivalent = (cargoItem: TransportCargoItem): number | null => {
+        if (this.getQuantityMode() === 'legacy' || cargoItem.kind !== 'assembled') return cargoItem.quantity;
+        const capacity = this.metadataFor(cargoItem.itemName)?.unitsPerCrate;
+        return capacity ? cargoItem.quantity / capacity : null;
+      };
       for (const route of plannedRoutes) {
         if (route.destination !== destinationName) continue;
         for (const plannedMission of route.missions) {
           for (const cargoItem of plannedMission.cargo) {
-            plannedInboundByItemName.set(cargoItem.itemName, (plannedInboundByItemName.get(cargoItem.itemName) ?? 0) + cargoItem.quantity);
+            const amount = cargoEquivalent(cargoItem);
+            if (amount === null) unknownInbound.add(cargoItem.itemName);
+            else plannedInboundByItemName.set(cargoItem.itemName, (plannedInboundByItemName.get(cargoItem.itemName) ?? 0) + amount);
           }
         }
       }
@@ -2207,7 +2331,10 @@ export class StockpileView {
         const target = targetByItemName.get(itemName);
         if (target === undefined || target === -1) return null;
         const plannedInbound = plannedInboundByItemName.get(itemName) ?? 0;
-        return resolveItemQuantity(destinationItems, itemName) + plannedInbound - target;
+        const stock = this.quantitiesFor(destinationItems, itemName).equivalentCrates;
+        if (stock === null || unknownInbound.has(itemName)) return null;
+        const gap = stock + plannedInbound - target;
+        return Math.abs(gap) < 1e-10 ? 0 : gap;
       };
       // Largest quantity of `targetItem` that fills this single trip to capacity alongside the
       // other rows already filled in.
@@ -2231,17 +2358,24 @@ export class StockpileView {
       };
       // Quantité qui comble tout juste le manque à destination (capée par ce qui tient dans ce voyage) ; 0 si la destination n'est pas en manque.
       const computeFitQuantityFor = (targetItem: TransportCargoItem): number => {
-        const gap = destinationGapFor(targetItem.itemName);
+        let gap = destinationGapFor(targetItem.itemName);
         if (gap === null || gap >= 0) return 0;
-        return Math.min(-gap, computeMaxQuantityFor(targetItem));
+        const factor = cargoEquivalent({ ...targetItem, quantity: 1 });
+        if (factor === null) return 0;
+        if (this.getQuantityMode() !== 'legacy') {
+          gap += available.filter(other => other.itemName === targetItem.itemName && cargoKey(other) !== cargoKey(targetItem))
+            .reduce((sum, other) => sum + (cargoEquivalent({ ...other, quantity: quantities.get(cargoKey(other)) ?? 0 }) ?? 0), 0);
+        }
+        const needed = this.getQuantityMode() === 'legacy' ? Math.max(0, -gap) : Math.max(0, Math.ceil(-gap / factor - 1e-10));
+        return Math.min(needed, computeMaxQuantityFor(targetItem));
       };
       const formatGapDisplay = (gap: number | null): string => gap === null
         ? '<span class="text-gray-600">—</span>'
         : gap === 0
           ? '<span class="text-gray-500">0</span>'
           : gap > 0
-            ? `<span class="text-blue-400">+${gap}</span>`
-            : `<span class="text-red-400">${gap}</span>`;
+            ? `<span class="text-blue-400">+${formatGapQuantity(gap)}</span>`
+            : `<span class="text-red-400">${formatGapQuantity(gap)}</span>`;
       const cargoKindLabel = (kind: CargoKind): string =>
         kind === 'container-crate' ? 'Crates in container' : kind === 'direct-crate' ? 'Crated shippable' : 'Assembled shippable';
       const categoryLabel = (category: CargoKind | IconCategory): string =>
@@ -2312,7 +2446,8 @@ export class StockpileView {
             const gapCell = input.closest('tr')?.querySelector<HTMLElement>('.transport-gap-cell') ?? null;
             if (item && gapCell) {
               const originalGap = destinationGapFor(item.itemName);
-              gapCell.innerHTML = formatGapDisplay(originalGap === null ? null : originalGap + quantity);
+              const contribution = cargoEquivalent({ ...item, quantity });
+              gapCell.innerHTML = formatGapDisplay(originalGap === null || contribution === null ? null : originalGap + contribution);
             }
             updateDraftUi();
           });
@@ -2517,6 +2652,7 @@ export class StockpileView {
                 </div>
               ` : ''}
 
+              ${hasLooseItems ? '<p class="mb-2 text-xs text-cyan-300">Unpacked item units contribute to stock targets. This planner loads crates and shippables; transport unpacked items separately.</p>' : ''}
               <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <h3 class="text-sm font-medium text-gray-200 whitespace-nowrap">Load for this transport</h3>
                 <select id="transport-category-filter" class="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-blue-500">
@@ -2647,13 +2783,21 @@ export class StockpileView {
         renderModal();
       });
       // Ne garde de chaque cargaison que ce qui manque réellement à la destination (borné par le stock disponible).
-      const capCargoToGap = (cargo: TransportCargoItem[]): TransportCargoItem[] => cargo
+      const capCargoToGap = (cargo: TransportCargoItem[]): TransportCargoItem[] => {
+        const remaining = new Map<string, number>();
+        return cargo
         .map(item => {
-          const gap = destinationGapFor(item.itemName);
+          const gap = remaining.has(item.itemName) ? -remaining.get(item.itemName)! : destinationGapFor(item.itemName);
           if (gap === null || gap >= 0) return null;
-          return { ...item, quantity: Math.min(item.quantity, -gap) };
+          const factor = cargoEquivalent({ ...item, quantity: 1 });
+          if (factor === null) return null;
+          const needed = this.getQuantityMode() === 'legacy' ? -gap : Math.ceil(-gap / factor - 1e-10);
+          const quantity = Math.min(item.quantity, needed);
+          if (this.getQuantityMode() !== 'legacy') remaining.set(item.itemName, Math.max(0, -gap - quantity * factor));
+          return { ...item, quantity };
         })
         .filter((item): item is TransportCargoItem => item !== null && item.quantity > 0);
+      };
       const runAutoFill = (cargo: TransportCargoItem[]): void => {
         preAutoFillSnapshot = plannedRoutes.map(route => ({ ...route, missions: route.missions.map(m => ({ ...m, cargo: [...m.cargo] })) }));
         plannedRoutes = plannedRoutes.filter(route => route.source !== sourceName || route.destination !== destinationName);
@@ -2744,6 +2888,7 @@ export class StockpileView {
   }
 
   private attachEvents(): void {
+    this.container?.querySelector('#btn-use-crate-equivalents')?.addEventListener('click', () => this.enableCrateEquivalents());
     if (!this.container) return;
 
     this.container.querySelectorAll('[data-stock-view]').forEach(button => {

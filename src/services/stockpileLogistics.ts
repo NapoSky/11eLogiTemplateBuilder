@@ -18,6 +18,7 @@ export interface NormalizedStockItem {
   itemName: string;
   crates: number;
   assembled: number;
+  loose?: number;
 }
 
 export interface TransportCargoItem {
@@ -156,7 +157,8 @@ export function aggregateStockpileItems(
 
 export function normalizeStockItems(
   items: Map<string, number>,
-  directCargoNames: ReadonlySet<string>
+  directCargoNames: ReadonlySet<string>,
+  looseItemNames?: ReadonlySet<string>,
 ): NormalizedStockItem[] {
   const normalized = new Map<string, NormalizedStockItem>();
 
@@ -166,7 +168,9 @@ export function normalizeStockItems(
     const itemName = isCrate ? translatedName.slice(0, -8) : translatedName;
     const current = normalized.get(itemName) ?? { itemName, crates: 0, assembled: 0 };
 
-    if (isCrate || !directCargoNames.has(itemName)) {
+    if (!isCrate && looseItemNames?.has(itemName)) {
+      current.loose = (current.loose ?? 0) + quantity;
+    } else if (isCrate || !directCargoNames.has(itemName)) {
       current.crates += quantity;
     } else {
       current.assembled += quantity;
@@ -180,9 +184,10 @@ export function normalizeStockItems(
 export function buildBacklineCargo(
   items: Map<string, number>,
   directCargoNames: ReadonlySet<string>,
-  exclusions: ReadonlySet<string> = DEFAULT_TRANSPORT_EXCLUSIONS
+  exclusions: ReadonlySet<string> = DEFAULT_TRANSPORT_EXCLUSIONS,
+  looseItemNames?: ReadonlySet<string>,
 ): TransportCargoItem[] {
-  return normalizeStockItems(items, directCargoNames).flatMap(item => {
+  return normalizeStockItems(items, directCargoNames, looseItemNames).flatMap(item => {
     if (exclusions.has(item.itemName)) return [];
     const cargo: TransportCargoItem[] = [];
     if (item.crates > 0) {

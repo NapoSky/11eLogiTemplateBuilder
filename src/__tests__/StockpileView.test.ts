@@ -224,12 +224,12 @@ describe('isCrateSubtype', () => {
 describe('iconPathToMappingKey', () => {
   test('extrait la clé depuis un chemin /assets/icons/...', () => {
     const result = iconPathToMappingKey('/assets/icons/UI/ItemIcons/RifleCItemIcon.png');
-    expect(result).toBe('UI/ItemIcons/RifleCItemIcon.png');
+    expect(result).toBe('Textures/UI/ItemIcons/RifleCItemIcon.png');
   });
 
   test('fonctionne si le chemin contient assets/icons/ sans slash initial', () => {
     const result = iconPathToMappingKey('some/prefix/assets/icons/UI/ItemIcons/Foo.png');
-    expect(result).toBe('UI/ItemIcons/Foo.png');
+    expect(result).toBe('Textures/UI/ItemIcons/Foo.png');
   });
 
   test('retourne le chemin tel quel si pas de assets/icons/', () => {
@@ -653,11 +653,13 @@ describe('StockpileView – dépôts et transport', () => {
     document.body.innerHTML = '';
   });
 
-  test('affiche séparément les caisses et assemblés dans la vue par dépôt', () => {
+  test('affiche une valeur compacte par dépôt avec les caisses et unités détaillées au survol', () => {
     (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
     expect(container.textContent).toContain('Transport planning');
-    expect(container.textContent).toContain('assembled');
     expect(container.textContent).toContain('Unlisted Cargo');
+    const stock = [...container.querySelectorAll<HTMLTableCellElement>('td[data-quantity-tooltip]')]
+      .find(cell => cell.dataset.quantityTooltip === '1 crates + 2 unpacked units');
+    expect(stock?.textContent?.trim()).toBe('3');
   });
 
   test('affiche les colonnes Target et Gap dans la vue Transport planning', () => {

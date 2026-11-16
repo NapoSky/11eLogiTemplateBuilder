@@ -2,6 +2,7 @@ import interact from 'interactjs';
 import { store, ICON_SCALES } from '../store';
 import { Section as SectionType, SectionIcon } from '../types';
 import { showToast } from '../services/toast';
+import { resolveIconPath } from '../services/iconPaths';
 
 interface InteractMoveEvent {
   dx: number;
@@ -220,7 +221,7 @@ export class SectionComponent {
         <div class="section-icon group relative bg-black/30 rounded flex items-center justify-center cursor-grab hover:bg-black/50 hover:scale-105 transition-all duration-150 select-none ring-1 ring-white/10 hover:ring-white/25" 
              style="width: ${iconSize}px; height: ${iconSize}px;"
              data-icon-instance-id="${icon.id}" data-section-id="${this.section.id}" draggable="true">
-          <img src="${icon.path}" alt="" style="width: ${imgSize}px; height: ${imgSize}px;" class="object-contain pointer-events-none select-none drop-shadow-sm" draggable="false" />
+          <img src="${resolveIconPath(icon.path)}" alt="" style="width: ${imgSize}px; height: ${imgSize}px;" class="object-contain pointer-events-none select-none drop-shadow-sm" draggable="false" />
           ${subtypeHtml}
           ${quantityHtml}
           <button class="icon-options-btn absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center bg-gray-900/90 hover:bg-blue-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity ring-1 ring-white/30"
