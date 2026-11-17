@@ -3,7 +3,7 @@ import { Template, Section, SectionIcon, MpfDataEntry, TodoListItem, TodoList, M
 import { getBaseUrl } from '../config';
 import { renderTodoList } from '../services/todoListExporter';
 import { fullOrderCost } from '../services/mpfCalculator';
-import { translateFrenchItemName } from '../services/frenchItemNames';
+import { migrateStoredStockpileNames, translateFrenchItemName } from '../services/frenchItemNames';
 import { showToast } from '../services/toast';
 import { confirmDialog } from '../services/confirmDialog';
 import { withActionGate } from '../services/actionGate';
@@ -553,7 +553,7 @@ export class StockpileView {
       this.csvEntries = entries.map((e, index) => ({
         id: e.id,
         header: e.header,
-        items: new Map(Object.entries(e.items)),
+        items: migrateStoredStockpileNames(e.items),
         label: e.label,
         depotName: e.depotName ?? inferDepotName(e.header?.location ?? e.label),
         role: e.role ?? (index === 0 ? 'intermediate' : 'backline'),
@@ -578,7 +578,7 @@ export class StockpileView {
       this.csvEntries = [{
         id: generateId(),
         header,
-        items: new Map(Object.entries(obj)),
+        items: migrateStoredStockpileNames(obj),
         label,
         depotName: inferDepotName(header?.location ?? label),
         role: 'intermediate',

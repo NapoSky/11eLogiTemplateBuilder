@@ -265,3 +265,44 @@ export function translateFrenchItemName(name: string): string {
   const translated = Object.hasOwn(FR_TO_EN, lookupName) ? FR_TO_EN[lookupName] : base;
   return hasCrate ? `${translated} (Crate)` : translated;
 }
+
+// Exact outputs of the former FR dictionary. Do not infer aliases from arbitrary
+// legacy catalogue labels: some of those historically identified other vehicles.
+const PREVIOUS_TRANSLATIONS: Record<string, string> = {
+  'No.1 "The Liar"': 'No.1 "The Liar" Submachine Gun',
+  'Paratrooper Backpack': "Paratrooper's Ruck",
+  'Pipeline Segment': 'Pipe',
+  'Rare Materials (Facilities)': 'Rare Materials',
+  'Relic Material': 'Relic Materials',
+  'Liquid Container (Fuel Tank)': 'Liquid Container',
+  "Airship Pilot's Flight Suit": "Aviator's Raiment",
+  'BMS - Universal Assembly Rig (Construction Vehicle)': 'BMS - Universal Assembly Rig',
+  'BMS - Packmule Flatbed Truck': 'BMS - Packmule Flatbed',
+  'T14 "Vesta" Flame Tankette': 'T14 "Vesta" Tankette',
+  'T13 "Deioneus" Tankette': 'T13 "Deioneus" Rocket Battery',
+  'AA-2 Battering Ram Gun Truck': 'AA-2 Battering Ram',
+  'Rocket Part Bottom': 'A0E-9 Rocket Booster',
+  'Rocket Part Center': 'A0E-9 Rocket Body',
+  'Rocket Part Top': 'A0E-9 Rocket Warhead',
+  'Construction Parts (Shippable)': 'Construction Parts',
+  'Structure Equipment (Shippable)': 'Structure Parts',
+  'Storm Cannon (Shippable)': 'Storm Cannon Parts',
+  'Fort Large Radar (Shippable)': 'Aircraft Radar Parts',
+  'Intelligence Center (Shippable)': 'Intelligence Center Parts',
+  'Weather Station (Shippable)': 'Weather Station Parts',
+};
+
+/** Reapply current translations to saved imports, merging aliases per packaging. */
+export function migrateStoredStockpileNames(items: Record<string, number>): Map<string, number> {
+  const restored = new Map<string, number>();
+  for (const [name, quantity] of Object.entries(items)) {
+    const translated = translateFrenchItemName(name)
+      .replace(/[‘’]/g, "'").replace(/[“”]/g, '"');
+    const crated = translated.endsWith(' (Crate)');
+    const base = crated ? translated.slice(0, -8) : translated;
+    const current = Object.hasOwn(PREVIOUS_TRANSLATIONS, base) ? PREVIOUS_TRANSLATIONS[base] : base;
+    const key = `${current}${crated ? ' (Crate)' : ''}`;
+    restored.set(key, (restored.get(key) ?? 0) + quantity);
+  }
+  return restored;
+}

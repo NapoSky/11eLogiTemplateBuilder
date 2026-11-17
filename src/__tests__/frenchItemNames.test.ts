@@ -1,10 +1,12 @@
 import { readFileSync } from 'node:fs';
-import { parseCSV, buildComparison } from '../components/StockpileView';
-import { translateFrenchItemName } from '../services/frenchItemNames';
+import { parseCSV, buildComparison, StockpileView } from '../components/StockpileView';
+import { migrateStoredStockpileNames, translateFrenchItemName } from '../services/frenchItemNames';
 import { normalizeGameName, type ItemDataEntry } from '../services/gameData';
 import { normalizeStockItems } from '../services/stockpileLogistics';
 import type { Section } from '../types';
 import frenchNames from './fixtures/french-stockpile-names.json';
+import { store } from '../store';
+import { localStorageMock } from './setup';
 
 const itemData: ItemDataEntry[] = JSON.parse(readFileSync('public/itemData.json', 'utf8'));
 const snapshot = JSON.parse(readFileSync('scripts/data/wiki.snapshot.json', 'utf8'));
@@ -53,6 +55,99 @@ describe('French stockpile export coverage', () => {
       "O'Brien v.200 Squire", 'Underground Fortress Parts',
     ].sort());
     expect(result.rows.find(row => row.itemName === 'BMS - Packmule Flatbed')?.status).toBe('ok');
+  });
+});
+
+describe('restoring stockpiles imported before the translation update', () => {
+  let view: StockpileView | undefined;
+  const originalFetch = global.fetch;
+  afterEach(() => {
+    view?.unmount();
+    view = undefined;
+    store.setItemData([]);
+    document.body.innerHTML = '';
+    global.fetch = originalFetch;
+    jest.restoreAllMocks();
+  });
+
+  test('merges old English translations and French names without merging packaging or unrelated identities', () => {
+    const result = migrateStoredStockpileNames({
+      'BMS - Packmule Flatbed Truck': 14,
+      'Camion Plateau BMS - Packmule': 2,
+      'BMS - Packmule Flatbed': 1,
+      'BMS - Packmule Flatbed Truck (Crate)': 4,
+      'Liquid Container (Fuel Tank)': 4,
+      'Détonateur de Charge Havoc (Crate)': 56,
+      'Havoc Charge Detonator (Crate)': 2,
+      'Unknown Item': 8,
+      '85K-b "Falchion" Mortar Tank': 3,
+    });
+    expect(Object.fromEntries(result)).toEqual({
+      'BMS - Packmule Flatbed': 17,
+      'BMS - Packmule Flatbed (Crate)': 4,
+      'Liquid Container': 4,
+      'Havoc Charge Detonator (Crate)': 58,
+      'Unknown Item': 8,
+      '85K-b "Falchion" Mortar Tank': 3,
+    });
+    expect(migrateStoredStockpileNames(Object.fromEntries(result))).toEqual(result);
+  });
+
+  test.each(['entries', 'single-csv'])('%s storage matches the actual colonial reference after reload', async format => {
+    const colonial = JSON.parse(readFileSync('public/referenceTemplateColonial.json', 'utf8'));
+    const mapping = JSON.parse(readFileSync('public/iconMapping.json', 'utf8'));
+    const cachedItems = {
+      'Détonateur de Charge Havoc (Crate)': 56,
+      'Munitions Incendiaires (Crate)': 30,
+      'Sirène de Raid Aérien (Crate)': 10,
+      'Bouée Navale (Crate)': 24,
+      'BMS - Packmule Flatbed Truck': 14,
+      'Liquid Container (Fuel Tank)': 4,
+      'Gravel (Crate)': 466,
+    };
+    const header = { location: 'Region - Depot - Seaport', date: 'old snapshot' };
+    const entry = { id: 'saved-import', items: cachedItems, header, label: 'Saved stock', depotName: 'My depot', role: 'intermediate' };
+    localStorage.setItem('stockpile_tpl_source', 'official-colonial');
+    if (format === 'entries') localStorage.setItem('stockpile_csv_entries', JSON.stringify([entry]));
+    else {
+      localStorage.setItem('stockpile_csv_items', JSON.stringify(cachedItems));
+      localStorage.setItem('stockpile_csv_header', JSON.stringify(header));
+    }
+    const original = localStorage.getItem('stockpile_csv_entries');
+    store.setItemData(itemData);
+    global.fetch = jest.fn(async input => ({
+      ok: true,
+      json: async () => String(input).includes('iconMapping') ? mapping : colonial,
+    } as Response));
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    view = new StockpileView();
+    view.mount(container);
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    const result = view['result']!;
+    expect(result).not.toBeNull();
+    for (const [name, crates] of [['Havoc Charge Detonator', 56], ['Flame Ammo', 30], ['Air Raid Siren', 10]] as const) {
+      expect(result.rows.find(row => row.itemName === name)?.stockpileQty).toBe(crates);
+      expect(result.surplus.some(row => row.itemName === name)).toBe(false);
+    }
+    // These items really are absent from the current colonial reference.
+    expect(result.surplus).toEqual(expect.arrayContaining([
+      { itemName: 'Naval Buoy', qty: 24, isCrate: true },
+      { itemName: 'BMS - Packmule Flatbed', qty: 14, isCrate: false },
+      { itemName: 'Liquid Container', qty: 4, isCrate: false },
+      { itemName: 'Gravel', qty: 466, isCrate: true },
+    ]));
+    expect(result.surplus).toHaveLength(4);
+    expect(view['csvEntries'][0].header).toEqual(header);
+    if (format === 'entries') {
+      expect(view['csvEntries'][0]).toMatchObject({ id: entry.id, role: entry.role, depotName: entry.depotName, label: entry.label });
+      expect(localStorage.getItem('stockpile_csv_entries')).toBe(original);
+    } else {
+      const saved = JSON.parse(localStorage.getItem('stockpile_csv_entries')!);
+      expect(saved[0].items['Havoc Charge Detonator (Crate)']).toBe(56);
+      expect(localStorage.getItem('stockpile_csv_items')).toBeNull();
+    }
   });
 });
 
