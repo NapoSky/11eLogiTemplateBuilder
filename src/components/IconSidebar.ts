@@ -86,7 +86,7 @@ export class IconSidebar {
           data-category="Toutes"
           class="px-2 py-1 text-xs rounded ${store.selectedCategory === 'Toutes' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}"
         >All</button>
-        ${[...CATEGORIES.map(category => ({ value: category, label: category })),
+        ${[...CATEGORIES.map(category => ({ value: category, label: category.charAt(0) + category.slice(1).toLowerCase() })),
           ...TODO_CATEGORIES.map(category => ({ value: category, label: PRODUCTION_MENU_LABELS[category] }))].map(({ value, label }) => `
           <button
             data-category="${value}"

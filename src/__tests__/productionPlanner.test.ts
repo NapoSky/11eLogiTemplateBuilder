@@ -257,7 +257,7 @@ describe('compact production UI', () => {
     expect(store.filteredIcons.map(icon => icon.filename)).toEqual(['test-supplies.png']);
     store.setViewMode('template');
     expect(store.selectedCategory).toBe('Toutes');
-    expect(visibleLabels()).toContain('Field Weapons');
+    expect(visibleLabels()).toContain('Field weapons');
     expect(visibleLabels()).toContain('Naval');
     container.querySelector<HTMLButtonElement>('[data-category="Field Weapons"]')!.click();
     expect(store.filteredIcons.map(icon => icon.filename)).toEqual(['test-field.png']);
