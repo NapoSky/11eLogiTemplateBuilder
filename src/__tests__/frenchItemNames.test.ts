@@ -3,7 +3,7 @@ import { parseCSV, buildComparison, StockpileView } from '../components/Stockpil
 import { migrateStoredStockpileNames, translateFrenchItemName } from '../services/frenchItemNames';
 import { normalizeGameName, type ItemDataEntry } from '../services/gameData';
 import { normalizeStockItems } from '../services/stockpileLogistics';
-import type { Section } from '../types';
+import type { Section, Template } from '../types';
 import frenchNames from './fixtures/french-stockpile-names.json';
 import { store } from '../store';
 import { localStorageMock } from './setup';
@@ -93,10 +93,13 @@ describe('restoring stockpiles imported before the translation update', () => {
     expect(migrateStoredStockpileNames(Object.fromEntries(result))).toEqual(result);
   });
 
-  test.each(['entries', 'single-csv'])('%s storage matches the actual colonial reference after reload', async format => {
-    const colonial = JSON.parse(readFileSync('public/referenceTemplateColonial.json', 'utf8'));
+  test.each([
+    ['entries', 'colonial'], ['single-csv', 'colonial'],
+    ['entries', 'warden'], ['single-csv', 'warden'],
+  ])('%s storage matches the actual %s reference after reload', async (format, faction) => {
+    const reference = JSON.parse(readFileSync(`public/${faction === 'warden' ? 'referenceTemplate.json' : 'referenceTemplateColonial.json'}`, 'utf8'));
     const mapping = JSON.parse(readFileSync('public/iconMapping.json', 'utf8'));
-    const cachedItems = {
+    const cachedItems: Record<string, number> = {
       'Détonateur de Charge Havoc (Crate)': 56,
       'Munitions Incendiaires (Crate)': 30,
       'Sirène de Raid Aérien (Crate)': 10,
@@ -105,9 +108,15 @@ describe('restoring stockpiles imported before the translation update', () => {
       'Liquid Container (Fuel Tank)': 4,
       'Gravel (Crate)': 466,
     };
+    if (faction === 'warden') {
+      cachedItems['No.1 "The Liar" (Crate)'] = 7;
+      cachedItems['No.1 "The Liar" Submachine Gun (Crate)'] = 3;
+      cachedItems["Airship Pilot's Flight Suit (Crate)"] = 9;
+      cachedItems["Vêtement d'Aviateur (Crate)"] = 2;
+    }
     const header = { location: 'Region - Depot - Seaport', date: 'old snapshot' };
     const entry = { id: 'saved-import', items: cachedItems, header, label: 'Saved stock', depotName: 'My depot', role: 'intermediate' };
-    localStorage.setItem('stockpile_tpl_source', 'official-colonial');
+    localStorage.setItem('stockpile_tpl_source', faction === 'warden' ? 'official' : 'official-colonial');
     if (format === 'entries') localStorage.setItem('stockpile_csv_entries', JSON.stringify([entry]));
     else {
       localStorage.setItem('stockpile_csv_items', JSON.stringify(cachedItems));
@@ -117,7 +126,7 @@ describe('restoring stockpiles imported before the translation update', () => {
     store.setItemData(itemData);
     global.fetch = jest.fn(async input => ({
       ok: true,
-      json: async () => String(input).includes('iconMapping') ? mapping : colonial,
+      json: async () => String(input).includes('iconMapping') ? mapping : reference,
     } as Response));
     const container = document.createElement('div');
     document.body.appendChild(container);
@@ -127,18 +136,22 @@ describe('restoring stockpiles imported before the translation update', () => {
 
     const result = view['result']!;
     expect(result).not.toBeNull();
-    for (const [name, crates] of [['Havoc Charge Detonator', 56], ['Flame Ammo', 30], ['Air Raid Siren', 10]] as const) {
+    const matched: [string, number][] = [['Havoc Charge Detonator', 56], ['Flame Ammo', 30]];
+    if (faction === 'colonial') matched.push(['Air Raid Siren', 10]);
+    else matched.push(['No.1 "The Liar" Submachine Gun', 10], ["Aviator's Raiment", 11]);
+    for (const [name, crates] of matched) {
       expect(result.rows.find(row => row.itemName === name)?.stockpileQty).toBe(crates);
       expect(result.surplus.some(row => row.itemName === name)).toBe(false);
     }
-    // These items really are absent from the current colonial reference.
+    // These items really are absent from both current reference templates.
     expect(result.surplus).toEqual(expect.arrayContaining([
       { itemName: 'Naval Buoy', qty: 24, isCrate: true },
       { itemName: 'BMS - Packmule Flatbed', qty: 14, isCrate: false },
       { itemName: 'Liquid Container', qty: 4, isCrate: false },
       { itemName: 'Gravel', qty: 466, isCrate: true },
     ]));
-    expect(result.surplus).toHaveLength(4);
+    if (faction === 'warden') expect(result.surplus).toContainEqual({ itemName: 'Air Raid Siren', qty: 10, isCrate: true });
+    expect(result.surplus).toHaveLength(faction === 'warden' ? 5 : 4);
     expect(view['csvEntries'][0].header).toEqual(header);
     if (format === 'entries') {
       expect(view['csvEntries'][0]).toMatchObject({ id: entry.id, role: entry.role, depotName: entry.depotName, label: entry.label });
@@ -147,6 +160,94 @@ describe('restoring stockpiles imported before the translation update', () => {
       const saved = JSON.parse(localStorage.getItem('stockpile_csv_entries')!);
       expect(saved[0].items['Havoc Charge Detonator (Crate)']).toBe(56);
       expect(localStorage.getItem('stockpile_csv_items')).toBeNull();
+    }
+  });
+});
+
+describe('Warden reference without a user stockpile sample', () => {
+  const template: Template = JSON.parse(readFileSync('public/referenceTemplate.json', 'utf8'));
+  const mapping = JSON.parse(readFileSync('public/iconMapping.json', 'utf8'));
+  const metadata = new Map(itemData.map(item => [item.iconFilename, item]));
+
+  test.each(['fresh CSV', 'stored CSV'])('all 112 reference rows match a synthetic %s with crates and loose units', source => {
+    const assets = template.sections.flatMap(section => section.icons.map(icon => {
+      const item = metadata.get(icon.filename);
+      expect(item).toBeDefined();
+      return item!;
+    }));
+    expect(assets).toHaveLength(112);
+    const names = [...new Set(assets.map(item => item.itemName))];
+    // A real CSV contains stock once per item, even when the template uses that
+    // item in several sections or with different target units.
+    const synthetic = Object.fromEntries(names.flatMap(name => [[`${name} (Crate)`, 2], [name, 3]]));
+    const items = source === 'fresh CSV'
+      ? parseCSV(Object.entries(synthetic).map(([name, qty]) => `${name},${qty}`).join('\n')).items
+      : migrateStoredStockpileNames(synthetic);
+    const result = buildComparison(template.sections, items, mapping, null, {
+      quantityMode: 'crate-equivalents-v1', itemData,
+    });
+    expect(result.rows).toHaveLength(112);
+    expect(result.surplus).toEqual([]);
+    // Identity is recognized even when the catalogue lacks a crate capacity.
+    // Mixed stock must retain an explicit unknown calculation in those cases.
+    expect(result.rows.filter(row => row.status === 'unknown').map(row => row.itemName).sort())
+      .toEqual(['Moray Torpedo', 'Tenta Torpedo']);
+    for (const [index, row] of result.rows.entries()) {
+      const capacity = assets[index].unitsPerCrate;
+      if (capacity === null) {
+        expect(row.quantities).toMatchObject({ crates: 2, units: 3, totalUnits: null, equivalentCrates: null });
+        continue;
+      }
+      expect(row.status).not.toBe('unknown');
+      expect(row.quantities).toMatchObject({ crates: 2, units: 3, totalUnits: 2 * capacity + 3 });
+      expect(row.stockpileQty).toBeCloseTo(row.isCrateTarget ? 2 + 3 / capacity : 2 * capacity + 3);
+    }
+  });
+
+  test('French Warden equipment merges with its English counterpart without false surplus', () => {
+    // Explicit associations from the supplied French export, independent of the
+    // translator, including the Warden weapons and uniforms affected by renames.
+    const pairs = [
+      ["Fusil d'Assaut Booker Model 838", 'Booker Storm Rifle Model 838'],
+      ["Fusil d'Assaut Aalto 24", 'Aalto Storm Rifle 24'],
+      ['Le Hangman 757', 'The Hangman 757'],
+      ['Fusil Auto Sampo 77', 'Sampo Auto-Rifle 77'],
+      ['Pistolet-mitrailleur No.1 "The Liar"', 'No.1 "The Liar" Submachine Gun'],
+      ['Pistolet-mitrailleur Fiddler Model 868', 'Fiddler Submachine Gun Model 868'],
+      ['Lance-Roquette Antichar Carnyx', 'Carnyx Anti-Tank Rocket Launcher'],
+      ['Bonesaw MK.3 Monté', 'Mounted Bonesaw MK.3'],
+      ['Fusil Antichar Neville', 'Neville Anti-Tank Rifle'],
+      ['Grenade à Fragmentation A3 Harpa', 'A3 Harpa Fragmentation Grenade'],
+      ['Grenade Flacon BF5 White Ash', 'BF5 White Ash Flask Grenade'],
+      ['Détonateur de Charge Havoc', 'Havoc Charge Detonator'],
+      ['Munitions Incendiaires', 'Flame Ammo'],
+      ['Munitions Antiaériennes Absol', 'Absol Anti-Aircraft Rounds'],
+      ['Roquette Incendiaire 4C', '4C-Fire Rocket'],
+      ["Munition pour Willow's Bane", "Willow's Bane Ammo"],
+      ["L'Ospreay", 'The Ospreay'],
+      ['Manteau de Spécialiste', "Specialist's Overcoat"],
+      ['Cuirasse', "Gunner's Breastplate"],
+      ['Tenue de Sapeur', 'Sapper Gear'],
+      ['Veste de Médecin', "Physician's Jacket"],
+      ["Parure d'Officier", "Officer's Regalia"],
+      ["Manteau d'Éclaireur", "Outrider's Mantle"],
+      ['Parka Caoivienne', 'Caoivish Parka'],
+      ['Combinaison Rembourrée', 'Padded Boiler Suit'],
+      ["Vêtement d'Aviateur", "Aviator's Raiment"],
+    ];
+    const { items, frenchDetected } = parseCSV(pairs.flatMap(([french, english]) => [
+      `${french} (Caisse),2`, `${english} (Crate),1`,
+    ]).join('\n'));
+    expect(frenchDetected).toBe(true);
+    const result = buildComparison(template.sections, items, mapping, null, {
+      quantityMode: 'crate-equivalents-v1', itemData,
+    });
+    expect(result.surplus).toEqual([]);
+    for (const [, english] of pairs) {
+      expect(items.get(`${english} (Crate)`)).toBe(3);
+      const rows = result.rows.filter(row => row.itemName === english);
+      expect(rows.length).toBeGreaterThan(0);
+      for (const row of rows) expect(row.quantities).toMatchObject({ crates: 3, units: 0 });
     }
   });
 });
