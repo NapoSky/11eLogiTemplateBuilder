@@ -168,11 +168,8 @@ export class FacilitiesView {
         <div class="max-w-[1600px] mx-auto p-4 sm:p-6">
           <div class="flex flex-wrap items-start justify-between gap-3 mb-5">
             <div><h2 class="text-xl font-semibold">Facilities</h2><p class="text-sm text-gray-400 mt-1">Turn production objectives into a task force plan.</p></div>
-            <div class="flex flex-wrap gap-2">
-              <button class="${button}" data-fc-action="save-mission">Save mission</button>
-              <label class="${button} cursor-pointer">Load mission<input id="fc-load-mission" type="file" accept=".json" class="sr-only"></label>
-            </div>
           </div>
+          <input id="fc-load-mission" type="file" accept=".json" class="hidden" aria-label="Load facility mission">
           ${this.workspace.warning ? `<p role="status" class="text-sm text-amber-300 mb-4">${html(this.workspace.warning)}</p>` : ''}
           <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-5 items-start">
             <div class="min-w-0 space-y-4">
@@ -563,7 +560,6 @@ export class FacilitiesView {
         this.workspace.mission.available = {}; this.save();
         showToast('Allocated stock cleared.'); break;
       case 'save-profile': this.download(JSON.stringify(this.workspace.profile, null, 2), 'facility-profile.json', 'application/json'); break;
-      case 'save-mission': this.download(JSON.stringify({ version: 1, mission: this.workspace.mission, profile: this.workspace.profile }, null, 2), 'facility-mission.json', 'application/json'); break;
       case 'copy': case 'text': {
         if (!this.catalog) return;
         const text = this.container?.querySelector<HTMLElement>('#fc-discord')?.dataset.raw ?? '';

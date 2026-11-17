@@ -148,6 +148,8 @@ export class Toolbar {
           </svg>
           PNG
         </button>
+        ` : ''}
+        ${isTemplate || isFacilities ? `
         <button id="btn-export-json" class="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 rounded text-sm flex items-center gap-1" title="Ctrl+S">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
@@ -433,10 +435,14 @@ export class Toolbar {
     this.container.querySelector('#btn-export-png')?.addEventListener('click', () => this.exportPng());
 
     // Export JSON
-    this.container.querySelector('#btn-export-json')?.addEventListener('click', () => this.exportJson());
+    this.container.querySelector('#btn-export-json')?.addEventListener('click', () => {
+      if (store.viewMode === 'facilities') window.dispatchEvent(new CustomEvent('facilities:export-mission'));
+      else this.exportJson();
+    });
 
     // Load template (open modal)
     this.container.querySelector('#btn-load-template')?.addEventListener('click', () => {
+      if (store.viewMode === 'facilities') { window.dispatchEvent(new CustomEvent('facilities:import-mission')); return; }
       window.dispatchEvent(new CustomEvent('open-template-load-modal'));
     });
 
