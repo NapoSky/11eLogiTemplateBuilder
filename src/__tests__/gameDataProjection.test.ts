@@ -143,7 +143,7 @@ describe('visually reviewed artwork does not invent recipe identities', () => {
     const current = buildComparison([section], stock, data.iconMapping, null,
       { quantityMode: 'crate-equivalents-v1', itemData: data.itemData });
     expect(current.rows[0]).toMatchObject({ itemName: 'Assembly Materials', status: 'unknown', stockpileQty: 0 });
-    expect(current.surplus).toEqual([{ itemName: 'Assembly Materials IV', qty: 12, isCrate: false }]);
+    expect(current.surplus).toEqual([{ itemName: 'Assembly Materials IV', crates: 0, units: 12 }]);
   });
 });
 

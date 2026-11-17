@@ -317,7 +317,7 @@ describe('buildComparison', () => {
 
     expect(surplus).toHaveLength(1);
     expect(surplus[0].itemName).toBe('Cremari Mortar');
-    expect(surplus[0].qty).toBe(3);
+    expect(surplus[0]).toEqual({ itemName: 'Cremari Mortar', crates: 0, units: 3 });
   });
 
   test('les items surplus avec qty = 0 ne sont pas inclus', () => {
@@ -329,8 +329,32 @@ describe('buildComparison', () => {
   test('le surplus est trié par quantité décroissante', () => {
     const csv = new Map([['Cremari Mortar', 3], ['A3 Harpa Fragmentation Grenade', 12]]);
     const { surplus } = buildComparison([], csv, iconMapping, null);
-    expect(surplus[0].qty).toBeGreaterThan(surplus[1].qty);
+    expect(surplus[0].units).toBeGreaterThan(surplus[1].units);
   });
+
+  test.each(['legacy', 'crate-equivalents-v1'] as const)(
+    'regroupe les caisses et unités hors template sans mélanger leurs quantités en mode %s', quantityMode => {
+      const csv = new Map([
+        ['Cremari Mortar', 12],
+        ['Cremari Mortar (Crate)', 3],
+        ['A3 Harpa Fragmentation Grenade (Crate)', 4],
+        ['A3 Harpa Fragmentation Grenade', 0],
+        ['Empty Item (Crate)', 0],
+      ]);
+      expect(buildComparison([], csv, iconMapping, null, { quantityMode, itemData: [] }).surplus).toEqual([
+        { itemName: 'Cremari Mortar', crates: 3, units: 12 },
+        { itemName: 'A3 Harpa Fragmentation Grenade', crates: 4, units: 0 },
+      ]);
+    },
+  );
+
+  test.each([undefined, 'subtypes/SubtypeCrateIcon.png'])(
+    'exclut les deux formes du surplus si le template contient l’objet avec le sous-type %s', subtype => {
+      const section = makeSection({ icons: [makeIcon('UI/ItemIcons/RifleCItemIcon.png', 10, subtype)] });
+      const csv = new Map([['Argenti r.II Rifle', 12], ['Argenti r.II Rifle (Crate)', 3]]);
+      expect(buildComparison([section], csv, iconMapping, null).surplus).toEqual([]);
+    },
+  );
 
   test('transmet le header dans le résultat', () => {
     const header = { location: 'Base Alpha', date: '2024.01.01-00.00.00' };
@@ -660,6 +684,22 @@ describe('StockpileView – dépôts et transport', () => {
     const stock = [...container.querySelectorAll<HTMLTableCellElement>('td[data-quantity-tooltip]')]
       .find(cell => cell.dataset.quantityTooltip === '1 crates + 2 unpacked units');
     expect(stock?.textContent?.trim()).toBe('3');
+  });
+
+  test('affiche une seule ligne hors template par objet et compte les objets distincts', () => {
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Mercy - Seaport - 11e,now\n7.92mm,10\nUnlisted Cargo,2\nUnlisted Cargo (Crate),3\nOther Cargo (Crate),1' },
+    }));
+    (container.querySelector('#btn-hide-ok') as HTMLButtonElement).click();
+
+    const section = container.querySelector('[data-section-key="__surplus__"]')!;
+    expect(section.textContent).toContain('2 items with qty > 0');
+    const rows = [...section.nextElementSibling!.querySelectorAll('tbody tr')];
+    expect(rows).toHaveLength(2);
+    expect(rows[0].querySelector('td')?.textContent).toBe('Unlisted Cargo');
+    // 4 bare units in Kirknell + 2 bare units and 3 crates in Mercy.
+    expect(rows[0].textContent).toContain('3 crates + 6 units');
+    expect(rows[1].textContent).toContain('1 crate');
   });
 
   test('affiche les colonnes Target et Gap dans la vue Transport planning', () => {

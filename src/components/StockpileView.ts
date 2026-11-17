@@ -67,7 +67,7 @@ interface StockpileHeader {
 interface ComparisonResult {
   header: StockpileHeader | null;
   rows: StockpileRow[];
-  surplus: Array<{ itemName: string; qty: number; isCrate: boolean }>;
+  surplus: Array<{ itemName: string; crates: number; units: number }>;
 }
 
 type CsvEntry = StockpileSnapshot;
@@ -264,16 +264,19 @@ export function buildComparison(
     }
   }
 
-  // Surplus: CSV entries with qty > 0 not matched to any template item
-  const surplus: ComparisonResult['surplus'] = [];
+  // One surplus row per item, keeping physical packaging visible for debugging.
+  const surplusByName = new Map<string, ComparisonResult['surplus'][number]>();
   for (const [name, qty] of csvItems.entries()) {
     if (qty > 0 && !matchedCsvKeys.has(name)) {
       const isCrate = name.endsWith(' (Crate)');
-      const baseName = isCrate ? name.slice(0, -7) : name; // " (Crate)" = 8 chars but we keep the space out
-      surplus.push({ itemName: isCrate ? name.slice(0, -8) : name, qty, isCrate });
+      const itemName = isCrate ? name.slice(0, -8) : name;
+      const item = surplusByName.get(itemName) ?? { itemName, crates: 0, units: 0 };
+      if (isCrate) item.crates += qty;
+      else item.units += qty;
+      surplusByName.set(itemName, item);
     }
   }
-  surplus.sort((a, b) => b.qty - a.qty);
+  const surplus = [...surplusByName.values()].sort((a, b) => (b.crates + b.units) - (a.crates + a.units));
 
   return { header, rows, surplus };
 }
@@ -619,6 +622,13 @@ export class StockpileView {
     return iconPath
       ? store.itemData.find(item => canonicalIconFilename(item.iconFilename) === iconPathToMappingKey(iconPath))
       : store.itemData.find(item => item.iconUsage !== 'facilities' && (item.itemName === itemName || item.aliases.includes(itemName)));
+  }
+
+  private matchesOfficialFaction(itemName: string): boolean {
+    if (!this.officialFaction) return true;
+    const metadata = this.metadataFor(itemName) ?? store.itemData.find(item => item.legacyItemName === itemName);
+    // Shared items and names without known faction metadata remain visible.
+    return !metadata?.faction?.length || metadata.faction.includes(this.officialFaction);
   }
 
   private quantitiesFor(items: Map<string, number>, itemName: string, iconPath?: string): StockQuantities {
@@ -1272,7 +1282,7 @@ export class StockpileView {
     );
     for (const items of depotItems.values()) {
       for (const itemName of items.keys()) {
-        if (!rowsByName.has(itemName)) rowsByName.set(itemName, {
+        if (!rowsByName.has(itemName) && this.matchesOfficialFaction(itemName)) rowsByName.set(itemName, {
           itemName,
           targetQty: -1,
           isCrateTarget: crateTargetFor(this.metadataFor(itemName)),
@@ -1555,7 +1565,8 @@ export class StockpileView {
     }
 
     // Surplus section — also collapsible; hidden when hideOk is active
-    if (this.result.surplus.length > 0 && this.filterStatus === 'all' && !this.hideOk) {
+    const surplus = this.result.surplus.filter(item => this.matchesOfficialFaction(item.itemName));
+    if (surplus.length > 0 && this.filterStatus === 'all' && !this.hideOk) {
       const surplusKey = '__surplus__';
       const collapsed  = this.collapsedSections.has(surplusKey);
       html += `
@@ -1568,7 +1579,7 @@ export class StockpileView {
             </svg>
             <span class="w-2.5 h-2.5 rounded-full bg-gray-600 inline-block shrink-0"></span>
             Not in template
-            <span class="text-xs text-gray-600 font-normal">${this.result.surplus.length} item${this.result.surplus.length > 1 ? 's' : ''} with qty &gt; 0</span>
+            <span class="text-xs text-gray-600 font-normal">${surplus.length} item${surplus.length > 1 ? 's' : ''} with qty &gt; 0</span>
           </button>
           <div class="${collapsed ? 'hidden' : ''}">
             <div class="rounded-lg overflow-hidden border border-gray-700/50">
@@ -1580,10 +1591,13 @@ export class StockpileView {
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-700/30">
-                  ${this.result.surplus.map(s => `
+                  ${surplus.map(s => `
                     <tr class="text-gray-400 hover:bg-gray-800/30 transition-colors">
                       <td class="px-3 py-1.5">${escapeHtml(s.itemName)}</td>
-                      <td class="px-3 py-1.5 text-right font-mono text-xs">${s.qty}</td>
+                      <td class="px-3 py-1.5 text-right font-mono text-xs whitespace-nowrap">${[
+                        s.crates > 0 ? `${s.crates} crate${s.crates === 1 ? '' : 's'}` : '',
+                        s.units > 0 ? `${s.units} unit${s.units === 1 ? '' : 's'}` : '',
+                      ].filter(Boolean).join(' + ')}</td>
                     </tr>
                   `).join('')}
                 </tbody>

@@ -489,6 +489,15 @@
           "gridRow": 2,
           "gridCol": 4,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
+        },
+        {
+          "id": "0035f9c5-570c-4baa-9ac0-065c8f2d5c0c",
+          "iconId": "Textures/UI/ItemIcons/HELaunchedGrenadeItemIcon.png",
+          "filename": "Textures/UI/ItemIcons/HELaunchedGrenadeItemIcon.png",
+          "path": "/assets/icons/Textures/UI/ItemIcons/HELaunchedGrenadeItemIcon.png",
+          "quantity": 50,
+          "gridRow": 0,
+          "gridCol": 3
         }
       ]
     },

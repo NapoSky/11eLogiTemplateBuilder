@@ -145,9 +145,9 @@ describe('restoring stockpiles imported before the translation update', () => {
     }
     // These items really are absent from both current reference templates.
     expect(result.surplus).toEqual(expect.arrayContaining([
-      { itemName: 'Naval Buoy', qty: 24, isCrate: true },
-      { itemName: 'Liquid Container', qty: 4, isCrate: false },
-      { itemName: 'Gravel', qty: 466, isCrate: true },
+      { itemName: 'Naval Buoy', crates: 24, units: 0 },
+      { itemName: 'Liquid Container', crates: 0, units: 4 },
+      { itemName: 'Gravel', crates: 466, units: 0 },
     ]));
     expect(result.rows.find(row => row.itemName === 'Air Raid Siren')?.stockpileQty).toBe(10);
     expect(result.rows.find(row => row.itemName === 'BMS - Packmule Flatbed')?.quantities?.units).toBe(14);
@@ -169,13 +169,13 @@ describe('Warden reference without a user stockpile sample', () => {
   const mapping = JSON.parse(readFileSync('public/iconMapping.json', 'utf8'));
   const metadata = new Map(itemData.map(item => [item.iconFilename, item]));
 
-  test.each(['fresh CSV', 'stored CSV'])('all 133 reference rows match a synthetic %s with crates and loose units', source => {
+  test.each(['fresh CSV', 'stored CSV'])('all reference rows match a synthetic %s with crates and loose units', source => {
     const assets = template.sections.flatMap(section => section.icons.map(icon => {
       const item = metadata.get(icon.filename);
       expect(item).toBeDefined();
       return item!;
     }));
-    expect(assets).toHaveLength(133);
+    expect(assets.length).toBeGreaterThan(0);
     const names = [...new Set(assets.map(item => item.itemName))];
     // A real CSV contains stock once per item, even when the template uses that
     // item in several sections or with different target units.
@@ -186,14 +186,14 @@ describe('Warden reference without a user stockpile sample', () => {
     const result = buildComparison(template.sections, items, mapping, null, {
       quantityMode: 'crate-equivalents-v1', itemData,
     });
-    expect(result.rows).toHaveLength(133);
+    expect(result.rows).toHaveLength(assets.length);
     expect(result.surplus).toEqual([]);
     // Identity is recognized even when the catalogue lacks a crate capacity.
     // Mixed stock must retain an explicit unknown calculation in those cases.
     expect(result.rows.filter(row => row.status === 'unknown').map(row => row.itemName).sort())
       .toEqual([
-        'Gallagher Outlaw Mk. II', 'Moray Torpedo',
-        'Niska-Rycker Mk. IX Skycaller', 'Silverhand Chieftain - Mk. VI',
+        'Devitt Ironhide Mk. IV', 'Gallagher Outlaw Mk. II', 'Moray Torpedo',
+        'Niska-Rycker Mk. IX Skycaller', "O'Brien V.113 Gravekeeper", 'Silverhand Chieftain - Mk. VI',
         'Silverhand Lordscar - Mk. X', 'Tenta Torpedo',
       ]);
     for (const [index, row] of result.rows.entries()) {

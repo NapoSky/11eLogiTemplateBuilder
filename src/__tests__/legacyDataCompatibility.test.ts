@@ -144,7 +144,7 @@ describe('historical stockpile quantities (before choosing explicit unit semanti
     );
     expect(rows[0].itemName).toBe('85K-b "Falchion" Mortar Tank');
     expect(rows[0].status).toBe('missing');
-    expect(surplus).toEqual([{ itemName: '85K-b "Falchion"', qty: 20, isCrate: false }]);
+    expect(surplus).toEqual([{ itemName: '85K-b "Falchion"', crates: 0, units: 20 }]);
   });
 });
 
