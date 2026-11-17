@@ -10,6 +10,8 @@
  *
  * The companion helper `translateFrenchItemName()` also handles the
  * "(Caisse)" → "(Crate)" suffix substitution before consulting this map.
+ * Targets use English names from the supplied CSV exports and local wiki
+ * snapshot; some snapshot items have no sidebar icon in itemData.json.
  */
 
 const FR_TO_EN: Record<string, string> = {
@@ -41,7 +43,7 @@ const FR_TO_EN: Record<string, string> = {
   'Fusil Argenti r.II':                      'Argenti r.II Rifle',
   'Chevrotines':                             'Buckshot',
   '"Le Pitch Gun" mc.V':                     '"The Pitch Gun" mc.V',
-  'Pistolet-mitrailleur No.1 "The Liar"':    'No.1 "The Liar"',
+  'Pistolet-mitrailleur No.1 "The Liar"':    'No.1 "The Liar" Submachine Gun',
   'Pistolet-mitrailleur Fiddler Model 868':  'Fiddler Submachine Gun Model 868',
   'Fusil Antichar Neville':                  'Neville Anti-Tank Rifle',
 
@@ -58,6 +60,7 @@ const FR_TO_EN: Record<string, string> = {
   'Grenade Flacon BF5 White Ash': 'BF5 White Ash Flask Grenade',
   'Bombe Collante Antichar':     'Anti-Tank Sticky Bomb',
   'Charge Havoc':                'Havoc Charge',
+  'Détonateur de Charge Havoc':  'Havoc Charge Detonator',
 
   // ── Rockets / shells ─────────────────────────────────────────────────────
   'Roquette':                       'RPG',
@@ -69,6 +72,7 @@ const FR_TO_EN: Record<string, string> = {
   'Obus de Mortier Éclairant':      'Flare Mortar Shell',
   'Obus de Mortier Incendiaire':    'Incendiary Mortar Shell',
   'Obus Antiaérien 950-70b':        '950-70b Anti-Aircraft Shell',
+  'Munitions Incendiaires':         'Flame Ammo',
   'Missile Briseur':                'Shatter Missile',
   'Munitions Antiaériennes Absol':  'Absol Anti-Aircraft Rounds',
   'Torpille Quillback':             'Quillback Torpedo',
@@ -76,12 +80,15 @@ const FR_TO_EN: Record<string, string> = {
   'Munition pour Willow\'s Bane':   "Willow's Bane Ammo",
 
   // ── Equipment / tools ────────────────────────────────────────────────────
+  'Bouée Navale':              'Naval Buoy',
+  'Sirène de Raid Aérien':      'Air Raid Siren',
+  'Masque de Vol':             'Flight Mask',
   'Jumelles':                  'Binoculars',
   'Kit d\'écoute':             'Listening Kit',
   'Poutrelle Métallique':      'Metal Beam',
-  'Sac de Parachutiste':       'Paratrooper Backpack',
+  'Sac de Parachutiste':       "Paratrooper's Ruck",
   'Transmetteur Radio':        'Radio Backpack',
-  'Transmetteur de Liaison':   'Radio',
+  'Transmetteur de Liaison':   'Liaison Transmitter',
   'Sac de sable':              'Sandbag',
   'Pelle':                     'Shovel',
   'Masse':                     'Sledge Hammer',
@@ -110,29 +117,43 @@ const FR_TO_EN: Record<string, string> = {
   'Blindage Thermique':                      'Thermal Shielding',
   'Matériaux de Construction Traités':       'Processed Construction Materials',
   'Matériaux de Construction en Acier':      'Steel Construction Materials',
+  'Matériaux d\'Assemblage I':               'Assembly Materials I',
+  'Matériaux d\'Assemblage II':              'Assembly Materials II',
+  'Matériaux d\'Assemblage III':             'Assembly Materials III',
   'Matériaux d\'Assemblage IV':              'Assembly Materials IV',
+  'Matériaux d\'Assemblage V':               'Assembly Materials V',
   'Alliages Rares':                          'Rare Alloys',
   'Pétrole Lourd':                           'Heavy Oil',
   'Pétrole Enrichi':                         'Enriched Oil',
   'Pétrole':                                 'Oil',
   'Essence':                                 'Petrol',
   'Diesel':                                  'Diesel',
-  'Tuyau':                                   'Pipeline Segment',
+  'Tuyau':                                   'Pipe',
   'Alliage d\'Aluminium':                    'Aluminum Alloy',
   'Matériaux Basiques':                      'Basic Materials',
   'Alliage de Cuivre':                       'Copper Alloy',
   'Poudre Explosive':                        'Explosive Powder',
   'Matériaux de Construction':               'Construction Materials',
-  'Matériaux Rares':                         'Rare Materials (Facilities)',
+  'Matériaux Rares':                         'Rare Materials',
   'Métal Rare':                              'Rare Metal',
+  // Raw resource names: https://foxhole.wiki.gg/fr/wiki/Ressources
+  'Aluminium':                              'Aluminum',
+  'Charbon':                                'Coal',
+  'Composants':                             'Components',
+  'Composants Endommagés':                   'Damaged Components',
+  'Cuivre':                                 'Copper',
+  'Débris':                                 'Wreckage',
+  'Fer':                                    'Iron',
+  'Ferraille':                              'Salvage',
+  'Soufre':                                 'Sulfur',
   'Gravier':                                 'Gravel',
   'Poudre Explosive Lourde':                 'Heavy Explosive Powder',
   'Alliage de Fer':                          'Iron Alloy',
   'Fournitures de Maintenance':              'Maintenance Supplies',
-  'Anciens Matériaux':                       'Relic Material',
+  'Anciens Matériaux':                       'Relic Materials',
   'Matériaux Raffinés':                      'Refined Materials',
   'Matériaux Béton':                         'Concrete Materials',
-  'Conteneur de Liquide':                    'Liquid Container (Fuel Tank)',
+  'Conteneur de Liquide':                    'Liquid Container',
   'Container de ressources':                 'Resource Container',
   'Conteneur de ressources':                 'Resource Container',
   'Palette de matériaux':                    'Material Pallet',
@@ -152,7 +173,7 @@ const FR_TO_EN: Record<string, string> = {
   'Harnais Auster':                 "Auster's Harness",
   "Cloudrunner's Vesture":          "Cloudrunner's Vesture",  // same
   "Lodesman's Lorica":              "Lodesman's Lorica",      // same
-  "Vêtement d'Aviateur":            "Airship Pilot's Flight Suit",
+  "Vêtement d'Aviateur":            "Aviator's Raiment",
   'Ciré du Légionnaire':            "Legionary's Oilcoat",
   'Camouflage de Reconnaissance':   'Recon Camo',
   "Manteau d'Éclaireur":            "Outrider's Mantle",
@@ -163,23 +184,44 @@ const FR_TO_EN: Record<string, string> = {
   'Combinaison de Tankiste':        "Tankman's Coveralls",
   'Combinaison Rembourrée':         'Padded Boiler Suit',
 
+  // ── Aircraft components (both factions, sizes and repair states) ────────
+  "Moteur d'Avion Colonial (Petit)": 'Colonial Aircraft Engine (Small)',
+  "Pièces Mécaniques d'Avion Colonial (Petit)": 'Colonial Aircraft Mechanical Parts (Small)',
+  "Moteur d'Avion Colonial Endommagé (Petit)": 'Damaged Colonial Aircraft Engine (Small)',
+  "Pièces Mécaniques d'Avion Colonial Endommagées (Petit)": 'Damaged Colonial Aircraft Mechanical Parts (Small)',
+  "Moteur d'Avion Warden (Petit)": 'Warden Aircraft Engine (Small)',
+  "Pièces Mécaniques d'Avion Warden (Petit)": 'Warden Aircraft Mechanical Parts (Small)',
+  "Moteur d'Avion Warden Endommagé (Petit)": 'Damaged Warden Aircraft Engine (Small)',
+  "Pièces Mécaniques d'Avion Warden Endommagées (Petit)": 'Damaged Warden Aircraft Mechanical Parts (Small)',
+  "Moteur d'Avion Colonial (Grand)": 'Colonial Aircraft Engine (Large)',
+  "Pièces Mécaniques d'Avion Colonial (Grand)": 'Colonial Aircraft Mechanical Parts (Large)',
+  "Moteur d'Avion Colonial Endommagé (Grand)": 'Damaged Colonial Aircraft Engine (Large)',
+  "Pièces Mécaniques d'Avion Colonial Endommagées (Grand)": 'Damaged Colonial Aircraft Mechanical Parts (Large)',
+  "Moteur d'Avion Warden (Grand)": 'Warden Aircraft Engine (Large)',
+  "Pièces Mécaniques d'Avion Warden (Grand)": 'Warden Aircraft Mechanical Parts (Large)',
+  "Moteur d'Avion Warden Endommagé (Grand)": 'Damaged Warden Aircraft Engine (Large)',
+  "Pièces Mécaniques d'Avion Warden Endommagées (Grand)": 'Damaged Warden Aircraft Mechanical Parts (Large)',
+
   // ── Vehicles ─────────────────────────────────────────────────────────────
+  "Camion d'incendie R-12b - \"Salva\"": 'R-12b - "Salva" Flame Truck',
   'Ambulance R-12 - "Salus"':              'R-12 - "Salus" Ambulance',
   'Grue Mobile BMS de Classe 2':           'BMS - Class 2 Mobile Auto-Crane',
-  'BMS - Universal Assembly Rig':          'BMS - Universal Assembly Rig (Construction Vehicle)',
   'Canon de Campagne 30-250 "Tisiphone"':  '30-250 "Tisiphone" Field Cannon',
   'Canon de campagne 30-250 "Tisiphone"':  '30-250 "Tisiphone" Field Cannon',
-  'Camion Plateau BMS - Packmule':         'BMS - Packmule Flatbed Truck',
+  'Camion Plateau BMS - Packmule':         'BMS - Packmule Flatbed',
   'Das Krokodil par VAC':                  'Das Krokodil by VAC',
   'Semi-chenillé Niska Mk. I':             'Niska Mk. I Gun Motor Carriage',
   'Canon de campagne 120-68 "Koronides"':  '120-68 "Koronides" Field Gun',
   'Canon de Campagne 120-68 "Koronides"':  '120-68 "Koronides" Field Gun',
   'Chenillette T12 "Actaeon"':             'T12 "Actaeon" Tankette',
-  'Chenillette T14 "Vesta"':               'T14 "Vesta" Flame Tankette',
+  'Chenillette T14 "Vesta"':               'T14 "Vesta" Tankette',
   'Chenillette T20 "Ixion"':               'T20 "Ixion" Tankette',
-  'Batterie de Roquette T13 "Deioneus"':   'T13 "Deioneus" Tankette',
+  'Batterie de Roquette T13 "Deioneus"':   'T13 "Deioneus" Rocket Battery',
   'Camion-citerne RR-3 "Stolon"':          'RR-3 "Stolon" Tanker',
-  'AA-2 "Battering Ram"':                  'AA-2 Battering Ram Gun Truck',
+  'AA-2 "Battering Ram"':                  'AA-2 Battering Ram',
+  'Balfour Rampart 68 mm':                 'Balfour Rampart 68mm',
+  'Canon Collins de 68 mm':                'Collins Cannon 68mm',
+  'Balfour Stockade 75 mm':                'Balfour Stockade 75mm',
   'Balfour Wolfhound 40 mm':               'Balfour Wolfhound 40mm',
   'Dunne Caravaner 2f':                    'Dunne Caravaner 2f',  // same
 
@@ -194,37 +236,32 @@ const FR_TO_EN: Record<string, string> = {
   'Sections de Coque Navale':         'Naval Hull Segments',
   'Placage de Coque Navale':          'Naval Shell Plating',
   'Composants de Turbines Navales':   'Naval Turbine Components',
-  'Propulseur de Fusée A0E-9':        'Rocket Part Bottom',
-  'Corps de Fusée A0E-9':             'Rocket Part Center',
-  'Ogive de Fusée A0E-9':             'Rocket Part Top',
-  'Pièces de Construction':           'Construction Parts (Shippable)',
-  'Pièces de Structure':              'Structure Equipment (Shippable)',
-  'Pièces de Canon Storm':            'Storm Cannon (Shippable)',
-  'Pièces de Radar d\'Avion':         'Fort Large Radar (Shippable)',
-  'Pièces de Centre de renseignement':'Intelligence Center (Shippable)',
-  'Pièces de Station Météo':          'Weather Station (Shippable)',
+  'Propulseur de Fusée A0E-9':        'A0E-9 Rocket Booster',
+  'Corps de Fusée A0E-9':             'A0E-9 Rocket Body',
+  'Ogive de Fusée A0E-9':             'A0E-9 Rocket Warhead',
+  'Pièces de Forteresse Souterraine': 'Underground Fortress Parts',
+  'Pièces de Construction':           'Construction Parts',
+  'Pièces de Structure':              'Structure Parts',
+  'Pièces de Canon Storm':            'Storm Cannon Parts',
+  'Pièces de Radar d\'Avion':         'Aircraft Radar Parts',
+  'Pièces de Centre de renseignement':'Intelligence Center Parts',
+  'Pièces de Station Météo':          'Weather Station Parts',
 };
 
 /**
- * Translate a French stockpile item name to its English equivalent.
- *
- * Steps applied in order:
- *  1. Replace the French crate suffix "(Caisse)" with "(Crate)".
- *  2. Look up the name (without the crate suffix) in the FR→EN map.
- *  3. Re-attach the suffix if present.
- *
- * Items already in English pass through unchanged because they won't have an
- * entry in the map.
+ * Translate French CSV names, preserving the physical crate/assembled distinction.
+ * Both suffixes are accepted because mixed-language imports may already have
+ * normalized "(Caisse)" to "(Crate)". Unknown and English base names pass through.
  */
 export function translateFrenchItemName(name: string): string {
-  // 1. Normalise the crate suffix
-  const crateRe = /\s*\(Caisse\)\s*$/i;
+  const crateRe = /\s*\((?:Caisse|Crate)\)\s*$/i;
   const hasCrate = crateRe.test(name);
   const base = hasCrate ? name.replace(crateRe, '').trimEnd() : name;
-
-  // 2. Translate base name (identity if not in map)
-  const translated = FR_TO_EN[base] ?? base;
-
-  // 3. Reattach English suffix
+  const lookupName = base
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const translated = Object.hasOwn(FR_TO_EN, lookupName) ? FR_TO_EN[lookupName] : base;
   return hasCrate ? `${translated} (Crate)` : translated;
 }
