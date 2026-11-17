@@ -174,7 +174,7 @@ describe('new icon declarations and game artwork contexts', () => {
       .toMatchObject({ displayName: 'Paratrooper', path: '/assets/icons/subtypes/SubtypeParatrooperIcon.png' });
   });
 
-  test('offers the first image in logistics, retains both files and hides only the four facilities alternatives', async () => {
+  test('keeps facilities artwork and the Sky-Hauler addressable while hiding them from template choices', async () => {
     const saved = savedState();
     try {
       store.icons = await prepareIcons(); store.itemData = data.itemData;
@@ -187,7 +187,9 @@ describe('new icon declarations and game artwork contexts', () => {
         expect(data.itemData.find(item => item.iconFilename === variants.logistics)!.iconUsage).toBe('logistics');
         expect(data.itemData.find(item => item.iconFilename === variants.facilities)!.iconUsage).toBe('facilities');
       }
-      expect(visible).toHaveLength(store.icons.length - 4);
+      expect(visible).not.toContain('Textures/UI/LargeCraneItemIcon.png');
+      expect(store.icons.some(icon => icon.filename === 'Textures/UI/LargeCraneItemIcon.png')).toBe(true);
+      expect(visible).toHaveLength(store.icons.length - 5);
     } finally { Object.assign(store, saved); }
   });
 
@@ -201,7 +203,7 @@ describe('new icon declarations and game artwork contexts', () => {
       expect(store.filteredIcons.some(icon => icon.filename.endsWith('/LargeShipLiquidShipIcon.png'))).toBe(true);
       store.templateFaction = 'colonial';
       expect(store.filteredIcons.some(icon => icon.filename.endsWith('/AircraftFighter2CIcon.png'))).toBe(true);
-      expect(store.filteredIcons.some(icon => icon.filename.endsWith('/LargeCraneItemIcon.png'))).toBe(true);
+      expect(store.filteredIcons.some(icon => icon.filename.endsWith('/LargeCraneItemIcon.png'))).toBe(false);
     } finally { Object.assign(store, saved); }
   });
 

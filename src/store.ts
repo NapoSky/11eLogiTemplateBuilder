@@ -712,6 +712,11 @@ class Store {
     // Keep alternate facilities artwork addressable for saved documents and the future module.
     const facilitiesOnly = new Set(this.itemData.filter(item => item.iconUsage === 'facilities').map(item => item.iconFilename));
     let filtered = this.icons.filter(icon => !facilitiesOnly.has(icon.filename));
+
+    // The rail-mounted Sky-Hauler is facility infrastructure, outside template targets.
+    if (this.viewMode === 'template') {
+      filtered = filtered.filter(icon => icon.filename !== 'Textures/UI/LargeCraneItemIcon.png');
+    }
     
     if (this.viewMode !== 'todolist' && this.selectedCategory !== 'Toutes') {
       filtered = filtered.filter(i => i.category === this.selectedCategory);

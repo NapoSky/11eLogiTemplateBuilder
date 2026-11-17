@@ -1,8 +1,8 @@
 # Warden reference trial
 
-`public/referenceTemplate.json` uses the Colonial reference's 11-section layout, including Vehicles and Structures, with the Warden background. It contains 132 entries. Template and Stockpile load this same file. The Colonial reference is unchanged.
+`public/referenceTemplate.json` uses the Colonial reference's compact 12-section layout, separating Tanks, Vehicles and Structures, with the Warden background. It contains 133 entries. Template and Stockpile load this same file. Ammunition and equipment sections leave room for every icon at the saved `xlarge` scale.
 
-Transferred entries retain the Colonial target number and crate overlay (or its absence), including zero targets. This is an ISO target trial, not a combat-balance or equal-production-cost calculation. Shared equipment, materials, medical supplies and maintenance targets follow the Colonial reference. Uniforms follow the corresponding role; the Grenadier's Baldric → Specialist's Overcoat (70 crates) and Oilcoat → Caoivish Parka (20 crates) choices are role substitutions.
+Transferred entries retain the Colonial target number and crate overlay (or its absence), including zero targets. Equipment now explicitly carries crate overlays. This is an ISO target trial, not a combat-balance or equal-production-cost calculation. Shared equipment, materials, medical supplies and maintenance targets follow the Colonial reference. Uniforms follow the corresponding role; the Grenadier's Baldric → Specialist's Overcoat (70 crates) and Oilcoat → Caoivish Parka (20 crates) choices are role substitutions.
 
 ## Associations to review
 
@@ -42,18 +42,20 @@ Transferred entries retain the Colonial target number and crate overlay (or its 
 | Hoplite → Niska Mk. I | 5 crates | Half-track role |
 | Retiarius → Skycaller | 0 units | Mobile rocket-artillery role |
 | Sagaris → Birdeater | 5 crates | Anti-air light tank |
-| Spatha → Outlaw | 6 and 8 units | Medium-tank role; both separate source targets retained |
+| Spatha → Outlaw | 8 crates | Medium-tank role; follows the single retained Colonial target |
 | Ballista → Chieftain | 4 units | 250mm siege role |
 | Talos → Lordscar | 10 units | Large-calibre assault role; different calibre |
 | Thunderbolt → Huber Exalt | 5 crates | 150mm emplacement |
 | Polybolos → Shellbore | 5 crates | Anti-tank emplacement role; different ammunition |
 | Serra → Snare Trap | 5 crates | Emplaced machine gun |
 | Zeal → Bolas | 3 units | Emplaced anti-air cannon |
+| R-1 Hauler → Dunne Transport | 10 crates | Logistics truck |
+| Packmule Flatbed → Packmule Flatbed | 5 crates | Shared flatbed truck |
 
 The two rocket targets swap to the Warden preference: 2,000 fire rockets and 0 HE rockets. Hydra → Alligator, Dagger → Raiding Club and Vexillum → War Ensign retain 100, 20 and 10 crates respectively. Shared ammunition retains its Colonial targets, including RPG (30), AP/RPG (100), ARC/RPG (25) and 14.5mm (40); this trial does not rebalance ammunition for the substituted launchers.
 
 ## Entries without a direct equivalent
 
-Catara, Mounted Fissura, Scorpion, Pelekys, Hades' Net and Shrike rounds are omitted rather than assigned a false direct equivalent. Removing Pelekys also resolves its overlap with the source's first Spatha. Warden-only options retain their previous targets: Blakerow 50, Liar 20, Hawthorne 20, Cometa 15, .44 ammunition 20, Bonesaw 40, Mounted Bonesaw 40 (all crates), and Tenta torpedoes 50 units. Quillback's previous 50-unit target is left out to retain the reference's three-column ammo layout and shared AA-shell target.
+Catara, Mounted Fissura, Scorpion, Pelekys, Hades' Net and Shrike rounds are omitted rather than assigned a false direct equivalent. Warden-only options retain their previous targets: Blakerow 50, Liar 20, Hawthorne 20, Cometa 15, .44 ammunition 20, Bonesaw 40, Mounted Bonesaw 40 (all crates), and Tenta torpedoes 50 units. Quillback's previous 50-unit target is left out to retain the reference's three-column ammo layout and shared AA-shell target.
 
 Role checks use the [Foxhole Wiki weapon catalogue](https://foxhole.wiki.gg/wiki/Weapons), [land vehicles](https://foxhole.wiki.gg/wiki/AFV) and [shippable structures](https://foxhole.wiki.gg/wiki/Shippable_Structures); item identities, faction eligibility and local image paths use the accepted offline catalogue.
