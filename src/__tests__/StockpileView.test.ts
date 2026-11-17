@@ -1194,6 +1194,12 @@ describe('StockpileView – dépôts et transport', () => {
     expect(document.querySelectorAll('.transport-remove-line')).toHaveLength(2);
     expect(preview).toMatch(/^A-One freighter/m);
     expect(preview).toMatch(/^B-One freighter/m);
+    const slots = [...document.querySelectorAll<HTMLElement>('#transport-load-meter [data-tooltip]')];
+    expect(slots).toHaveLength(7);
+    expect(slots.filter(slot => slot.textContent?.includes('Shippable'))).toHaveLength(3);
+    expect(slots.filter(slot => slot.textContent?.includes('60/60'))).toHaveLength(3);
+    expect(slots.filter(slot => slot.textContent?.includes('4/60'))).toHaveLength(1);
+    expect(document.querySelector('#transport-current-capacity')?.textContent).toContain('7/10 slots');
   });
 
   test.each(['flatbed', 'train'])('replanifie les manquants en %s après un premier plan en freighter', mode => {
@@ -1216,6 +1222,99 @@ describe('StockpileView – dépôts et transport', () => {
     (document.querySelector('#transport-undo-auto-fill') as HTMLButtonElement).click();
     expect((document.querySelector('#transport-preview') as HTMLTextAreaElement).value).toContain('One freighter');
     expect(document.querySelector('#transport-summary')?.textContent).toContain('90 units planned');
+  });
+
+  test.each(['container', 'flatbed', 'freighter', 'train'].flatMap(mode =>
+    ['all', 'gap'].map(plan => ({ mode, plan }))))('remplit les slots après changement vers $mode et plan $plan', ({ mode, plan }) => {
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Mercy - Seaport - 11e,now\n7.92mm,10\nDunne Transport,1' },
+    }));
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Kirknell - Storage Depot - 11e,now\n7.92mm,180' },
+    }));
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+    selectHaulerMode(mode === 'freighter' ? 'train' : 'freighter');
+    (document.querySelector('#transport-auto-fill-gap') as HTMLButtonElement).click();
+    selectHaulerMode(mode);
+    expect(document.querySelectorAll('#transport-load-meter [data-tooltip]')).toHaveLength(0);
+
+    (document.querySelector(`#transport-auto-fill-${plan}`) as HTMLButtonElement).click();
+    const slots = [...document.querySelectorAll<HTMLElement>('#transport-load-meter [data-tooltip]')];
+    const quantity = plan === 'all' ? 180 : 90;
+    expect(slots).toHaveLength(Math.ceil(quantity / 60));
+    expect(slots[0].textContent).toContain('60/60');
+    expect(slots[0].classList.contains('bg-green-950/40')).toBe(true);
+    expect(slots[0].dataset.tooltip).toContain('60 7.92mm');
+    if (plan === 'gap') {
+      expect(slots[1].textContent).toContain('30/60');
+      expect(slots[1].classList.contains('bg-amber-950/40')).toBe(true);
+      expect(slots[1].dataset.tooltip).toContain('30 7.92mm');
+    }
+    const preview = (document.querySelector('#transport-preview') as HTMLTextAreaElement).value;
+    expect(document.querySelector('#transport-summary')?.textContent).toContain(`${quantity} units planned`);
+    const current = document.querySelector('#transport-current-capacity')!.textContent;
+    expect(current).not.toContain('Current load: 0');
+    (document.querySelector('#transport-auto-fill-gap') as HTMLButtonElement).click();
+    expect(document.querySelectorAll('#transport-load-meter [data-tooltip]')).toHaveLength(2);
+    expect((document.querySelector('#transport-preview') as HTMLTextAreaElement).value).not.toBe('');
+    expect(preview).toContain('7.92mm');
+  });
+
+  test.each(['flatbed', 'freighter', 'train'])('garde les slots de deux chargements partiels séparés en %s et les actualise à la suppression', mode => {
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Kirknell - Storage Depot - 11e,now\n7.92mm,180' },
+    }));
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+    selectHaulerMode(mode);
+    for (let load = 0; load < 2; load++) {
+      const input = document.querySelector<HTMLInputElement>('.transport-qty')!;
+      input.value = '20';
+      input.dispatchEvent(new Event('input'));
+      (document.querySelector('#transport-add-line') as HTMLButtonElement).click();
+    }
+    let slots = [...document.querySelectorAll<HTMLElement>('#transport-load-meter [data-tooltip]')];
+    expect(slots).toHaveLength(2);
+    for (const slot of slots) {
+      expect(slot.textContent).toContain('20/60');
+      expect(slot.classList.contains('bg-amber-950/40')).toBe(true);
+      expect(slot.dataset.tooltip).toBe('20 7.92mm');
+    }
+    expect(document.querySelectorAll('[data-transport-meter-load]')).toHaveLength(2);
+    (document.querySelector('.transport-remove-line') as HTMLButtonElement).click();
+    slots = [...document.querySelectorAll<HTMLElement>('#transport-load-meter [data-tooltip]')];
+    expect(slots).toHaveLength(1);
+    expect(slots[0].dataset.tooltip).toBe('20 7.92mm');
+    (document.querySelector('.transport-remove-line') as HTMLButtonElement).click();
+    expect(document.querySelectorAll('#transport-load-meter [data-tooltip]')).toHaveLength(0);
+  });
+
+  test('annuler un plan restaure aussi les slots, puis un changement de mode les remet à zéro', () => {
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Mercy - Seaport - 11e,now\n7.92mm,10\nDunne Transport,1' },
+    }));
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Kirknell - Storage Depot - 11e,now\n7.92mm,180' },
+    }));
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+    selectHaulerMode('flatbed');
+    (document.querySelector('#transport-auto-fill-gap') as HTMLButtonElement).click();
+    const before = (document.querySelector('#transport-preview') as HTMLTextAreaElement).value;
+    (document.querySelector('#transport-auto-fill-all') as HTMLButtonElement).click();
+    expect(document.querySelectorAll('#transport-load-meter [data-tooltip]')).toHaveLength(3);
+    (document.querySelector('#transport-undo-auto-fill') as HTMLButtonElement).click();
+    const slots = [...document.querySelectorAll<HTMLElement>('#transport-load-meter [data-tooltip]')];
+    expect(slots).toHaveLength(2);
+    expect(slots[1].dataset.tooltip).toBe('30 7.92mm');
+    expect((document.querySelector('#transport-preview') as HTMLTextAreaElement).value).toBe(before);
+    selectHaulerMode('train');
+    expect(document.querySelectorAll('#transport-load-meter [data-tooltip]')).toHaveLength(0);
+    selectHaulerMode('flatbed');
+    expect(document.querySelectorAll('#transport-load-meter [data-tooltip]')).toHaveLength(0);
+    (document.querySelector('#transport-auto-fill-gap') as HTMLButtonElement).click();
+    expect(document.querySelectorAll('#transport-load-meter [data-tooltip]')).toHaveLength(2);
   });
 
   test.each(['container', 'flatbed', 'freighter', 'train'])('relancer les manquants en %s conserve le même chargement', mode => {

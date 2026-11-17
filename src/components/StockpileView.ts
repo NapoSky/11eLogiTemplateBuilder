@@ -2032,6 +2032,7 @@ export class StockpileView {
     let exclusionSearch = '';
     let exclusionsPanelOpen = false;
     let autoFillMenuOpen = false;
+    let showPlannedLoadMeter = false;
     let categoryFilter: CargoKind | IconCategory | 'all' = 'all';
     let plannedRoutes: TransportRoute[] = [];
     // Snapshot pris juste avant un "Plan automatically", pour pouvoir tout annuler en un clic plutôt que ligne par ligne.
@@ -2213,7 +2214,7 @@ export class StockpileView {
           <span class="text-gray-400">Transport slots</span>
           <span class="${usedSlots > capacity ? 'text-red-400' : tripCount > 1 ? 'text-blue-400' : 'text-gray-300'} tabular-nums">${usedSlots}/${capacity} used · ${containerSlots} container${containerSlots !== 1 ? 's' : ''}${tripCount > 1 ? ` · x${tripCount}` : ''}</span>
         </div>
-        <div class="mt-2 grid gap-1.5" style="grid-template-columns:repeat(${Math.min(capacity, 7)},minmax(0,1fr))">${slots}</div>
+        <div class="mt-2 grid gap-1.5" style="grid-template-columns:repeat(${Math.max(1, Math.min(capacity, 7))},minmax(0,1fr))">${slots}</div>
         ${warnings ? `<div class="mt-2 text-xs">${warnings}</div>` : ''}
       `;
     };
@@ -2356,12 +2357,22 @@ export class StockpileView {
       const formatPlannedSlots = (planned: TransportMission): string => planned.mode === 'container'
         ? describeContainerLoad(planned.cargo)
         : `${usedTransportSlots(planned)}/${transportSlotsPerTrip(planned) * planned.tripCount} slots${planned.tripCount > 1 ? ` · x${planned.tripCount}` : ''}`;
-      const describeLoad = (currentMission: TransportMission): { text: string; className: string } => currentMission.mode === 'container'
-        ? { text: `Current load: ${describeContainerLoad(currentMission.cargo)}`, className: 'text-xs text-green-400' }
-        : {
-          text: `Current load: ${usedTransportSlots(currentMission)}/${transportSlotsPerTrip(currentMission) * Math.max(1, currentMission.tripCount)} slots${currentMission.tripCount > 1 ? ` · x${currentMission.tripCount}` : ''}`,
-          className: `text-xs ${!missionFits(currentMission) ? 'text-red-400' : currentMission.tripCount > 1 ? 'text-blue-400' : 'text-green-400'}`,
+      const describeLoad = (missions: TransportMission[]): { text: string; className: string } => {
+        if (missions[0].mode === 'container') {
+          const containers = missions.reduce((total, mission) => total + Math.ceil(mission.cargo
+            .filter(item => item.kind === 'container-crate').reduce((sum, item) => sum + item.quantity, 0) / 60), 0);
+          const shippables = missions.reduce((total, mission) => total + mission.cargo
+            .filter(item => item.kind !== 'container-crate').reduce((sum, item) => sum + item.quantity, 0), 0);
+          return { text: `Current load: ${containers} container${containers !== 1 ? 's' : ''} · ${shippables} shippable${shippables !== 1 ? 's' : ''}`, className: 'text-xs text-green-400' };
+        }
+        const used = missions.reduce((total, mission) => total + usedTransportSlots(mission), 0);
+        const capacity = missions.reduce((total, mission) => total + transportSlotsPerTrip(mission) * Math.max(1, mission.tripCount), 0);
+        const trips = missions.reduce((total, mission) => total + Math.max(1, mission.tripCount), 0);
+        return {
+          text: `Current load: ${used}/${capacity} slots${trips > 1 ? ` · x${trips}` : ''}`,
+          className: `text-xs ${!missions.every(missionFits) ? 'text-red-400' : trips > 1 ? 'text-blue-400' : 'text-green-400'}`,
         };
+      };
       const itemMatchesCategory = (item: TransportCargoItem, category: CargoKind | IconCategory | 'all'): boolean => {
         if (category === 'all') return true;
         if (isCargoKind(category)) return item.kind === category;
@@ -2503,23 +2514,26 @@ export class StockpileView {
         const requiredTrips = neededSlots > 0 ? Math.max(1, Math.ceil(neededSlots / capacity)) : 1;
         return { mode, tripCount: requiredTrips, trainCars, cargo: rawCargo };
       };
-      // La jauge doit refléter ce que "Transport slots" contiendra une fois le brouillon ajouté,
-      // pas uniquement le petit ajout en cours : on la fusionne (aperçu) avec le dernier voyage déjà
-      // planifié sur ce trajet quand les deux partagent le mode 'container' (pas de notion de
-      // véhicule/capacité à respecter dans ce mode).
-      const previewMissionForMeter = (draft: TransportMission): TransportMission => {
-        const route = plannedRoutes.find(candidate => candidate.source === sourceName && candidate.destination === destinationName);
-        const lastMission = route?.missions.at(-1);
-        if (!lastMission || draft.mode !== 'container' || lastMission.mode !== 'container') return draft;
-        if (draft.cargo.length === 0) return lastMission;
-        return { ...lastMission, cargo: mergeCargoTotals(lastMission.cargo, draft.cargo) };
+      // A mode/route change shows an empty draft. Once a load is planned, keep its actual
+      // slots visible after the input fields reset. Separate loads retain their own packing.
+      const missionsForMeter = (draft: TransportMission): TransportMission[] => {
+        if (!showPlannedLoadMeter || (draft.cargo.length > 0 && draft.mode !== 'container')) return [draft];
+        const route = buildRoutesWithDraft(draft).find(candidate => candidate.source === sourceName && candidate.destination === destinationName);
+        const missions = route?.missions.filter(mission => mission.mode === draft.mode
+          && (mission.mode !== 'train' || transportSlotsPerTrip(mission) === transportSlotsPerTrip(draft))) ?? [];
+        return missions.length > 0 ? missions : [draft];
       };
+      const renderMeters = (missions: TransportMission[]): string => missions.map((mission, index) => `
+        <section data-transport-meter-load class="${index > 0 ? 'mt-3 border-t border-gray-700 pt-3' : ''}">
+          ${missions.length > 1 ? `<p class="mb-1 text-xs font-medium text-gray-300">${modeLabel(mission.mode)} · Load ${index + 1}</p>` : ''}
+          ${renderLoadMeter(mission)}
+        </section>`).join('');
       const mission = getDraftMission();
       const selected = mission.cargo;
       const routes = buildRoutesWithDraft(mission);
       const allMissions = routes.flatMap(route => route.missions);
       const fits = allMissions.length > 0 && allMissions.every(missionFits);
-      const loadSummary = describeLoad(previewMissionForMeter(mission));
+      const loadSummary = describeLoad(missionsForMeter(mission));
       const discordText = allMissions.length > 0 ? renderTransportList({
         date: new Date(),
         notes: globalNotes.split('\n').filter(Boolean),
@@ -2646,8 +2660,8 @@ export class StockpileView {
                 </table>
               </div>
               </div>
-              <div id="transport-load-meter" class="shrink-0 border-t border-gray-700 bg-gray-900/70 p-3">
-                ${renderLoadMeter(previewMissionForMeter(mission))}
+              <div id="transport-load-meter" class="shrink-0 max-h-[32vh] overflow-y-auto border-t border-gray-700 bg-gray-900/70 p-3">
+                ${renderMeters(missionsForMeter(mission))}
               </div>
             </div>
 
@@ -2677,7 +2691,7 @@ export class StockpileView {
         const currentRoutes = buildRoutesWithDraft(currentMission);
         const currentMissions = currentRoutes.flatMap(route => route.missions);
         const currentFits = currentMissions.length > 0 && currentMissions.every(missionFits);
-        const currentLoadSummary = describeLoad(previewMissionForMeter(currentMission));
+        const currentLoadSummary = describeLoad(missionsForMeter(currentMission));
         const currentDiscordText = currentMissions.length > 0 ? renderTransportList({
           date: new Date(),
           notes: globalNotes.split('\n').filter(Boolean),
@@ -2692,7 +2706,7 @@ export class StockpileView {
         const meter = modal.querySelector<HTMLElement>('#transport-load-meter');
         const preview = modal.querySelector<HTMLTextAreaElement>('#transport-preview');
         const summary = modal.querySelector<HTMLElement>('#transport-summary');
-        if (meter) meter.innerHTML = renderLoadMeter(previewMissionForMeter(currentMission));
+        if (meter) meter.innerHTML = renderMeters(missionsForMeter(currentMission));
         if (capacityLabel) {
           capacityLabel.textContent = currentLoadSummary.text;
           capacityLabel.className = currentLoadSummary.className;
@@ -2712,6 +2726,7 @@ export class StockpileView {
       modal.querySelector('#transport-close')?.addEventListener('click', () => close());
       modal.querySelector('#transport-source')?.addEventListener('change', event => {
         sourceName = (event.target as HTMLSelectElement).value;
+        showPlannedLoadMeter = false;
         if (destinationName === sourceName) {
           destinationName = depots.find(depot => depot.name !== sourceName)!.name;
         }
@@ -2720,6 +2735,7 @@ export class StockpileView {
       });
       modal.querySelector('#transport-destination')?.addEventListener('change', event => {
         destinationName = (event.target as HTMLSelectElement).value;
+        showPlannedLoadMeter = false;
         quantities = new Map();
         renderModal();
       });
@@ -2740,11 +2756,13 @@ export class StockpileView {
       });
       modal.querySelector('#transport-mode')?.addEventListener('change', event => {
         mode = (event.target as HTMLSelectElement).value as TransportMode;
+        showPlannedLoadMeter = false;
         quantities = new Map();
         renderModal();
       });
       modal.querySelector('#transport-train-cars')?.addEventListener('change', event => {
         trainCars = Math.min(14, Math.max(1, Math.floor(Number((event.target as HTMLInputElement).value) || 1)));
+        showPlannedLoadMeter = false;
         quantities = new Map();
         renderModal();
       });
@@ -2779,6 +2797,7 @@ export class StockpileView {
         }
         quantities = new Map();
         autoFillMenuOpen = false;
+        showPlannedLoadMeter = true;
         renderModal();
       };
       modal.querySelector<HTMLDetailsElement>('#transport-auto-fill-details')?.addEventListener('toggle', event => {
@@ -2795,6 +2814,7 @@ export class StockpileView {
         plannedRoutes = preAutoFillSnapshot;
         preAutoFillSnapshot = null;
         quantities = new Map();
+        showPlannedLoadMeter = true;
         renderModal();
       });
       modal.querySelector('#transport-add-line')?.addEventListener('click', () => {
@@ -2803,6 +2823,7 @@ export class StockpileView {
         addMissionToCurrentRoute(currentMission);
         preAutoFillSnapshot = null;
         quantities = new Map();
+        showPlannedLoadMeter = true;
         renderModal();
       });
       modal.querySelectorAll<HTMLButtonElement>('.transport-remove-line').forEach(button => {
