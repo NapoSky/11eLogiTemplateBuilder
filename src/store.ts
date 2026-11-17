@@ -204,7 +204,7 @@ class Store {
       if (gridRow === undefined || gridCol === undefined) {
         // Chercher la première cellule libre
         const occupied = new Set(s.icons.map(i => `${i.gridRow},${i.gridCol}`));
-        const maxCols = Math.floor((s.width - 16) / 60) || 1; // 60px par cellule + padding
+        const maxCols = this.getGridColumns(s.width);
         let found = false;
         for (let r = 0; !found; r++) {
           for (let c = 0; c < maxCols; c++) {
@@ -227,7 +227,8 @@ class Store {
         gridRow: row,
         gridCol: col
       };
-      return { ...s, icons: [...s.icons, sectionIcon] };
+      // Un dépôt explicite remplace la case entière, quantité et subtype compris.
+      return { ...s, icons: s.icons.filter(i => i.gridRow !== row || i.gridCol !== col).concat(sectionIcon) };
     });
     this.save();
     this.emit();
@@ -321,8 +322,12 @@ class Store {
   }
   
   moveIconBetweenSections(fromSectionId: string, toSectionId: string, iconInstanceId: string, gridRow: number, gridCol: number): void {
+    if (fromSectionId === toSectionId) {
+      this.moveIconToGridPosition(fromSectionId, iconInstanceId, gridRow, gridCol);
+      return;
+    }
     const fromSection = this.sections.find(s => s.id === fromSectionId);
-    if (!fromSection) return;
+    if (!fromSection || !this.sections.some(s => s.id === toSectionId)) return;
     
     const icon = fromSection.icons.find(i => i.id === iconInstanceId);
     if (!icon) return;
@@ -335,16 +340,8 @@ class Store {
         return { ...s, icons: s.icons.filter(i => i.id !== iconInstanceId) };
       }
       if (s.id === toSectionId) {
-        // Vérifier si la position est occupée et échanger si nécessaire
-        const existingIcon = s.icons.find(i => i.gridRow === gridRow && i.gridCol === gridCol);
-        if (existingIcon) {
-          // Retirer l'icône existante et ajouter la nouvelle
-          return { 
-            ...s, 
-            icons: s.icons.filter(i => i.id !== existingIcon.id).concat(movedIcon)
-          };
-        }
-        return { ...s, icons: [...s.icons, movedIcon] };
+        // Remplacer tout occupant de la case, en conservant l'icône transférée.
+        return { ...s, icons: s.icons.filter(i => i.gridRow !== gridRow || i.gridCol !== gridCol).concat(movedIcon) };
       }
       return s;
     });
@@ -793,7 +790,7 @@ class Store {
       if (data) {
         const template: Template = JSON.parse(data);
         this.quantityMode = template.quantityMode === 'crate-equivalents-v1' ? 'crate-equivalents-v1' : 'legacy';
-        // Migrer les anciennes icônes sans gridRow/gridCol
+        // Restaurer les positions et décaler les collisions des anciens fichiers.
         this.sections = (template.sections || []).map(section => ({
           ...section,
           icons: this.migrateIcons(section.icons, section.width)
@@ -808,24 +805,32 @@ class Store {
     }
   }
   
-  // Migration des icônes sans positions de grille
+  private getGridColumns(sectionWidth: number): number {
+    // Même largeur de cellule et padding de 6px que SectionComponent.
+    return Math.max(1, Math.floor((sectionWidth - 12) / ICON_SCALES[this.iconScale].cell));
+  }
+
+  // Garder les positions existantes ; déplacer seulement les doublons/positions absentes.
   private migrateIcons(icons: SectionIcon[], sectionWidth: number): SectionIcon[] {
-    const CELL_SIZE = 60;
-    const PADDING = 8;
-    const maxCols = Math.max(1, Math.floor((sectionWidth - PADDING * 2) / CELL_SIZE));
-    const occupied = new Set<string>();
+    const maxCols = this.getGridColumns(sectionWidth);
+    const migrated = icons.map(icon => migrateSectionIcon(icon, getBaseUrl()));
+    const hasPosition = (icon: SectionIcon): boolean => Number.isInteger(icon.gridRow) && icon.gridRow >= 0 &&
+      Number.isInteger(icon.gridCol) && icon.gridCol >= 0;
+    // Réserver aussi les cases des icônes suivantes pour ne pas les déplacer.
+    const occupied = new Set(migrated.filter(hasPosition).map(icon => `${icon.gridRow},${icon.gridCol}`));
+    const assigned = new Set<string>();
     
-    return icons.map((original, index) => {
-      const icon = migrateSectionIcon(original, getBaseUrl());
-      // Si l'icône a déjà des positions valides, la garder
-      if (typeof icon.gridRow === 'number' && typeof icon.gridCol === 'number') {
-        occupied.add(`${icon.gridRow},${icon.gridCol}`);
+    return migrated.map((icon, index) => {
+      const key = `${icon.gridRow},${icon.gridCol}`;
+      if (hasPosition(icon) && !assigned.has(key)) {
+        assigned.add(key);
         return icon;
       }
       
       // Sinon, trouver une position libre
-      let row = Math.floor(index / maxCols);
-      let col = index % maxCols;
+      const start = hasPosition(icon) ? icon.gridRow * maxCols + icon.gridCol + 1 : index;
+      let row = Math.floor(start / maxCols);
+      let col = start % maxCols;
       
       // S'assurer que la position n'est pas occupée
       while (occupied.has(`${row},${col}`)) {
@@ -837,6 +842,7 @@ class Store {
       }
       
       occupied.add(`${row},${col}`);
+      assigned.add(`${row},${col}`);
       return { ...icon, gridRow: row, gridCol: col };
     });
   }

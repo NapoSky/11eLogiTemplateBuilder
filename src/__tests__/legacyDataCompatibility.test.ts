@@ -69,10 +69,17 @@ describe('historical template documents and rendering', () => {
   });
 
   test.each(['referenceTemplate.json', 'referenceTemplateColonial.json'])(
-    'round-trips the bundled %s without rewriting its icon instances', filename => {
+    'round-trips the bundled %s without changing assets or targets while repairing overlaps', filename => {
       const template = JSON.parse(readFileSync(resolve('public', filename), 'utf8')) as Template;
       expect(store.importJSON(JSON.stringify(template))).toBe(true);
-      expect((JSON.parse(store.exportJSON()) as Template).sections).toEqual(template.sections);
+      const exported = JSON.parse(store.exportJSON()) as Template;
+      const withoutPositions = (sections: Template['sections']) => sections.map(section => ({
+        ...section, icons: section.icons.map(({ gridRow: _row, gridCol: _col, ...icon }) => icon),
+      }));
+      expect(withoutPositions(exported.sections)).toEqual(withoutPositions(template.sections));
+      for (const section of exported.sections) {
+        expect(new Set(section.icons.map(icon => `${icon.gridRow},${icon.gridCol}`)).size).toBe(section.icons.length);
+      }
     },
   );
 

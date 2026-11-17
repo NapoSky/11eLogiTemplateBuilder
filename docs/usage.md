@@ -14,6 +14,8 @@ Button names below match the English interface. The **?** help panel also offers
 5. Drag a section header to move it, or a corner to resize it. Use **Size** (S through XXL) and **Background** to adjust the appearance.
 6. Click **PNG** for a 1920 × 1080 image, or **Export JSON** for an editable file. **Load** reopens a JSON template.
 
+Each grid cell holds one asset. Dropping a sidebar asset onto an occupied cell replaces its contents with the new asset's default quantity and no subtype. Moving an existing asset within the same section exchanges occupied cells; moving it between sections replaces the destination asset and retains the incoming quantity and subtype. Loading an older template with overlapping assets moves each duplicate to the next free cell, without changing its quantity or subtype. Existing distinct positions stay in place.
+
 For Stockpile comparisons, ordinary depot item targets represent crates. Vehicle and structure targets represent units unless you select the **Crate** subtype. See [stockpile units](calculations.md#stockpile-units) for examples and older-file behavior.
 
 ## Production: regiment list or personal run

@@ -1489,7 +1489,9 @@ describe('Section - Composant réel', () => {
     expect(sectionBox.classList.contains('ring-2')).toBe(false);
   });
 
-  test('setupDropZone - drop depuis sidebar ajoute icône', () => {
+  test('setupDropZone - deux drops sidebar sur la même case remplacent son contenu', async () => {
+    // Même instance que SectionComponent après le resetModules du beforeEach.
+    const { store } = await import('../store');
     store.addSection({
       id: 'sidebar-drop-add',
       title: 'Sidebar Drop Add',
@@ -1533,10 +1535,30 @@ describe('Section - Composant réel', () => {
 
     el.dispatchEvent(dropEvent);
 
-    // Vérifier que l'icône a été ajoutée
     const updatedSection = store.sections.find(s => s.id === 'sidebar-drop-add');
-    expect(updatedSection?.icons.length).toBeGreaterThanOrEqual(0);
+    expect(updatedSection?.icons).toHaveLength(1);
+    const originalId = updatedSection!.icons[0].id;
+    store.setIconQuantity('sidebar-drop-add', originalId, 42);
+    store.setIconSubtype('sidebar-drop-add', originalId, '/crate.png');
+    section.update(store.sections.find(s => s.id === 'sidebar-drop-add')!);
 
+    dataTransfer.getData.mockReturnValue(JSON.stringify({
+      id: 'replacement', filename: 'tank.png', path: '/tank.png', displayName: 'Tank',
+    }));
+    el.dispatchEvent(dropEvent);
+    const replaced = store.sections.find(s => s.id === 'sidebar-drop-add')!;
+    expect(replaced.icons).toHaveLength(1);
+    expect(replaced.icons[0]).toMatchObject({
+      iconId: 'replacement', filename: 'tank.png', path: '/tank.png',
+      gridRow: 0, gridCol: 0, quantity: 1,
+    });
+    expect(replaced.icons[0].id).not.toBe(originalId);
+    expect(replaced.icons[0].subtype).toBeUndefined();
+    section.update(replaced);
+    expect(el.querySelectorAll('.icon-cell')).toHaveLength(1);
+    expect(el.querySelector('.icon-cell img')?.getAttribute('src')).toBe('/tank.png');
+
+    section.destroy();
     store.deleteSection('sidebar-drop-add');
   });
 
