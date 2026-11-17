@@ -1,74 +1,18 @@
 import { store } from '../store';
-import { TodoListItem, TODO_CATEGORIES, TODO_CATEGORY_LABELS, TodoCategory, TextBlock, TextAnchor, ProductionSource, ProductionWorkspace } from '../types';
+import { TodoListItem, TODO_CATEGORIES, TODO_CATEGORY_LABELS, TodoCategory, TextBlock, TextAnchor, ProductionSource, ProductionRunProfile, ProductionWorkspace } from '../types';
 import { categoryLabel, displayedCost, orderCrateCount, productionSource } from '../services/mpfCalculator';
 import { renderTodoList } from '../services/todoListExporter';
+import { regionalIndicator, renderDiscordPreviewHtml } from '../services/discordPreview';
 import { getBaseUrl } from '../config';
 import { showToast } from '../services/toast';
 import { iconAssetUrl } from '../services/iconPaths';
-import { MATERIALS, MATERIAL_KEYS, loadingSummary, producedCrates, truckPredeposit, LoadingTransport } from '../services/productionPlanner';
+import { FACTORY_QUEUE_CAPACITY, factoryCrateLimit, MATERIALS, MATERIAL_KEYS, loadingSummary, producedCrates, truckPredeposit, LoadingTransport } from '../services/productionPlanner';
 
 const BASE_URL = getBaseUrl();
+type ProductionContext = 'todolist' | `${ProductionSource}-${ProductionRunProfile}`;
 
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
-}
-
-/** Maps Discord emoji names to Unicode characters */
-const EMOJI_MAP: Record<string, string> = {
-  'grey_exclamation': '⚠️',
-  'warning': '⚠️',
-  'checkmark': '✅',
-  'x': '❌',
-  'information_source': 'ℹ️',
-  'question': '❓',
-  'heavy_check_mark': '✔️',
-  'white_check_mark': '✅',
-  'negative_squared_cross_mark': '❎',
-  'exclamation': '❗',
-  'bulb': '💡',
-};
-
-/** Converts Discord emoji names (e.g. :grey_exclamation:) to Unicode characters */
-function convertEmojiNames(text: string): string {
-  return text.replace(/:([a-z_]+):/gi, (match, name) => {
-    return EMOJI_MAP[name.toLowerCase()] ?? match;
-  });
-}
-
-/** Parses Discord markdown (**, *, __) and converts to HTML with styling. */
-function renderMarkdownToHtml(text: string): string {
-  // Handle bold+italic: ***text***
-  text = text.replace(/\*\*\*(.+?)\*\*\*/gs, '<strong><em>$1</em></strong>');
-  
-  // Handle bold: **text**
-  text = text.replace(/\*\*(.+?)\*\*/gs, '<strong>$1</strong>');
-  
-  // Handle underline: __text__
-  text = text.replace(/__(.+?)__/gs, '<u>$1</u>');
-  
-  // Handle italic: *text* (single asterisk, avoiding already-replaced markup)
-  text = text.replace(/\*([^*]+?)\*/gs, '<em>$1</em>');
-  
-  return text;
-}
-
-/** Renders raw Discord text as safe HTML, replacing the alarm custom emoji with a visual <img>. */
-function renderPreviewHtml(raw: string): string {
-  // First, convert named emojis (:grey_exclamation:) to Unicode
-  let text = convertEmojiNames(raw);
-  const escaped = escapeHtml(text);
-  // Apply markdown formatting (bold, italic, underline)
-  const withMarkdown = renderMarkdownToHtml(escaped);
-  // After escapeHtml, '<a:alarm:1308239734618984508>' becomes '&lt;a:alarm:1308239734618984508&gt;'
-  return withMarkdown.replaceAll(
-    '&lt;a:alarm:1308239734618984508&gt;',
-    `<img src="${BASE_URL}assets/emojis/alarm_icon.gif" alt="<a:alarm:1308239734618984508>" title="alarm" class="inline w-5 h-5 align-middle" onerror="this.outerHTML='\u23F0'" />`
-  );
-}
-
-function regionalIndicator(index: number): string {
-  if (index < 0 || index > 25) return '•';
-  return String.fromCodePoint(0x1F1E6 + index);
 }
 
 export class TodoListView {
@@ -77,8 +21,8 @@ export class TodoListView {
   private focusBlockHandler: ((e: Event) => void) | null = null;
   private pendingFocusBlockId: string | null = null;
   private transportOpen = true;
-  private renderedContext: 'todolist' | ProductionSource | null = null;
-  private scrollByContext = { todolist: 0, factory: 0, mpf: 0 };
+  private renderedContext: ProductionContext | null = null;
+  private scrollByContext: Record<ProductionContext, number> = { todolist: 0, 'factory-1': 0, 'factory-2': 0, 'mpf-1': 0, 'mpf-2': 0 };
 
   mount(container: HTMLElement): void {
     this.container = container;
@@ -124,7 +68,16 @@ export class TodoListView {
     if (!this.container) return;
     const tl = store.productionDocument;
     const isRun = store.productionWorkspace === 'run';
-    const context = isRun ? store.productionRunSource : 'todolist';
+    const source = store.productionRunSource;
+    const buildingName = source === 'factory' ? `Factory ${store.productionRunProfile}` : 'MPF';
+    const buildingButtons: Array<{ source: ProductionSource; profile: ProductionRunProfile; label: string }> = [
+      { source: 'factory', profile: 1, label: 'Factory 1' },
+      { source: 'factory', profile: 2, label: 'Factory 2' },
+      { source: 'mpf', profile: store.getProductionRunProfile('mpf'), label: 'MPF' },
+    ];
+    const combinedFactory = source === 'factory' && store.factoryCombinedLoading;
+    const loadingItems = isRun ? store.productionLoadingItems : [];
+    const context: ProductionContext = isRun ? `${source}-${store.productionRunProfile}` : 'todolist';
 
     // Group items by category, preserving insertion order within categories
     const grouped: Record<TodoCategory, TodoListItem[]> = {
@@ -184,14 +137,12 @@ export class TodoListView {
               <input id="tl-autodate" type="checkbox" ${tl.autoDate ? 'checked' : ''} class="accent-blue-500" />
               <span>Auto date (DD/MM)</span>
             </label>` : ''}
-            ${isRun ? `<div role="group" aria-label="Production building" class="grid grid-cols-2 gap-3 w-full">
-                ${(['factory', 'mpf'] as ProductionSource[]).map(source => `
-                  <button type="button" data-production-source="${source}" aria-pressed="${(tl.productionSource ?? 'mpf') === source}"
-                    class="flex items-center justify-center gap-2 min-h-14 px-4 py-3 rounded-lg border text-base font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-blue-400 focus-visible:outline-offset-2 ${(tl.productionSource ?? 'mpf') === source ? 'bg-blue-600 border-blue-500 text-white' : 'bg-gray-700 border-gray-600 text-gray-200 hover:bg-gray-600'}">
-                    <span aria-hidden="true" class="w-4">${(tl.productionSource ?? 'mpf') === source ? '✓' : ''}</span>
-                    ${source === 'factory' ? 'Factory' : 'MPF'}
-                  </button>
-                `).join('')}
+            ${isRun ? `<div role="group" aria-label="Production building" class="grid grid-cols-3 gap-2 sm:gap-3 w-full">
+                ${buildingButtons.map(button => {
+                  const selected = source === button.source && store.productionRunProfile === button.profile;
+                  return `<button type="button" data-production-source="${button.source}" data-production-profile="${button.profile}" aria-pressed="${selected}"
+                    class="flex items-center justify-center min-w-0 min-h-14 px-2 py-3 rounded-lg border text-sm sm:text-base font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-blue-400 focus-visible:outline-offset-2 ${selected ? 'bg-blue-600 border-blue-500 text-white' : 'bg-gray-700 border-gray-600 text-gray-200 hover:bg-gray-600'}">${button.label}</button>`;
+                }).join('')}
             </div>` : ''}
           </div>
 
@@ -213,6 +164,7 @@ export class TodoListView {
                     const assetCount = items.length;
                     const lineCount = items.reduce((s, i) => s + i.orderCount, 0);
                     const assetLabel = assetCount !== 1 ? 'assets' : 'asset';
+                    if (isRun && source === 'factory') return `<span class="text-xs text-gray-400 ml-2">(${assetCount} ${assetLabel}, ${producedCrates(items)} / ${FACTORY_QUEUE_CAPACITY} crates${combinedFactory ? ` · ${producedCrates(loadingItems.filter(item => item.category === cat))} / ${FACTORY_QUEUE_CAPACITY * 2} across both factories` : ''})</span>`;
                     const lineLabel = isRun ? (lineCount !== 1 ? 'queues' : 'queue') : (lineCount !== 1 ? 'orders' : 'order');
                     return `<span class="text-xs text-gray-500 ml-2">(${assetCount} ${assetLabel}, ${lineCount} ${lineLabel})</span>`;
                   })()}
@@ -228,7 +180,7 @@ export class TodoListView {
 
           ${footerBlocks.map(b => this.renderTextBlock(b)).join('')}
           <div class="text-xs text-gray-500 flex flex-wrap justify-between gap-2">
-            <span>${isRun ? 'One item per production category. Choosing another replaces the current line.' : 'Drag or double-click sidebar items to add an order.'}</span>
+            <span>${isRun ? source === 'factory' ? 'Mix items within each category, up to 4 crates total. Reduce a quantity to make room for another item.' : 'One item per production category. Choosing another replaces the current line.' : 'Drag or double-click sidebar items to add an order.'}</span>
             <span>${isRun ? 'Costs for selected crates' : 'Costs shown per order'}</span>
           </div>
         </div>
@@ -236,7 +188,7 @@ export class TodoListView {
           <!-- Each workspace has its own document and purpose. -->
         <div class="space-y-3 lg:sticky lg:top-20 self-start min-w-0">
           <div class="bg-gray-800 rounded-lg border border-gray-700">
-            <h2 class="px-4 py-3 border-b border-gray-700 text-sm">${isRun ? 'Loading' : 'Discord Preview'}</h2>
+            <h2 class="px-4 py-3 border-b border-gray-700 text-sm">${isRun ? `Loading <span class="ml-2 text-xs text-gray-400">${combinedFactory ? 'Both factories' : buildingName}</span>` : 'Discord Preview'}</h2>
             ${isRun ? `<div id="tl-panel-loading">
               ${this.renderLoading()}
             </div>` : `<div id="tl-panel-discord">
@@ -245,10 +197,10 @@ export class TodoListView {
                 <button id="tl-copy" class="ml-auto px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs">📋 Copy</button>
                 <button id="tl-download" class="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs">⬇️ .txt</button>
               </div>
-              <pre id="tl-preview" data-raw="${escapeHtml(exportText)}" class="p-4 text-xs whitespace-pre-wrap break-words font-mono text-gray-200 max-h-[65vh] overflow-auto">${renderPreviewHtml(exportText)}</pre>
+              <pre id="tl-preview" data-raw="${escapeHtml(exportText)}" class="p-4 text-xs whitespace-pre-wrap break-words font-mono text-gray-200 max-h-[65vh] overflow-auto">${renderDiscordPreviewHtml(exportText)}</pre>
             </div>`}
           </div>
-          ${isRun && tl.items.length ? `<div class="text-xs text-gray-500">Produces ${producedCrates(tl.items)} ${producedCrates(tl.items) === 1 ? 'crate' : 'crates'}</div>` : ''}
+          ${isRun && loadingItems.length ? `<div class="text-xs text-gray-500">Produces ${producedCrates(loadingItems)} ${producedCrates(loadingItems) === 1 ? 'crate' : 'crates'}${combinedFactory ? ' across both factories' : ''}</div>` : ''}
         </div>
       </div>
       </div>
@@ -283,6 +235,8 @@ export class TodoListView {
     const source = productionSource(item);
     const isRun = store.productionWorkspace === 'run';
     const minimumCrates = source === 'factory' ? 1 : 3;
+    const maximumCrates = isRun && source === 'factory'
+      ? Math.min(item.maxCrates, factoryCrateLimit(store.productionDocument.items, item.category, item.id)) : item.maxCrates;
     const factionBadge = warnFaction
       ? `<span title="This item does not belong to the selected faction" class="text-amber-400 text-xs">⚠️</span>`
       : '';
@@ -315,10 +269,10 @@ export class TodoListView {
             <button type="button" data-action="decrease-crates" ${crates <= minimumCrates ? 'disabled' : ''}
               aria-label="Decrease ${escapeHtml(item.itemName)} crates"
               class="px-2 py-1 hover:bg-gray-700 rounded-l disabled:opacity-40 disabled:cursor-not-allowed">−</button>
-            <input id="tl-crates-${item.id}" type="number" inputmode="numeric" min="${minimumCrates}" max="${item.maxCrates}" step="1" value="${crates}"
+            <input id="tl-crates-${item.id}" type="number" inputmode="numeric" min="${minimumCrates}" max="${maximumCrates}" step="1" value="${crates}"
               data-action="set-crates" aria-label="Crates of ${escapeHtml(item.itemName)}"
               class="production-crate-input w-10 bg-transparent text-center text-sm tabular-nums py-1 focus:outline-none focus:ring-1 focus:ring-blue-500" />
-            <button type="button" data-action="increase-crates" ${crates >= item.maxCrates ? 'disabled' : ''}
+            <button type="button" data-action="increase-crates" ${crates >= maximumCrates ? 'disabled' : ''}
               aria-label="Increase ${escapeHtml(item.itemName)} crates"
               class="px-2 py-1 hover:bg-gray-700 rounded-r disabled:opacity-40 disabled:cursor-not-allowed">+</button>
           </div>
@@ -420,13 +374,15 @@ export class TodoListView {
   }
 
   private renderLoading(): string {
-    const summary = loadingSummary(store.productionDocument.items, store.productionRunTransport, store.itemData);
+    const summary = loadingSummary(store.productionLoadingItems, store.productionRunTransport, store.itemData);
     const isFactory = store.productionRunSource === 'factory';
     const isTruck = store.productionRunTransport === 'truck';
     const unit = isTruck ? 'slots' : 'crates';
     const over = summary.used > summary.capacity;
     const deposit = isTruck && over ? truckPredeposit(summary.totals) : null;
     return `<div class="p-4" id="tl-loading-summary">
+      ${isFactory ? `<label class="flex items-center gap-2 text-sm mb-2 cursor-pointer"><input id="tl-load-both-factories" type="checkbox" ${store.factoryCombinedLoading ? 'checked' : ''} class="accent-blue-500">Load both factories</label>
+        ${store.factoryCombinedLoading ? `<p class="text-xs text-gray-400 mb-3">${([1, 2] as const).map(profile => `Factory ${profile}: ${producedCrates(store.getProductionRunItems('factory', profile))} crates`).join(' · ')}<br>Materials from both profiles are combined.</p>` : ''}` : ''}
       <h3 class="text-sm font-medium mb-3">Materials to load</h3>
       <div aria-live="polite">
         ${MATERIAL_KEYS.filter(material => summary.totals[material] > 0).map(material => {
@@ -448,7 +404,7 @@ export class TodoListView {
         }).join('') || '<div class="text-xs text-gray-500 py-2">No production orders yet.</div>'}
         <div class="flex justify-between gap-2 text-sm pt-3">
           <span>${isTruck ? 'Total truck slots' : 'Total crates'}</span>
-          <div class="flex items-center gap-2 ${!isTruck && over ? 'text-amber-300' : ''}">
+          <div class="flex items-center gap-2 ${over ? 'text-amber-300' : ''}">
             <strong id="tl-total-load" data-unit="${unit}" class="tabular-nums">${summary.used}</strong>
           </div>
         </div>
@@ -472,7 +428,7 @@ export class TodoListView {
         <p id="tl-transport-status" aria-live="polite" class="text-xs mt-2 ${over ? 'text-amber-300' : 'text-gray-400'}">
           ${over ? `${summary.used - summary.capacity} ${summary.used - summary.capacity === 1 ? isTruck ? 'slot' : 'crate' : unit} over capacity` : `Fits · ${summary.capacity - summary.used} ${unit} available`}
         </p>
-        ${deposit ? `<p id="tl-predeposit" class="text-xs text-amber-300 mt-2">Deposit ${MATERIAL_KEYS.filter(material => deposit[material] > 0).map(material => `${deposit[material].toLocaleString('en-GB')} ${MATERIALS[material].label}`).join(' + ')} in the ${isFactory ? 'Factory' : 'MPF'} inventory beforehand so the remaining load fits in your truck.</p>` : ''}
+        ${deposit ? `<p id="tl-predeposit" class="text-xs text-amber-300 mt-2">Deposit ${MATERIAL_KEYS.filter(material => deposit[material] > 0).map(material => `${deposit[material].toLocaleString('en-GB')} ${MATERIALS[material].label}`).join(' + ')} in the ${isFactory ? store.factoryCombinedLoading ? 'Factory inventories' : 'Factory inventory' : 'MPF inventory'} beforehand so the remaining load fits in your truck.</p>` : ''}
         ${store.productionRunTransport === 'truck' ? `<div class="text-xs text-gray-500 mt-2">${MATERIAL_KEYS.filter(material => summary.loads[material]).map(material => `${summary.loads[material]} ${MATERIALS[material].label} ${summary.loads[material] === 1 ? 'stack' : 'stacks'}`).join(' · ')}<br>100 loose materials per stack · 15 slots</div>` : ''}
       </details>
     </div>`;
@@ -497,8 +453,10 @@ export class TodoListView {
     this.container.querySelectorAll<HTMLButtonElement>('[data-production-source]').forEach(button => {
       button.addEventListener('click', () => {
         const source = button.dataset.productionSource as ProductionSource;
+        const profile = Number(button.dataset.productionProfile) as ProductionRunProfile;
         store.setTodoListProductionSource(source, workspace);
-        this.container?.querySelector<HTMLButtonElement>(`[data-production-source="${source}"]`)?.focus();
+        if (source === 'factory') store.setProductionRunProfile(profile);
+        this.container?.querySelector<HTMLButtonElement>(`[data-production-source="${source}"][data-production-profile="${profile}"]`)?.focus();
       });
     });
     const transportDetails = this.container.querySelector<HTMLDetailsElement>('#tl-transport-details');
@@ -510,6 +468,11 @@ export class TodoListView {
       this.transportOpen = true;
       store.setProductionRunTransport(transport.value as LoadingTransport);
       this.container?.querySelector<HTMLSelectElement>('#tl-transport')?.focus();
+    });
+    const bothFactories = this.container.querySelector<HTMLInputElement>('#tl-load-both-factories');
+    bothFactories?.addEventListener('change', () => {
+      store.setFactoryCombinedLoading(bothFactories.checked);
+      this.container?.querySelector<HTMLInputElement>('#tl-load-both-factories')?.focus();
     });
 
     // Header controls
@@ -546,9 +509,10 @@ export class TodoListView {
         if (!item || !Number.isFinite(value)) return;
         const crates = orderCrateCount({ ...item, cratesPerOrder: value });
         if (crates !== orderCrateCount(item)) store.setTodoListCratesPerOrder(id, crates, workspace);
+        const savedItem = store.getProductionDocument(workspace).items.find(item => item.id === id);
         const row = this.container?.querySelector<HTMLElement>(`[data-item-id="${id}"]`);
         const input = row?.querySelector<HTMLInputElement>('[data-action="set-crates"]');
-        if (input) input.value = String(crates);
+        if (input && savedItem) input.value = String(orderCrateCount(savedItem));
         if (focusAction) {
           const control = row?.querySelector<HTMLButtonElement | HTMLInputElement>(`[data-action="${focusAction}"]`);
           if (control && !control.disabled) control.focus(); else input?.focus();
@@ -678,6 +642,8 @@ export class TodoListView {
             showToast(`"${payload.displayName ?? payload.filename}" cannot be produced in ${store.productionDocument.productionSource === 'factory' ? 'a Factory' : 'an MPF'}.`, { type: 'error' });
           } else if (result === 'wrong-faction') {
             showToast(`"${payload.displayName ?? payload.filename}" belongs to the opposing faction.`, { type: 'error' });
+          } else if (result === 'category-full') {
+            showToast('Factory category full (4/4 crates). Reduce or remove an item before adding another.', { type: 'error' });
           }
         } catch (err) {
           console.error('drop parse failed:', err);
@@ -718,7 +684,7 @@ export class TodoListView {
             };
             const rawText = renderTodoList(tlSnapshot);
             previewEl.dataset.raw = rawText;
-            previewEl.innerHTML = renderPreviewHtml(rawText);
+            previewEl.innerHTML = renderDiscordPreviewHtml(rawText);
             const charCountEl = this.container?.querySelector('#tl-char-count') as HTMLElement | null;
             if (charCountEl) {
               charCountEl.textContent = `${rawText.length} / 4000`;

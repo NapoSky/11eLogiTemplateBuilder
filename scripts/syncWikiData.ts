@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import { collectWikiSnapshot, semanticWikiSnapshot } from '../src/services/wikiSource.ts';
 import { buildWikiCatalog } from '../src/services/wikiCatalog.ts';
 import { projectWikiData } from '../src/services/gameData.ts';
+import { projectFacilitiesCatalog } from '../src/services/facilitiesCatalog.ts';
 
 const args = process.argv.slice(2);
 if (args.length && (args.length !== 1 || args[0] !== '--check')) throw new Error('Usage: syncWikiData.ts [--check]');
@@ -17,6 +18,7 @@ const [previous, mapping, compatibility, legacyMpf] = await Promise.all([
 const collected = await collectWikiSnapshot();
 const catalog = buildWikiCatalog(collected, mapping, compatibility.assetOverrides, compatibility.assetAnnotations);
 const projection = projectWikiData(catalog, mapping, compatibility.aliases, legacyMpf, compatibility.iconVariants);
+projectFacilitiesCatalog(catalog, compatibility.iconVariants);
 const oldCatalog = buildWikiCatalog(previous, mapping, compatibility.assetOverrides, compatibility.assetAnnotations);
 const oldMpfCount = oldCatalog.items.filter(item => item.mpf).length;
 if (projection.mpfData.length < oldMpfCount) throw new Error('MPF references disappeared; inspect the change before accepting this snapshot.');

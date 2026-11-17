@@ -1,8 +1,8 @@
-import { Icon, Section, Template, IconCategory, CATEGORIES, generateId, Subtype, SectionIcon, IconScale, ICON_SCALES, ViewMode, MpfDataEntry, TodoList, TodoListItem, TodoProductionEntry, TodoCategory, TODO_CATEGORIES, ProductionSource, ProductionWorkspace, FactionFilter, TextBlock, TextAnchor, TemplateBackground, BackgroundPreset, DEFAULT_BACKGROUND, isValidBackground } from './types';
+import { Icon, Section, Template, IconCategory, CATEGORIES, generateId, Subtype, SectionIcon, IconScale, ICON_SCALES, ViewMode, MpfDataEntry, TodoList, TodoListItem, TodoProductionEntry, TodoCategory, TODO_CATEGORIES, ProductionSource, ProductionRunProfile, ProductionWorkspace, FactionFilter, TextBlock, TextAnchor, TemplateBackground, BackgroundPreset, DEFAULT_BACKGROUND, isValidBackground } from './types';
 import { getBaseUrl } from './config';
 import type { ItemDataEntry, QuantityMode } from './services/gameData';
 import { canonicalIconFilename, migrateSectionIcon, migrateTodoListItem } from './services/iconPaths';
-import { factoryTodoEntries, LoadingTransport } from './services/productionPlanner';
+import { FACTORY_QUEUE_CAPACITY, factoryCrateLimit, factoryTodoEntries, normalizeFactoryQueueItems, LoadingTransport } from './services/productionPlanner';
 import { orderCrateCount, productionSource } from './services/mpfCalculator';
 
 export type { IconScale };
@@ -17,9 +17,11 @@ const TODOLIST_STORAGE_KEY = 'todolist';
 const RUN_STORAGE_KEY = 'productionRun';
 const RUN_QUEUE_BACKUP_KEY = 'productionRun_beforeSingleQueue';
 const RUN_ORDER_BACKUP_KEY = 'productionRun_beforeSingleOrder';
+const RUN_FACTORY_BACKUP_KEY = 'productionRun_beforeFactoryCapacity';
 
-/** One queue per category, containing one order. Keep the latest selected item. */
-function singleQueueItems(items: TodoListItem[]): TodoListItem[] {
+/** One queue per category: mixed Factory crates, or the latest selected MPF asset. */
+function runQueueItems(items: TodoListItem[], source: ProductionSource): TodoListItem[] {
+  if (source === 'factory') return normalizeFactoryQueueItems(items);
   const selected = new Map<TodoListItem['category'], TodoListItem>();
   for (const item of items) selected.set(item.category, item.orderCount === 1 ? item : { ...item, orderCount: 1 });
   return [...selected.values()];
@@ -37,6 +39,10 @@ function defaultTodoList(): TodoList {
 
 function defaultProductionRun(source: ProductionSource = 'factory'): TodoList {
   return { ...defaultTodoList(), title: source === 'factory' ? 'Factory run' : 'MPF run', autoDate: false, productionSource: source };
+}
+
+function defaultProductionRuns(): Record<ProductionSource, [TodoList, TodoList]> {
+  return { factory: [defaultProductionRun('factory'), defaultProductionRun('factory')], mpf: [defaultProductionRun('mpf'), defaultProductionRun('mpf')] };
 }
 
 function readProductionRun(value: unknown, source: ProductionSource): TodoList {
@@ -70,17 +76,38 @@ class Store {
   itemData: ItemDataEntry[] = [];
   quantityMode: QuantityMode = 'legacy';
   todolist: TodoList = defaultTodoList();
-  private productionRuns = { factory: defaultProductionRun('factory'), mpf: defaultProductionRun('mpf') };
-  productionRun: TodoList = this.productionRuns.factory;
+  private productionRuns = defaultProductionRuns();
+  private selectedRunProfiles: Record<ProductionSource, ProductionRunProfile> = { factory: 1, mpf: 1 };
+  productionRun: TodoList = this.productionRuns.factory[0];
   productionWorkspace: ProductionWorkspace = 'todolist';
-  private mpfRunTransport: LoadingTransport = 'truck';
+  private mpfRunTransports: [LoadingTransport, LoadingTransport] = ['truck', 'truck'];
+  factoryCombinedLoading = false;
 
   get productionRunSource(): ProductionSource {
     return this.productionRun.productionSource === 'mpf' ? 'mpf' : 'factory';
   }
 
   get productionRunTransport(): LoadingTransport {
-    return this.productionRunSource === 'factory' ? 'truck' : this.mpfRunTransport;
+    return this.productionRunSource === 'factory' ? 'truck' : this.mpfRunTransports[this.productionRunProfile - 1];
+  }
+
+  getProductionRunProfile(source: ProductionSource): ProductionRunProfile {
+    return this.selectedRunProfiles[source];
+  }
+
+  get productionRunProfile(): ProductionRunProfile {
+    return this.getProductionRunProfile(this.productionRunSource);
+  }
+
+  getProductionRunItems(source: ProductionSource, profile: ProductionRunProfile): readonly TodoListItem[] {
+    return source === this.productionRunSource && profile === this.productionRunProfile
+      ? this.productionRun.items : this.productionRuns[source][profile - 1].items;
+  }
+
+  get productionLoadingItems(): TodoListItem[] {
+    return this.productionRunSource === 'factory' && this.factoryCombinedLoading
+      ? ([1, 2] as const).flatMap(profile => this.getProductionRunItems('factory', profile))
+      : this.productionRun.items;
   }
 
   // Template faction filter (persisted)
@@ -372,7 +399,7 @@ class Store {
   /** Existing callers target the regiment todo unless a workspace is explicit. */
   private updateProductionDocument(workspace: ProductionWorkspace, update: (document: TodoList) => TodoList): void {
     const updated = update(this.getProductionDocument(workspace));
-    const document = workspace === 'run' ? { ...updated, items: singleQueueItems(updated.items) } : updated;
+    const document = workspace === 'run' ? { ...updated, items: runQueueItems(updated.items, updated.productionSource ?? 'mpf') } : updated;
     if (workspace === 'run') this.productionRun = document; else this.todolist = document;
     this.saveTodoList(workspace);
     this.emit();
@@ -388,7 +415,14 @@ class Store {
 
   setProductionRunTransport(transport: LoadingTransport): void {
     if (this.productionRunSource !== 'mpf') return;
-    this.mpfRunTransport = transport;
+    this.mpfRunTransports[this.productionRunProfile - 1] = transport;
+    this.saveTodoList('run');
+    this.emit();
+  }
+
+  setFactoryCombinedLoading(enabled: boolean): void {
+    if (this.productionRunSource !== 'factory') return;
+    this.factoryCombinedLoading = enabled;
     this.saveTodoList('run');
     this.emit();
   }
@@ -407,10 +441,20 @@ class Store {
 
   setTodoListProductionSource(source: ProductionSource, workspace: ProductionWorkspace = 'todolist'): void {
     if (workspace !== 'run') return;
-    this.productionRuns[this.productionRunSource] = this.productionRun;
-    this.productionRun = this.productionRuns[source];
+    this.productionRuns[this.productionRunSource][this.productionRunProfile - 1] = this.productionRun;
+    this.productionRun = this.productionRuns[source][this.getProductionRunProfile(source) - 1];
     this.selectedCategory = 'Toutes';
     this.searchQuery = '';
+    this.saveTodoList('run');
+    this.emit();
+  }
+
+  setProductionRunProfile(profile: ProductionRunProfile): void {
+    if ((profile !== 1 && profile !== 2) || profile === this.productionRunProfile) return;
+    const source = this.productionRunSource;
+    this.productionRuns[source][this.productionRunProfile - 1] = this.productionRun;
+    this.selectedRunProfiles[source] = profile;
+    this.productionRun = this.productionRuns[source][profile - 1];
     this.saveTodoList('run');
     this.emit();
   }
@@ -434,8 +478,8 @@ class Store {
     this.emit();
   }
 
-  /** Returns 'added' on success, 'not-mpf' if not craftable, 'wrong-faction' if blocked by current faction filter. */
-  addTodoListItemFromIcon(iconFilename: string, workspace: ProductionWorkspace = 'todolist'): 'added' | 'not-mpf' | 'wrong-faction' {
+  /** Factory additions consume free crates in their category and never replace another asset. */
+  addTodoListItemFromIcon(iconFilename: string, workspace: ProductionWorkspace = 'todolist'): 'added' | 'not-mpf' | 'wrong-faction' | 'category-full' {
     const document = this.getProductionDocument(workspace);
     const source = workspace === 'run' ? this.productionRunSource : 'mpf';
     const entry = this.productionDataFor(workspace).find(e => canonicalIconFilename(e.iconFilename) === canonicalIconFilename(iconFilename));
@@ -449,6 +493,8 @@ class Store {
       if (workspace === 'todolist') this.setTodoListOrderCount(existing.id, existing.orderCount + 1, workspace);
       return 'added';
     }
+    const freeCrates = workspace === 'run' && source === 'factory' ? factoryCrateLimit(document.items, entry.category) : entry.maxCrates;
+    if (freeCrates === 0) return 'category-full';
     const item: TodoListItem = {
       id: generateId(),
       iconFilename: entry.iconFilename,
@@ -462,6 +508,7 @@ class Store {
       subtypeFilename: entry.subtypeFilename,
       orderCount: 1,
       ...(source === 'factory' ? { productionSource: source } : {}),
+      ...(freeCrates < entry.maxCrates ? { cratesPerOrder: freeCrates } : {}),
     };
     this.updateProductionDocument(workspace, current => ({ ...current, items: [...current.items, item] }));
     return 'added';
@@ -480,7 +527,8 @@ class Store {
     this.updateProductionDocument(workspace, document => ({
       ...document,
       items: document.items.map(item => item.id === itemId
-        ? { ...item, cratesPerOrder: orderCrateCount({ ...item, cratesPerOrder: count }) } : item),
+        ? { ...item, cratesPerOrder: Math.min(orderCrateCount({ ...item, cratesPerOrder: count }),
+          this.productionRunSource === 'factory' ? factoryCrateLimit(document.items, item.category, item.id) : item.maxCrates) } : item),
     }));
   }
 
@@ -557,9 +605,10 @@ class Store {
     const document = { ...current, items: current.items.map(migrateTodoListItem) };
     if (workspace === 'run') this.productionRun = document; else this.todolist = document;
     if (workspace === 'run') {
-      this.productionRuns[this.productionRunSource] = document;
+      this.productionRuns[this.productionRunSource][this.productionRunProfile - 1] = document;
       localStorage.setItem(RUN_STORAGE_KEY, JSON.stringify({
-        version: 2, source: this.productionRunSource, runs: this.productionRuns, mpfTransport: this.mpfRunTransport,
+        version: 3, source: this.productionRunSource, selectedProfiles: this.selectedRunProfiles,
+        runs: this.productionRuns, mpfTransports: this.mpfRunTransports, factoryCombinedLoading: this.factoryCombinedLoading,
       }));
     } else {
       localStorage.setItem(TODOLIST_STORAGE_KEY, JSON.stringify(document));
@@ -579,41 +628,58 @@ class Store {
         };
       }
       const savedMode = localStorage.getItem('viewMode');
-      if (savedMode === 'template' || savedMode === 'todolist' || savedMode === 'stockpile') {
+      if (savedMode === 'template' || savedMode === 'todolist' || savedMode === 'stockpile' || savedMode === 'facilities') {
         this.viewMode = savedMode;
       }
     } catch (e) {
       console.error('Failed to load todolist:', e);
     }
     // A damaged personal draft must never prevent restoring the regiment todo.
-    this.productionRuns = { factory: defaultProductionRun('factory'), mpf: defaultProductionRun('mpf') };
-    this.productionRun = this.productionRuns.factory;
-    this.mpfRunTransport = localStorage.getItem('productionRunTransport') === 'container' ? 'container' : 'truck';
+    this.productionRuns = defaultProductionRuns();
+    this.selectedRunProfiles = { factory: 1, mpf: 1 };
+    this.factoryCombinedLoading = false;
+    this.productionRun = this.productionRuns.factory[0];
+    this.mpfRunTransports = [localStorage.getItem('productionRunTransport') === 'container' ? 'container' : 'truck', 'truck'];
     try {
       const raw = localStorage.getItem(RUN_STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed?.version === 2 && parsed.runs) {
+        if (parsed?.version === 3 && parsed.runs) {
+          this.factoryCombinedLoading = parsed.factoryCombinedLoading === true;
+          for (const source of ['factory', 'mpf'] as const) {
+            this.selectedRunProfiles[source] = parsed.selectedProfiles?.[source] === 2 ? 2 : 1;
+            for (const index of [0, 1] as const) {
+              try {
+                this.productionRuns[source][index] = readProductionRun(parsed.runs[source]?.[index], source);
+              } catch (error) {
+                console.error(`Failed to load ${source} profile ${index + 1}:`, error);
+              }
+            }
+          }
+          this.mpfRunTransports = [0, 1].map(index => parsed.mpfTransports?.[index] === 'container' ? 'container' : 'truck') as [LoadingTransport, LoadingTransport];
+        } else if (parsed?.version === 2 && parsed.runs) {
           for (const source of ['factory', 'mpf'] as const) {
             try {
-              this.productionRuns[source] = readProductionRun(parsed.runs[source], source);
+              this.productionRuns[source][0] = readProductionRun(parsed.runs[source], source);
             } catch (error) {
               console.error(`Failed to load ${source} run:`, error);
             }
           }
-          this.mpfRunTransport = parsed.mpfTransport === 'container' ? 'container' : 'truck';
+          this.mpfRunTransports[0] = parsed.mpfTransport === 'container' ? 'container' : 'truck';
         } else {
           // Preserve the old mixed draft, splitting by each recorded recipe.
           for (const source of ['factory', 'mpf'] as const) {
             const document = readProductionRun(parsed, source);
-            this.productionRuns[source] = {
+            this.productionRuns[source][0] = {
               ...document, items: document.items.filter(item => productionSource(item) === source),
             };
           }
         }
-        const hasDuplicateQueues = Object.values(this.productionRuns).some(run => singleQueueItems(run.items).length !== run.items.length);
-        const hasMultipleOrders = Object.values(this.productionRuns).some(run => run.items.some(item => item.orderCount !== 1));
-        for (const [needed, key] of [[hasDuplicateQueues, RUN_QUEUE_BACKUP_KEY], [hasMultipleOrders, RUN_ORDER_BACKUP_KEY]] as const) {
+        const hasDuplicateQueues = this.productionRuns.mpf.some(run => runQueueItems(run.items, 'mpf').length !== run.items.length);
+        const hasOverfullFactory = this.productionRuns.factory.some(run => TODO_CATEGORIES.some(category => run.items
+          .filter(item => item.category === category).reduce((sum, item) => sum + orderCrateCount(item), 0) > FACTORY_QUEUE_CAPACITY));
+        const hasMultipleOrders = Object.values(this.productionRuns).flat().some(run => run.items.some(item => item.orderCount !== 1));
+        for (const [needed, key] of [[hasDuplicateQueues, RUN_QUEUE_BACKUP_KEY], [hasMultipleOrders, RUN_ORDER_BACKUP_KEY], [hasOverfullFactory, RUN_FACTORY_BACKUP_KEY]] as const) {
           if (needed && !localStorage.getItem(key)) {
             try {
               localStorage.setItem(key, raw);
@@ -622,8 +688,11 @@ class Store {
             }
           }
         }
-        for (const run of Object.values(this.productionRuns)) run.items = singleQueueItems(run.items);
-        this.productionRun = this.productionRuns[parsed.productionSource === 'mpf' || parsed.source === 'mpf' ? 'mpf' : 'factory'];
+        for (const source of ['factory', 'mpf'] as const) {
+          for (const run of this.productionRuns[source]) run.items = runQueueItems(run.items, source);
+        }
+        const source = parsed.productionSource === 'mpf' || parsed.source === 'mpf' ? 'mpf' : 'factory';
+        this.productionRun = this.productionRuns[source][this.getProductionRunProfile(source) - 1];
       }
     } catch (error) {
       console.error('Failed to load production run:', error);

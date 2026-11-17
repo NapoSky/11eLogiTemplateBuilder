@@ -1,15 +1,6 @@
 import { TodoList, TodoListItem, TODO_CATEGORIES, TODO_CATEGORY_LABELS, TodoCategory, TextBlock } from '../types';
 import { displayedCost, orderCrateCount, productionSource } from './mpfCalculator';
-
-/**
- * Letter allocator: returns 🇦, 🇧, 🇨, ... regional indicator emoji (Discord renders flags).
- * Each category gets its own counter (per the example file).
- */
-function regionalIndicator(index: number): string {
-  // 0x1F1E6 = 🇦 (REGIONAL INDICATOR SYMBOL LETTER A)
-  if (index < 0 || index > 25) return '•';
-  return String.fromCodePoint(0x1F1E6 + index);
-}
+import { regionalIndicator } from './discordPreview';
 
 function formatMatPart(parts: string[]): string {
   return parts.join(' – ');

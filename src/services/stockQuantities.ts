@@ -30,27 +30,34 @@ export function readStockQuantities(
   const capacity = metadata?.unitsPerCrate ?? null;
   if (capacity !== null && (!Number.isSafeInteger(capacity) || capacity <= 0)) throw new Error('Invalid crate capacity');
   if (capacity === null) {
-    return { crates, units, unitsPerCrate: null, totalUnits: null, equivalentCrates: units === 0 ? crates : null };
+    return { crates, units, unitsPerCrate: null, totalUnits: crates === 0 ? units : null, equivalentCrates: units === 0 ? crates : null };
   }
   const totalUnits = crates * capacity + units;
   if (!Number.isSafeInteger(totalUnits)) throw new Error('Stock total exceeds safe integer range');
   return { crates, units, unitsPerCrate: capacity, totalUnits, equivalentCrates: totalUnits / capacity };
 }
 
+/** Compare in the template row's unit; physical stock counters remain unchanged. */
+export function stockQuantityForTarget(stock: StockQuantities, isCrateTarget = true): number | null {
+  return isCrateTarget ? stock.equivalentCrates : stock.totalUnits;
+}
+
 export function calculateCrateShortage(
-  targetCrates: number,
+  target: number,
   stock: StockQuantities,
   backline: StockQuantities | null,
   maxCratesPerOrder: number,
+  isCrateTarget = true,
 ): { cratesNeeded: number; backlineAvailable: number; toProduce: number; orderCount: number; missingUnits: number | null } | null {
   if (stock.equivalentCrates === null || backline?.equivalentCrates === null) return null;
-  if (!Number.isSafeInteger(targetCrates) || targetCrates < 0 || !Number.isSafeInteger(maxCratesPerOrder) || maxCratesPerOrder <= 0) {
+  if (!isCrateTarget && stock.unitsPerCrate === null) return null;
+  if (!Number.isSafeInteger(target) || target < 0 || !Number.isSafeInteger(maxCratesPerOrder) || maxCratesPerOrder <= 0) {
     throw new Error('Invalid production target');
   }
   if (stock.totalUnits !== null && stock.unitsPerCrate !== null) {
     const capacity = stock.unitsPerCrate;
     if (backline && (backline.unitsPerCrate !== capacity || backline.totalUnits === null)) return null;
-    const targetUnits = targetCrates * capacity;
+    const targetUnits = isCrateTarget ? target * capacity : target;
     if (!Number.isSafeInteger(targetUnits)) throw new Error('Target exceeds safe integer range');
     const gapUnits = Math.max(0, targetUnits - stock.totalUnits);
     const deduction = Math.min(gapUnits, backline?.totalUnits ?? 0);
@@ -62,7 +69,7 @@ export function calculateCrateShortage(
       orderCount: Math.ceil(missingUnits / (capacity * maxCratesPerOrder)), missingUnits,
     };
   }
-  const gap = Math.max(0, targetCrates - stock.equivalentCrates);
+  const gap = Math.max(0, target - stock.equivalentCrates);
   const deduction = Math.min(gap, backline?.equivalentCrates ?? 0);
   const toProduce = Math.max(0, gap - deduction);
   return { cratesNeeded: gap, backlineAvailable: deduction, toProduce, orderCount: Math.ceil(toProduce / maxCratesPerOrder), missingUnits: null };

@@ -36,7 +36,7 @@ jobs:
       - name: Detect a data change
         id: diff
         run: |
-          if git diff --quiet -- scripts/data/wiki.snapshot.json public/mpfData.json public/iconMapping.json public/itemData.json; then
+          if git diff --quiet -- scripts/data/wiki.snapshot.json public/mpfData.json public/iconMapping.json public/itemData.json public/facilitiesData.json; then
             echo 'changed=false' >> "$GITHUB_OUTPUT"
           else
             echo 'changed=true' >> "$GITHUB_OUTPUT"
@@ -66,8 +66,9 @@ jobs:
             public/mpfData.json
             public/iconMapping.json
             public/itemData.json
+            public/facilitiesData.json
           body: |
-            Refresh the accepted Foxhole Wiki Cargo snapshot and regenerate the compatible MPF, icon and item datasets.
+            Refresh the accepted Foxhole Wiki Cargo snapshot and regenerate the compatible MPF, icon, item and independent facility datasets.
 
             When data changes, this workflow runs the test suite and production build before proposing the update. The comparison artifact lists image bindings that need review and differing labels. Saved template calculations are selected by their quantity-mode marker; historical files retain their previous calculation.
 

@@ -1,5 +1,6 @@
 import { store, type SidebarCategory } from '../store';
 import { CATEGORIES, TODO_CATEGORIES, TODO_CATEGORY_LABELS, Icon, FactionFilter } from '../types';
+import { showToast } from '../services/toast';
 
 const PRODUCTION_MENU_LABELS = { ...TODO_CATEGORY_LABELS, supplies: 'Resources', shipables: 'Structures' };
 
@@ -137,7 +138,8 @@ export class IconSidebar {
     this.container.querySelectorAll('.sidebar-icon').forEach(el => {
       if (store.viewMode === 'todolist') {
         el.addEventListener('dblclick', () => {
-          store.addTodoListItemFromIcon((el as HTMLElement).dataset.iconFilename!, store.productionWorkspace);
+          const result = store.addTodoListItemFromIcon((el as HTMLElement).dataset.iconFilename!, store.productionWorkspace);
+          if (result === 'category-full') showToast('Factory category full (4/4 crates). Reduce or remove an item before adding another.', { type: 'error' });
         });
       }
       el.addEventListener('dragstart', (e) => {

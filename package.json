@@ -1,6 +1,6 @@
 {
   "name": "11e-template-builder",
-  "version": "2.3.0",
+  "version": "3.0.0",
   "packageManager": "pnpm@12.5.1",
   "type": "module",
   "scripts": {

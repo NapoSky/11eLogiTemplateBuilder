@@ -6,6 +6,28 @@ import { displayedCost, orderCrateCount } from './mpfCalculator';
 export type Material = 'bmat' | 'rmat' | 'emat' | 'hemat';
 export type MaterialTotals = Record<Material, number>;
 export type LoadingTransport = 'container' | 'truck';
+export const FACTORY_QUEUE_CAPACITY = 4;
+
+/** Maximum crates available to a new line, or to an existing line being edited. */
+export function factoryCrateLimit(items: TodoListItem[], category: TodoCategory, exceptId?: string): number {
+  const used = items.filter(item => item.category === category && item.id !== exceptId)
+    .reduce((sum, item) => sum + orderCrateCount(item), 0);
+  return Math.max(0, FACTORY_QUEUE_CAPACITY - used);
+}
+
+/** Restore valid mixed queues; overfull historical drafts retain the latest selections. */
+export function normalizeFactoryQueueItems(items: TodoListItem[]): TodoListItem[] {
+  const used = new Map<TodoCategory, number>();
+  const selected: TodoListItem[] = [];
+  for (const item of [...items].reverse()) {
+    const remaining = FACTORY_QUEUE_CAPACITY - (used.get(item.category) ?? 0);
+    if (remaining <= 0) continue;
+    const crates = Math.min(remaining, orderCrateCount(item));
+    used.set(item.category, (used.get(item.category) ?? 0) + crates);
+    selected.push({ ...item, orderCount: 1, ...(crates !== orderCrateCount(item) ? { cratesPerOrder: crates } : {}) });
+  }
+  return selected.reverse();
+}
 
 /** Standard logistics trucks: 15 slots, 100 loose materials per stack.
  * Shipping containers: 60 crated inputs. These are input loads, not output cargo.
@@ -33,7 +55,7 @@ export function factoryTodoEntries(items: ItemDataEntry[], icons: Icon[], mpf: M
     return {
       iconFilename: filename, itemName: item.itemName,
       category: categories[icon?.category ?? ''] ?? mpfEntry?.itemCategory ?? 'supplies',
-      faction: item.faction ?? ['neutral'], cost: { ...item.factory!.cost }, maxCrates: 4,
+      faction: item.faction ?? ['neutral'], cost: { ...item.factory!.cost }, maxCrates: FACTORY_QUEUE_CAPACITY,
       numberProduced: item.unitsPerCrate ?? 1, productionSource: 'factory',
       subtypeFilename: mpfEntry?.subtypeFilename, aliases: item.aliases,
     };
@@ -94,6 +116,6 @@ export function truckPredeposit(totals: MaterialTotals): MaterialTotals {
   return deposit;
 }
 
-export function producedCrates(items: TodoListItem[]): number {
+export function producedCrates(items: readonly TodoListItem[]): number {
   return items.reduce((sum, item) => sum + orderCrateCount(item) * item.orderCount, 0);
 }

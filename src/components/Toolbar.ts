@@ -40,6 +40,7 @@ export class Toolbar {
     const isTodolist = store.viewMode === 'todolist';
     const isRun = isTodolist && store.productionWorkspace === 'run';
     const isStockpile = store.viewMode === 'stockpile';
+    const isFacilities = store.viewMode === 'facilities';
 
     const tplSource = store.stockpileTplSource;
     const tplFileName = store.stockpileTplFileName;
@@ -59,10 +60,11 @@ export class Toolbar {
         </div>
 
         <!-- Mode toggle -->
-        <div class="flex items-center rounded overflow-hidden border border-gray-600">
+        <div data-mode-tabs class="flex items-center rounded overflow-hidden border border-gray-600">
           <button id="btn-mode-template" class="px-3 py-1.5 text-xs ${activeTab(isTemplate)} transition-colors">🎨 Template</button>
           <button id="btn-mode-todolist" class="px-3 py-1.5 text-xs ${activeTab(isTodolist)} transition-colors">📋 Production</button>
           <button id="btn-mode-stockpile" class="px-3 py-1.5 text-xs ${activeTab(isStockpile)} transition-colors">📦 Stockpile</button>
+          <button id="btn-mode-facilities" class="px-3 py-1.5 text-xs ${activeTab(isFacilities)} transition-colors">🏭 Facilities</button>
         </div>
 
         ${isTemplate ? `
@@ -169,7 +171,7 @@ export class Toolbar {
         ` : ''}
         ${!isStockpile ? `
         <button id="btn-clear" class="px-3 py-1.5 bg-red-600/50 hover:bg-red-600 rounded text-sm">
-          ${isRun ? 'Clear calculator' : 'Clear'}
+          ${isFacilities ? 'Clear mission' : isRun ? 'Clear calculator' : 'Clear'}
         </button>
         ` : `
         <button id="btn-clear-tpl" class="px-3 py-1.5 bg-red-600/50 hover:bg-red-600 rounded text-sm">
@@ -208,7 +210,7 @@ export class Toolbar {
 
           <div class="mt-5 pt-4 border-t border-gray-700 space-y-2">
             <div class="text-center">
-              <span class="text-xs text-gray-500">11eRC-FL Template Builder v2.3</span>
+              <span class="text-xs text-gray-500">11eRC-FL Template Builder v3.0</span>
             </div>
             <div class="text-center">
               <a href="https://github.com/NapoSky/11eLogiTemplateBuilder" target="_blank" rel="noopener noreferrer" class="text-xs text-blue-400 hover:text-blue-300 underline transition-colors">
@@ -238,6 +240,19 @@ export class Toolbar {
       </div>
     `;
 
+    if (store.viewMode === 'facilities') {
+      return `<div class="space-y-3 text-sm"><h3 class="font-semibold text-gray-200">🏭 Facilities</h3>
+        <ul class="text-gray-400 space-y-2">
+          <li>• ${fr ? 'Filtrez le catalogue illustré, cliquez sur un objet, puis réglez sa quantité en unités, litres ou caisses.' : 'Filter the illustrated catalogue, click an item, then set its quantity in units, litres or crates.'}</li>
+          <li>• <span class="text-gray-200">Facility settings</span> ${fr ? 'ouvre les recettes et le lieu de dépôt dans une fenêtre compacte. Le bouton i détaille les ingrédients ; All materials affiche aussi les autres matériaux.' : 'opens recipes and the delivery location in a compact window. The i button reveals ingredients; All materials includes other materials.'}</li>
+          <li>• <span class="text-gray-200">Available stock</span> ${fr ? 'permet de déduire les quantités déjà affectées à cette mission. Les deux fenêtres proposent des filtres de matériaux et masquent les objectifs finaux.' : 'deducts quantities already allocated to this mission. Both dialogs offer material filters and hide final objectives.'}</li>
+          <li>• <span class="text-gray-200">Supply from outside</span> ${fr ? 'arrête le calcul de la chaîne pour cette ressource : elle sera demandée à l’approvisionnement.' : 'stops that production chain and adds the item to the supply list.'}</li>
+          <li>• ${fr ? 'Le plan regroupe les besoins, calcule des lots complets et ordonne les étapes. Les surplus et coproduits sont affichés ; les coproduits ne sont pas déduits.' : 'The plan combines requirements, rounds whole batches and orders the stages. Surplus and byproducts are shown; byproducts are not deducted.'}</li>
+          <li>• ${fr ? 'Copiez la mission sur Discord ou exportez-la en .txt. Le profil et la mission sont sauvegardés séparément et partageables en JSON.' : 'Copy the mission to Discord or export .txt. Profiles and missions are saved separately and can be shared as JSON.'}</li>
+          <li>• ${fr ? 'Le carburant de production électrique, la maintenance et les trajets sont exclus. Une recette enregistrée qui change doit être choisie à nouveau.' : 'Power generation fuel, maintenance and transport are excluded. Changed saved recipes need to be selected again.'}</li>
+        </ul>${shortcuts}</div>`;
+    }
+
     if (store.viewMode === 'stockpile') {
       return `
         <div class="space-y-3 text-sm">
@@ -265,10 +280,13 @@ export class Toolbar {
             <ul class="text-gray-400 space-y-1.5">
               <li>• <span class="text-gray-200">MPF Todolist</span> ${fr ? 'conserve la liste du régiment et son export Discord. Le catalogue est limité à la MPF.' : 'keeps the regiment list and its Discord export. Its catalogue is MPF-only.'}</li>
               <li>• <span class="text-gray-200">Logi Calculator</span> ${fr ? 'possède un brouillon Factory et un brouillon MPF indépendants, conservés en changeant de bâtiment.' : 'has independent Factory and MPF drafts, retained when switching buildings.'}</li>
-              <li>• ${fr ? 'Une seule ligne par catégorie de production : choisir un autre objet remplace la ligne de cette catégorie.' : 'One line per production category: choosing another item replaces that category’s line.'}</li>
+              <li>• <span class="text-gray-200">Factory 1 / Factory 2 / MPF</span> ${fr ? 'ouvrent directement leurs productions sauvegardées. Les deux usines gardent leurs assets et quantités indépendants. Clear efface uniquement la production affichée.' : 'open their saved production directly. Both factories keep independent assets and quantities. Clear applies only to the displayed production.'}</li>
+              <li>• <span class="text-gray-200">Load both factories</span> ${fr ? 'cumule les matériaux des deux profils Factory pour une tournée : jusqu’à 8 caisses par catégorie, avec 4 maximum dans chaque usine. Le total et le warning passent en orange si le chargement dépasse les 15 slots du camion.' : 'combines both Factory profiles for one run: up to 8 crates per category, with at most 4 in each factory. The total and warning turn orange when the load exceeds the truck’s 15 slots.'}</li>
+              <li>• ${fr ? 'En MPF, une seule ligne par catégorie de production : choisir un autre objet remplace la ligne de cette catégorie.' : 'In MPF, one line per production category: choosing another item replaces that category’s line.'}</li>
               <li>• ${fr ? 'Dans Logi Calculator, choisissez Factory ou MPF, puis glissez une icône ou faites un double-clic dessus.' : 'In Logi Calculator, choose Factory or MPF, then drag or double-click an icon.'}</li>
               <li>• ${fr ? 'Dans MPF Todolist, le compteur × indique le nombre de commandes complètes.' : 'In MPF Todolist, the × counter sets the number of full orders.'}</li>
               <li>• <span class="text-gray-200">Crates − / +</span> ${fr ? 'règle directement les caisses d’une seule queue dans Logi Calculator : Factory 1–4, MPF 3–9 (3–5 pour véhicules et shippables).' : 'directly sets crates for one queue in Logi Calculator: Factory 1–4, MPF 3–9 (3–5 for vehicles and shippables).'}</li>
+              <li>• ${fr ? 'Factory accepte plusieurs assets dans une même catégorie, pour un total de 4 caisses maximum. Réduisez une quantité pour ajouter un autre asset. MPF conserve un seul asset par catégorie.' : 'Factory accepts multiple assets in the same category, up to 4 crates total. Reduce a quantity to add another asset. MPF retains one asset per category.'}</li>
               <li>• <span class="text-gray-200">Loading</span> ${fr ? 'autorise le camion pour Factory et MPF ; le flatbed avec conteneur est réservé à la MPF.' : 'allows a truck for Factory and MPF; a flatbed with container is MPF-only.'}</li>
               <li>• <span class="text-gray-200">+ Text</span> ${fr ? 'ajoute une note Markdown Discord dans MPF Todolist.' : 'adds a Discord Markdown note in MPF Todolist.'}</li>
               <li>• <span class="text-gray-200">Discord → Copy / .txt</span> ${fr ? 'exporte la todolist. Clear calculator efface uniquement le brouillon du bâtiment affiché.' : 'exports the todolist. Clear calculator clears only the displayed building’s draft.'}</li>
@@ -322,6 +340,9 @@ export class Toolbar {
     });
     this.container.querySelector('#btn-mode-stockpile')?.addEventListener('click', () => {
       store.setViewMode('stockpile');
+    });
+    this.container.querySelector('#btn-mode-facilities')?.addEventListener('click', () => {
+      store.setViewMode('facilities');
     });
 
     // New section
@@ -421,10 +442,12 @@ export class Toolbar {
 
     // Clear
     this.container.querySelector('#btn-clear')?.addEventListener('click', () => {
-      if (store.viewMode === 'todolist') {
+      if (store.viewMode === 'facilities') {
+        window.dispatchEvent(new CustomEvent('facilities:clear-mission'));
+      } else if (store.viewMode === 'todolist') {
         const isRun = store.productionWorkspace === 'run';
-        const building = store.productionRunSource === 'factory' ? 'Factory' : 'MPF';
-        if (confirm(isRun ? `Clear your ${building} calculator draft? The other building’s draft and MPF Todolist will stay unchanged.` : 'Clear the entire MPF todolist? Your Logi Calculator drafts will stay unchanged.')) {
+        const building = store.productionRunSource === 'factory' ? `Factory ${store.productionRunProfile}` : 'MPF';
+        if (confirm(isRun ? `Clear your ${building} calculator draft? Your other calculator profiles and MPF Todolist will stay unchanged.` : 'Clear the entire MPF todolist? Your Logi Calculator drafts will stay unchanged.')) {
           if (isRun) store.clearProductionRun(); else store.clearTodoList();
         }
       } else if (store.viewMode === 'template') {
@@ -476,6 +499,7 @@ export class Toolbar {
       // Ctrl/Cmd + S : Sauvegarder (Export JSON)
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
+        if (store.viewMode === 'facilities') { window.dispatchEvent(new CustomEvent('facilities:export-mission')); return; }
         this.exportJson();
         return;
       }
@@ -483,6 +507,7 @@ export class Toolbar {
       // Ctrl/Cmd + O : Ouvrir (Import JSON)
       if ((e.ctrlKey || e.metaKey) && e.key === 'o') {
         e.preventDefault();
+        if (store.viewMode === 'facilities') { window.dispatchEvent(new CustomEvent('facilities:import-mission')); return; }
         this.triggerImport();
         return;
       }

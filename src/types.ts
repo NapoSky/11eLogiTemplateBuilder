@@ -139,7 +139,7 @@ export const CATEGORIES: IconCategory[] = [
 // TodoList builder (mode #2)
 // =====================================================================
 
-export type ViewMode = 'template' | 'todolist' | 'stockpile';
+export type ViewMode = 'template' | 'todolist' | 'stockpile' | 'facilities';
 
 export type Faction = 'neutral' | 'colonial' | 'warden';
 export type FactionFilter = 'all' | 'colonial' | 'warden';
@@ -175,6 +175,7 @@ export const MPF_CATEGORY_LABELS: Record<MpfCategory, string> = {
 };
 
 export type ProductionSource = 'mpf' | 'factory';
+export type ProductionRunProfile = 1 | 2;
 export type ProductionWorkspace = 'todolist' | 'run';
 export type TodoCategory = MpfCategory | 'utility' | 'medical';
 export const TODO_CATEGORIES: TodoCategory[] = [...MPF_CATEGORIES, 'utility', 'medical'];

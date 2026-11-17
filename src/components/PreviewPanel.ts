@@ -81,7 +81,7 @@ export class PreviewPanel {
     const button = this.container?.querySelector<HTMLElement>('#preview-toggle');
     if (!button) return;
 
-    if (store.viewMode === 'todolist' || store.viewMode === 'stockpile') {
+    if (store.viewMode !== 'template') {
       if (this.isOpen) {
         this.isOpen = false;
         const content = this.container?.querySelector<HTMLElement>('#preview-content');

@@ -4,6 +4,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildWikiCatalog } from '../src/services/wikiCatalog.ts';
 import { projectWikiData } from '../src/services/gameData.ts';
+import { projectFacilitiesCatalog } from '../src/services/facilitiesCatalog.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const readJSON = async (path: string) => JSON.parse(await readFile(resolve(root, path), 'utf8'));
@@ -15,11 +16,13 @@ const [snapshot, legacyMapping, compatibility, legacyMpf] = await Promise.all([
 ]);
 const catalog = buildWikiCatalog(snapshot, legacyMapping, compatibility.assetOverrides, compatibility.assetAnnotations);
 const data = projectWikiData(catalog, legacyMapping, compatibility.aliases, legacyMpf, compatibility.iconVariants);
+const facilities = projectFacilitiesCatalog(catalog, compatibility.iconVariants);
 // Finish validation before writing any application data.
 await Promise.all(catalog.assets.map(asset => access(resolve(root, 'public/assets/icons', asset.iconFilename))));
 for (const [file, value] of [
   ['mpfData.json', data.mpfData], ['itemData.json', data.itemData],
   ['iconMapping.json', data.iconMapping],
+  ['facilitiesData.json', facilities],
 ] as const) {
   await writeFile(resolve(root, 'public', file), `${JSON.stringify(value, null, 2)}\n`);
 }

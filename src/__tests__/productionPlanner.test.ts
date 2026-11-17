@@ -376,6 +376,72 @@ describe('compact production UI', () => {
     expect(container.querySelector('[data-action="set-count"]')).toBeNull();
   });
 
+  test('three direct building buttons replace the profile selector and retain each saved production', () => {
+    store.setProductionWorkspace('run');
+    store.addTodoListItemFromIcon(havoc.iconFilename, 'run');
+    const container = mount();
+    expect(Array.from(container.querySelectorAll('[data-production-source]')).map(button => button.textContent?.trim())).toEqual(['Factory 1', 'Factory 2', 'MPF']);
+    expect(container.querySelector('#tl-run-profile')).toBeNull();
+    const factory = (profile: 1 | 2) => container.querySelector<HTMLButtonElement>(`[data-production-source="factory"][data-production-profile="${profile}"]`)!;
+    const firstLoad = container.querySelector('#tl-total-load')!.textContent;
+    factory(2).click();
+    expect(document.activeElement).toBe(factory(2));
+    expect(container.querySelector('#tl-total-load')!.textContent).toBe('0');
+    expect(container.querySelector('h2')!.textContent).toContain('Factory 2');
+    store.addTodoListItemFromIcon(shirts.iconFilename, 'run');
+    expect(container.textContent).not.toContain('Havoc Charge');
+    factory(1).click();
+    expect(container.querySelector('#tl-total-load')!.textContent).toBe(firstLoad);
+    expect(container.textContent).toContain('Havoc Charge');
+    expect(container.textContent).not.toContain('Soldier Supplies');
+    container.querySelector<HTMLButtonElement>('[data-production-source="mpf"]')!.click();
+    expect(container.querySelector('h2')!.textContent?.trim()).toBe('Loading MPF');
+    // Previously saved MPF profiles remain intact; the single MPF button opens the last active one.
+    store.setProductionRunProfile(2); store.addTodoListItemFromIcon(tank.iconFilename, 'run');
+    factory(2).click();
+    expect(store.productionRunProfile).toBe(2);
+    expect(container.textContent).toContain('Soldier Supplies');
+    container.querySelector<HTMLButtonElement>('[data-production-source="mpf"]')!.click();
+    expect(store.productionRunProfile).toBe(2);
+    expect(container.textContent).toContain(tank.itemName);
+    expect(container.querySelectorAll('[data-production-source][aria-pressed="true"]')).toHaveLength(1);
+  });
+
+  test('both factories share one truck calculation, allow 4+4 per category and warn when the combined materials exceed 15 slots', () => {
+    store.setProductionWorkspace('run');
+    store.addTodoListItemFromIcon(shirts.iconFilename, 'run');
+    store.setProductionRunProfile(2);
+    store.addTodoListItemFromIcon(shirts.iconFilename, 'run');
+    const before = JSON.stringify([store.getProductionRunItems('factory', 1), store.getProductionRunItems('factory', 2)]);
+    const container = mount();
+    const toggle = () => container.querySelector<HTMLInputElement>('#tl-load-both-factories')!;
+    expect(toggle().checked).toBe(false);
+    toggle().checked = true; toggle().dispatchEvent(new Event('change'));
+    expect(document.activeElement).toBe(toggle());
+    expect(container.querySelector('h2')!.textContent).toContain('Both factories');
+    expect(container.querySelector('[data-loading-material="bmat"]')!.textContent).toContain('640');
+    // Eight crates of shirts cost 640 Bmats: pool them before rounding to 100-unit stacks.
+    expect(container.querySelector('#tl-total-load')!.textContent).toBe('7');
+    expect(container.querySelector('#tl-transport-capacity')!.textContent).toBe('7 / 15 slots');
+    expect(container.querySelector('#tl-transport-status')!.textContent).toContain('Fits');
+    expect(container.querySelector('section header')!.textContent).toContain('8 / 8 across both factories');
+    expect(container.querySelector<HTMLInputElement>('[data-action="set-crates"]')!.max).toBe('4');
+    expect(container.textContent).toContain('Produces 8 crates across both factories');
+    expect(JSON.stringify([store.getProductionRunItems('factory', 1), store.getProductionRunItems('factory', 2)])).toBe(before);
+    store.addTodoListItemFromIcon(havoc.iconFilename, 'run');
+    store.setProductionRunProfile(1); store.addTodoListItemFromIcon(havoc.iconFilename, 'run');
+    expect(container.querySelector('#tl-total-load')!.textContent).toBe('17');
+    expect(container.querySelector('#tl-total-load')!.parentElement!.classList.contains('text-amber-300')).toBe(true);
+    expect(container.querySelector('#tl-transport-status')!.textContent).toContain('2 slots over capacity');
+    expect(container.querySelector('#tl-transport-status')!.classList.contains('text-amber-300')).toBe(true);
+    expect(container.querySelector('#tl-predeposit')!.textContent).toContain('Deposit 40 Bmats + 20 HEmats in the Factory inventories');
+    toggle().checked = false; toggle().dispatchEvent(new Event('change'));
+    expect(container.querySelector('#tl-total-load')!.textContent).toBe('9');
+    expect(container.querySelector('#tl-predeposit')).toBeNull();
+    store.setTodoListProductionSource('mpf', 'run');
+    expect(container.querySelector('#tl-load-both-factories')).toBeNull();
+  });
+
   test('Factory mode in the run does not add anything to the regiment list', () => {
     store.replaceTodoList(list([tank]));
     store.productionRun = { ...list([tank]), productionSource: 'mpf' };
@@ -396,6 +462,46 @@ describe('compact production UI', () => {
     expect(store.productionRun.items[0].cratesPerOrder).toBe(1);
     expect(container.querySelector<HTMLButtonElement>('[data-action="decrease-crates"]')!.disabled).toBe(true);
     expect(container.querySelector('li[data-item-id]')!.textContent).toContain('75 Bmats');
+  });
+
+  test('Factory mixed assets share four crates, show their category total and clamp direct edits without changing siblings', () => {
+    store.setProductionWorkspace('run');
+    store.addTodoListItemFromIcon(shirts.iconFilename, 'run');
+    const shirtId = store.productionRun.items[0].id;
+    const aid = factories.find(item => item.itemName === 'First Aid Kit')!;
+    const container = mount();
+    const menu = document.createElement('div'); document.body.append(menu);
+    sidebar = new IconSidebar(); sidebar.mount(menu);
+    const addAid = () => Array.from(menu.querySelectorAll<HTMLElement>('.sidebar-icon'))
+      .find(icon => icon.dataset.iconFilename === aid.iconFilename)!.dispatchEvent(new MouseEvent('dblclick'));
+    addAid();
+    expect(store.productionRun.items).toHaveLength(1);
+    expect(document.body.textContent).toContain('Factory category full (4/4 crates)');
+    const drop = new Event('drop', { bubbles: true, cancelable: true });
+    Object.defineProperty(drop, 'dataTransfer', { value: { getData: () => JSON.stringify({ filename: aid.iconFilename, displayName: aid.itemName }) } });
+    container.querySelector('#todolist-dropzone')!.dispatchEvent(drop);
+    expect(store.productionRun.items.map(item => item.id)).toEqual([shirtId]);
+    const edit = (id: string, value: string) => {
+      const input = container.querySelector<HTMLInputElement>(`[data-item-id="${id}"] [data-action="set-crates"]`)!;
+      input.value = value; input.dispatchEvent(new Event('input'));
+    };
+    edit(shirtId, '2'); addAid();
+    expect(container.querySelectorAll('li[data-category="medical"]')).toHaveLength(2);
+    expect(container.querySelector('section header')!.textContent).toContain('2 assets, 4 / 4 crates');
+    const aidItem = { ...store.productionRun.items.find(item => item.itemName === 'First Aid Kit')! };
+    const shirtInput = () => container.querySelector<HTMLInputElement>(`[data-item-id="${shirtId}"] [data-action="set-crates"]`)!;
+    expect(shirtInput().max).toBe('2');
+    expect(Array.from(container.querySelectorAll<HTMLButtonElement>('[data-action="increase-crates"]')).every(button => button.disabled)).toBe(true);
+    const expected = loadingSummary(store.productionRun.items, 'truck');
+    expect(container.querySelector('#tl-total-load')!.textContent).toBe(String(expected.used));
+    edit(shirtId, '4');
+    expect(shirtInput().value).toBe('2');
+    expect(store.productionRun.items.find(item => item.id === aidItem.id)).toEqual(aidItem);
+    container.querySelector<HTMLButtonElement>(`[data-item-id="${aidItem.id}"] [data-action="delete"]`)!.click();
+    expect(shirtInput().max).toBe('4');
+    container.querySelector<HTMLButtonElement>(`[data-item-id="${shirtId}"] [data-action="increase-crates"]`)!.click();
+    expect(shirtInput().value).toBe('3');
+    expect(container.querySelector('section header')!.textContent).toContain('1 asset, 3 / 4 crates');
   });
 
   test('Factory only allows loose truck loads, while MPF keeps its transport choice', () => {
@@ -437,6 +543,96 @@ describe('compact production UI', () => {
 });
 
 describe('independent workspace persistence', () => {
+  test('combined Factory loading persists without merging profiles or changing MPF loading and Clear remains profile-specific', () => {
+    store.addTodoListItemFromIcon(shirts.iconFilename, 'run');
+    store.setProductionRunProfile(2); store.addTodoListItemFromIcon(shirts.iconFilename, 'run');
+    store.setFactoryCombinedLoading(true);
+    store.load();
+    expect(store.factoryCombinedLoading).toBe(true);
+    expect(store.productionRunProfile).toBe(2);
+    expect(store.productionRun.items).toHaveLength(1);
+    expect(store.productionLoadingItems).toHaveLength(2);
+    expect(loadingSummary(store.productionLoadingItems, 'truck').used).toBe(7);
+    store.setTodoListProductionSource('mpf', 'run');
+    store.addTodoListItemFromIcon(tank.iconFilename, 'run');
+    expect(store.productionLoadingItems).toEqual(store.productionRun.items);
+    expect(store.productionLoadingItems).toHaveLength(1);
+    store.setTodoListProductionSource('factory', 'run'); store.clearProductionRun();
+    expect(store.productionRun.items).toHaveLength(0);
+    expect(store.productionLoadingItems).toHaveLength(1);
+    expect(orderCrateCount(store.productionLoadingItems[0])).toBe(4);
+    store.load(); expect(store.productionLoadingItems).toHaveLength(1);
+  });
+
+  test('all four profiles retain their own quantities, factions and MPF transport after reload, and Clear affects one profile', () => {
+    store.replaceTodoList(list([tank]));
+    const originalTodo = localStorage.getItem('todolist');
+    store.addTodoListItemFromIcon(shirts.iconFilename, 'run');
+    store.setTodoListCratesPerOrder(store.productionRun.items[0].id, 2, 'run');
+    store.setTodoListFaction('warden', 'run');
+    const factory1 = JSON.parse(JSON.stringify(store.productionRun));
+    store.setProductionRunProfile(2);
+    expect(store.productionRun.items).toHaveLength(0);
+    store.addTodoListItemFromIcon(shirts.iconFilename, 'run');
+    expect(orderCrateCount(store.productionRun.items[0])).toBe(4);
+    store.setTodoListFaction('colonial', 'run');
+    const factory2 = JSON.parse(JSON.stringify(store.productionRun));
+    store.setTodoListProductionSource('mpf', 'run');
+    store.addTodoListItemFromIcon(tank.iconFilename, 'run');
+    store.setTodoListCratesPerOrder(store.productionRun.items[0].id, 3, 'run');
+    store.setProductionRunTransport('container');
+    const mpf1 = JSON.parse(JSON.stringify(store.productionRun));
+    store.setProductionRunProfile(2);
+    expect(store.productionRunTransport).toBe('truck');
+    store.addTodoListItemFromIcon(tank.iconFilename, 'run');
+    expect(orderCrateCount(store.productionRun.items[0])).toBe(5);
+    const mpf2 = JSON.parse(JSON.stringify(store.productionRun));
+    store.load();
+    expect(store.productionRunProfile).toBe(2); expect(store.productionRun).toEqual(mpf2);
+    expect(store.productionRunTransport).toBe('truck');
+    store.setProductionRunProfile(1);
+    expect(store.productionRun).toEqual(mpf1); expect(store.productionRunTransport).toBe('container');
+    store.setTodoListProductionSource('factory', 'run');
+    expect(store.productionRunProfile).toBe(2); expect(store.productionRun).toEqual(factory2);
+    expect(store.productionRunTransport).toBe('truck');
+    store.clearProductionRun(); store.load();
+    expect(store.productionRunProfile).toBe(2); expect(store.productionRun.items).toHaveLength(0);
+    store.setProductionRunProfile(1); expect(store.productionRun).toEqual(factory1);
+    store.setTodoListProductionSource('mpf', 'run'); expect(store.productionRun).toEqual(mpf1);
+    store.setProductionRunProfile(2); expect(store.productionRun).toEqual(mpf2);
+    expect(localStorage.getItem('todolist')).toBe(originalTodo);
+  });
+
+  test('version 2 drafts migrate into profile 1 unchanged and profile 2 starts empty for both buildings', () => {
+    const factory = { ...list([{ ...shirts, orderCount: 1, cratesPerOrder: 2 }, { ...factories.find(item => item.itemName === 'First Aid Kit')!, id: 'aid', orderCount: 1, cratesPerOrder: 2 }]), productionSource: 'factory' };
+    const oldMpf = { ...list([{ ...tank, cost: { rmat: 465 }, cratesPerOrder: 3 }]), productionSource: 'mpf' };
+    localStorage.setItem('productionRun', JSON.stringify({ version: 2, source: 'mpf', runs: { factory, mpf: oldMpf }, mpfTransport: 'container' }));
+    store.load();
+    expect(store.productionRunProfile).toBe(1); expect(store.productionRun).toEqual(oldMpf);
+    expect(store.productionRunTransport).toBe('container');
+    store.setProductionRunProfile(2);
+    expect(store.productionRun.items).toHaveLength(0); expect(store.productionRunTransport).toBe('truck');
+    store.setTodoListProductionSource('factory', 'run');
+    expect(store.productionRunProfile).toBe(1); expect(store.productionRun).toEqual(factory);
+    store.setProductionRunProfile(2); expect(store.productionRun.items).toHaveLength(0);
+    const saved = JSON.parse(localStorage.getItem('productionRun')!);
+    expect(saved.version).toBe(3); expect(saved.runs.factory[0]).toEqual(factory); expect(saved.runs.mpf[0]).toEqual(oldMpf);
+  });
+
+  test('a damaged profile leaves the other three intact and invalid profile selections fall back to 1/2', () => {
+    const factory = { ...list([{ ...shirts, orderCount: 1 }]), productionSource: 'factory' };
+    const mpfDraft = { ...list([tank]), productionSource: 'mpf' };
+    localStorage.setItem('productionRun', JSON.stringify({ version: 3, source: 'factory', selectedProfiles: { factory: 99, mpf: 2 },
+      runs: { factory: [{ items: null }, factory], mpf: [mpfDraft, mpfDraft] }, mpfTransports: ['container', 'truck'] }));
+    store.load();
+    expect(store.productionRunProfile).toBe(1); expect(store.productionRun.items).toHaveLength(0);
+    store.setProductionRunProfile(2); expect(store.productionRun).toEqual(factory);
+    store.setTodoListProductionSource('mpf', 'run');
+    expect(store.productionRunProfile).toBe(2); expect(store.productionRun).toEqual(mpfDraft);
+    store.setProductionRunProfile(1); expect(store.productionRun).toEqual(mpfDraft);
+    expect(store.productionRunTransport).toBe('container');
+  });
+
   test('old run multipliers become one queue, with an untouched backup and unchanged regiment todo', () => {
     store.replaceTodoList(list([{ ...tank, orderCount: 40 }]));
     const savedTodo = localStorage.getItem('todolist');
@@ -489,7 +685,7 @@ describe('independent workspace persistence', () => {
     expect(localStorage.getItem('todolist')).toBe(savedTodo);
   });
 
-  test('Factory run also replaces an item in its queue without changing other queues or the MPF draft', () => {
+  test('Factory run mixes assets within its category budget without changing other categories or the MPF draft', () => {
     store.setProductionWorkspace('run');
     store.setTodoListProductionSource('mpf', 'run');
     store.addTodoListItemFromIcon(tank.iconFilename, 'run');
@@ -499,12 +695,44 @@ describe('independent workspace persistence', () => {
     store.addTodoListItemFromIcon(shirts.iconFilename, 'run');
     const utility = { ...store.productionRun.items[0] };
     const aid = factories.find(item => item.itemName === 'First Aid Kit')!;
-    store.addTodoListItemFromIcon(aid.iconFilename, 'run');
-    expect(store.productionRun.items).toHaveLength(2);
-    expect(store.productionRun.items.find(item => item.category === 'medical')!.itemName).toBe('First Aid Kit');
+    const savedFull = localStorage.getItem('productionRun');
+    expect(store.addTodoListItemFromIcon(aid.iconFilename, 'run')).toBe('category-full');
+    expect(localStorage.getItem('productionRun')).toBe(savedFull);
+    const shirtId = store.productionRun.items.find(item => item.itemName === 'Soldier Supplies')!.id;
+    store.setTodoListCratesPerOrder(shirtId, 2, 'run');
+    expect(store.addTodoListItemFromIcon(aid.iconFilename, 'run')).toBe('added');
+    expect(store.productionRun.items).toHaveLength(3);
+    expect(store.productionRun.items.filter(item => item.category === 'medical').map(item => [item.itemName, orderCrateCount(item)]))
+      .toEqual([['Soldier Supplies', 2], ['First Aid Kit', 2]]);
+    const aidId = store.productionRun.items.find(item => item.itemName === 'First Aid Kit')!.id;
+    store.setTodoListCratesPerOrder(aidId, 4, 'run');
+    expect(orderCrateCount(store.productionRun.items.find(item => item.id === aidId)!)).toBe(2);
+    const factoryDraft = JSON.parse(JSON.stringify(store.productionRun));
     expect(store.productionRun.items.find(item => item.category === 'utility')).toEqual(utility);
+    store.load();
+    expect(store.productionRun).toEqual(factoryDraft);
+    expect(localStorage.getItem('productionRun_beforeFactoryCapacity')).toBeNull();
     store.setTodoListProductionSource('mpf', 'run');
     expect(store.productionRun).toEqual(mpfDraft);
+  });
+
+  test('Factory can mix four distinct one-crate assets and refuses a fifth without replacing any', () => {
+    store.setProductionWorkspace('run');
+    const base = catalogue.find(item => item.itemName === 'First Aid Kit')!;
+    const candidates = Array.from({ length: 5 }, (_, index) => ({ ...base, itemName: `Medical item ${index}`, iconFilename: `test-medical-${index}.png` }));
+    store.setItemData([...catalogue, ...candidates]);
+    store.setIcons([...icons, ...candidates.map(item => ({ id: item.iconFilename, filename: item.iconFilename, displayName: item.itemName, path: item.iconFilename, category: 'Medical' as const }))]);
+    for (const entry of candidates.slice(0, 4)) {
+      expect(store.addTodoListItemFromIcon(entry.iconFilename, 'run')).toBe('added');
+      const added = store.productionRun.items.find(item => item.itemName === entry.itemName)!;
+      store.setTodoListCratesPerOrder(added.id, 1, 'run');
+    }
+    const before = JSON.stringify(store.productionRun);
+    expect(store.addTodoListItemFromIcon(candidates[4].iconFilename, 'run')).toBe('category-full');
+    expect(JSON.stringify(store.productionRun)).toBe(before);
+    expect(store.productionRun.items.map(orderCrateCount)).toEqual([1, 1, 1, 1]);
+    store.load();
+    expect(JSON.stringify(store.productionRun)).toBe(before);
   });
 
   test('old duplicate queues keep their last selection and retain a copy of the original cache', () => {
@@ -521,11 +749,26 @@ describe('independent workspace persistence', () => {
     expect(store.productionRun.items).toEqual([{ ...latest, orderCount: 1 }]);
     expect(localStorage.getItem('productionRun_beforeSingleQueue')).toBe(old);
     store.setTodoListProductionSource('factory', 'run');
-    expect(store.productionRun.items.map(item => item.id)).toEqual(['aid', 'havoc']);
+    expect(store.productionRun.items.map(item => item.id)).toEqual(['havoc', 'aid']);
+    expect(localStorage.getItem('productionRun_beforeFactoryCapacity')).toBe(old);
     store.load();
-    expect(store.productionRun.items.map(item => item.id)).toEqual(['aid', 'havoc']);
+    expect(store.productionRun.items.map(item => item.id)).toEqual(['havoc', 'aid']);
     expect(localStorage.getItem('productionRun_beforeSingleQueue')).toBe(old);
     expect(localStorage.getItem('todolist')).toBe(savedTodo);
+  });
+
+  test('overfull historical mixed Factory crates retain the latest quantities within four and back up the original', () => {
+    const aid = { ...factories.find(item => item.itemName === 'First Aid Kit')!, id: 'aid', orderCount: 1, cratesPerOrder: 3 };
+    const old = JSON.stringify({ version: 2, source: 'factory', runs: {
+      factory: { ...list([{ ...shirts, orderCount: 1, cratesPerOrder: 3 }, aid]), productionSource: 'factory' },
+      mpf: { ...list([tank]), productionSource: 'mpf' },
+    } });
+    localStorage.setItem('productionRun', old); store.load();
+    expect(store.productionRun.items.map(item => [item.id, orderCrateCount(item)])).toEqual([['shirts', 1], ['aid', 3]]);
+    expect(localStorage.getItem('productionRun_beforeFactoryCapacity')).toBe(old);
+    store.setTodoListCratesPerOrder('aid', 2, 'run'); store.load();
+    expect(store.productionRun.items.map(item => [item.id, orderCrateCount(item)])).toEqual([['shirts', 1], ['aid', 2]]);
+    expect(localStorage.getItem('productionRun_beforeFactoryCapacity')).toBe(old);
   });
 
   test('a category shared by Factory and MPF remains separate when an old mixed draft is loaded', () => {
@@ -581,7 +824,7 @@ describe('independent workspace persistence', () => {
     store.setTodoListProductionSource('mpf', 'run');
     expect(store.productionRun.items).toHaveLength(1);
     expect(store.productionRun.items[0]).toMatchObject({ id: 'tank', cost: { rmat: 465 }, orderCount: 1 });
-    expect(JSON.parse(localStorage.getItem('productionRun')!).version).toBe(2);
+    expect(JSON.parse(localStorage.getItem('productionRun')!).version).toBe(3);
     store.load();
     expect(store.productionRun.items[0].cost.rmat).toBe(465);
     store.setTodoListProductionSource('factory', 'run');
@@ -616,7 +859,7 @@ describe('independent workspace persistence', () => {
     store.setTodoListCratesPerOrder(id, 3, 'run');
     store.reorderTodoListItems('utility', [id], 'run');
     expect(localStorage.getItem('todolist')).toBe(original);
-    expect(JSON.parse(localStorage.getItem('productionRun')!).runs.factory.items.find((item: TodoListItem) => item.id === id)).toMatchObject({ orderCount: 1, cratesPerOrder: 3 });
+    expect(JSON.parse(localStorage.getItem('productionRun')!).runs.factory[0].items.find((item: TodoListItem) => item.id === id)).toMatchObject({ orderCount: 1, cratesPerOrder: 3 });
     store.removeTodoListItem(id, 'run');
     store.clearProductionRun();
     expect(store.productionRun.items).toHaveLength(0);
@@ -635,7 +878,7 @@ describe('independent workspace persistence', () => {
     const personal = JSON.parse(localStorage.getItem('productionRun')!);
     store.todolist = list([]); store.productionRun = list([]);
     store.load();
-    expect(store.productionRun).toEqual(personal.runs.factory);
+    expect(store.productionRun).toEqual(personal.runs.factory[0]);
     expect(store.todolist.items[0]).toMatchObject({ orderCount: 20, cost: { rmat: 465 } });
     expect(store.productionWorkspace).toBe('run');
     expect(store.productionRunTransport).toBe('truck');

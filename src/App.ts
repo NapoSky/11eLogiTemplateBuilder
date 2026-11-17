@@ -10,6 +10,7 @@ import { TodoListLoadModal } from './components/TodoListLoadModal';
 import { BackgroundModal } from './components/BackgroundModal';
 import { TemplateLoadModal } from './components/TemplateLoadModal';
 import { StockpileView } from './components/StockpileView';
+import { FacilitiesView } from './components/FacilitiesView';
 import { loadIcons, loadSubtypes } from './services/iconLoader';
 import { loadMpfData } from './services/mpfDataLoader';
 import { loadItemData } from './services/itemDataLoader';
@@ -22,6 +23,7 @@ export class App {
   private canvas: Canvas;
   private todolistView: TodoListView;
   private stockpileView: StockpileView;
+  private facilitiesView: FacilitiesView;
   private toolbar: Toolbar;
   private modal: SectionModal;
   private todolistLoadModal: TodoListLoadModal;
@@ -36,6 +38,7 @@ export class App {
     this.canvas = new Canvas();
     this.todolistView = new TodoListView();
     this.stockpileView = new StockpileView();
+    this.facilitiesView = new FacilitiesView();
     this.toolbar = new Toolbar();
     this.modal = new SectionModal();
     this.todolistLoadModal = new TodoListLoadModal();
@@ -110,6 +113,7 @@ export class App {
     const sidebar  = this.container?.querySelector('#sidebar')   as HTMLElement | null;
     if (!mainView) return;
     this.container?.classList.toggle('production-planner', store.viewMode === 'todolist');
+    this.container?.classList.toggle('facilities-planner', store.viewMode === 'facilities');
 
     // Unmount previous view cleanly
     if (previous === 'todolist') {
@@ -118,19 +122,23 @@ export class App {
       this.canvas.destroy();
     } else if (previous === 'stockpile') {
       this.stockpileView.unmount();
+    } else if (previous === 'facilities') {
+      this.facilitiesView.unmount();
     }
 
     mainView.innerHTML = '';
 
     // Sidebar is only useful in template / todolist modes
     if (sidebar) {
-      sidebar.style.display = store.viewMode === 'stockpile' ? 'none' : '';
+      sidebar.style.display = store.viewMode === 'stockpile' || store.viewMode === 'facilities' ? 'none' : '';
     }
 
     if (store.viewMode === 'todolist') {
       this.todolistView.mount(mainView);
     } else if (store.viewMode === 'stockpile') {
       this.stockpileView.mount(mainView);
+    } else if (store.viewMode === 'facilities') {
+      this.facilitiesView.mount(mainView);
     } else {
       this.canvas.mount(mainView);
     }

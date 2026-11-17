@@ -13,13 +13,16 @@ const mpfData: MpfDataEntry[] = JSON.parse(readFileSync('public/mpfData.json', '
 const mapping: Record<string, string> = JSON.parse(readFileSync('public/iconMapping.json', 'utf8'));
 const silverhand = itemData.find(item => item.itemName === 'Silverhand - Mk. IV')!;
 const falchion = itemData.find(item => item.itemName === '85K-b "Falchion"')!;
+const bardiche = itemData.find(item => item.itemName === '86K-a "Bardiche"')!;
 const stock = (meta: ItemDataEntry, crates: number, units: number) =>
   readStockQuantities(new Map([[`${meta.itemName} (Crate)`, crates], [meta.itemName, units]]), meta.itemName, meta, 'crate-equivalents-v1');
 const section = (target = 10): Section => ({
   id: 'tanks', title: 'Tanks', color: '#123456', x: 0, y: 0, width: 200, height: 200,
   icons: [{ id: 'saved-tank', filename: silverhand.iconFilename.split('/').pop()!, iconId: 'old-basename',
-    path: `/assets/icons/${silverhand.iconFilename}`, quantity: target, gridRow: 0, gridCol: 0 }],
+    path: `/assets/icons/${silverhand.iconFilename}`, subtype: '/assets/icons/subtypes/SubtypeCrateIcon.png', quantity: target, gridRow: 0, gridCol: 0 }],
 });
+const unitSection = (target = 5, metadata = silverhand): Section => ({ ...section(target), icons: [{ ...section(target).icons[0],
+  filename: metadata.iconFilename, path: `/assets/icons/${metadata.iconFilename}`, subtype: undefined }] });
 
 describe('counts stock in units and only then derives crate equivalents', () => {
   test('Silverhand: 2 crates + 15 assembled = 21 units, short of 3 crates / 9 units', () => {
@@ -60,6 +63,7 @@ describe('counts stock in units and only then derives crate equivalents', () => 
     expect(quantity.equivalentCrates).toBeNull();
     expect(calculateCrateShortage(10, quantity, null, 5)).toBeNull();
     expect(stock(unknown, 2, 0).equivalentCrates).toBe(2);
+    expect(calculateCrateShortage(5, stock(unknown, 0, 0), null, 5, false)).toBeNull();
   });
 
   test('bare equipment CSV quantities are units in the new mode', () => {
@@ -116,6 +120,39 @@ describe('counts stock in units and only then derives crate equivalents', () => 
       { quantityMode: 'crate-equivalents-v1', itemData });
     expect(rows[0]).toMatchObject({ targetQty: 10, stockpileQty: 7, status: 'partial',
       quantities: { crates: 2, units: 15, totalUnits: 21, unitsPerCrate: 3 } });
+  });
+
+  test.each([bardiche, itemData.find(item => item.itemName === 'Shipping Container')!])('unmarked vehicle/structure targets use units: $itemName', metadata => {
+    const csv = new Map([[metadata.itemName, 13]]);
+    const target = unitSection(5, metadata);
+    const context = { quantityMode: 'crate-equivalents-v1' as const, itemData };
+    expect(buildComparison([target], csv, mapping, null, context).rows[0])
+      .toMatchObject({ targetQty: 5, isCrateTarget: false, stockpileQty: 13, status: 'ok' });
+    // An unrelated subtype must not turn the target into crates either.
+    target.icons[0].subtype = '/assets/icons/subtypes/SubtypeFLIcon.png';
+    expect(buildComparison([target], csv, mapping, null, context).rows[0].stockpileQty).toBe(13);
+    target.icons[0].subtype = '/assets/icons/subtypes/SubtypeCrateIcon.png';
+    expect(buildComparison([target], csv, mapping, null, context).rows[0])
+      .toMatchObject({ targetQty: 5, isCrateTarget: true, stockpileQty: 13 / 3, status: 'partial' });
+  });
+
+  test('unit targets count both assembled stock and the actual contents of crates', () => {
+    const csv = new Map([[`${bardiche.itemName} (Crate)`, 1], [bardiche.itemName, 10]]);
+    expect(buildComparison([unitSection(5, bardiche)], csv, mapping, null,
+      { quantityMode: 'crate-equivalents-v1', itemData }).rows[0])
+      .toMatchObject({ stockpileQty: 13, quantities: { crates: 1, units: 10, totalUnits: 13 }, status: 'ok' });
+    const unknown = { ...bardiche, unitsPerCrate: null };
+    expect(buildComparison([unitSection(5, unknown)], new Map([[unknown.itemName, 13]]), mapping, null,
+      { quantityMode: 'crate-equivalents-v1', itemData: [unknown] }).rows[0]).toMatchObject({ stockpileQty: 13, status: 'ok' });
+    expect(buildComparison([unitSection(5, unknown)], csv, mapping, null,
+      { quantityMode: 'crate-equivalents-v1', itemData: [unknown] }).rows[0].status).toBe('unknown');
+  });
+
+  test('unit targets convert only the remaining MPF production into crates, after subtracting Backline units', () => {
+    expect(calculateCrateShortage(5, stock(silverhand, 0, 2), stock(silverhand, 0, 1), 5, false))
+      .toMatchObject({ cratesNeeded: 1, backlineAvailable: 1 / 3, toProduce: 1, orderCount: 1, missingUnits: 2 });
+    expect(calculateCrateShortage(5, stock(bardiche, 0, 13), null, 5, false))
+      .toMatchObject({ toProduce: 0, orderCount: 0, missingUnits: 0 });
   });
 });
 
@@ -188,6 +225,33 @@ describe('saved templates and explicit comparison migration', () => {
     store.save(); store.quantityMode = 'legacy'; store.load();
     expect(store.quantityMode).toBe('crate-equivalents-v1');
     expect(store.sections[0].icons[0].quantity).toBe(10);
+  });
+
+  test.each([false, true])('Bardiche target packaging is respected in both tables and gap hovers (crated: %s)', async crated => {
+    store.quantityMode = 'crate-equivalents-v1';
+    store.sections = [unitSection(5, bardiche)];
+    if (crated) store.sections[0].icons[0].subtype = '/assets/icons/subtypes/SubtypeCrateIcon.png';
+    const before = JSON.stringify(store.sections);
+    localStorage.setItem('stockpile_csv_entries', JSON.stringify([{ id: 'main', header: null,
+      items: { [bardiche.itemName]: 13 }, label: 'Main', depotName: 'Main', role: 'intermediate' }]));
+    view.mount(container); await tick();
+    (container.querySelector('#btn-hide-ok') as HTMLButtonElement).click();
+    const cells = [...container.querySelectorAll('tbody tr')].find(row => row.textContent?.includes(bardiche.itemName))!.querySelectorAll('td');
+    expect(cells[2].textContent?.trim()).toBe(crated ? '4.33' : '13');
+    expect(cells[4].textContent?.trim()).toBe(crated ? '4.33' : '13');
+    expect(cells[5].textContent?.trim()).toBe('5');
+    expect(cells[6].textContent?.trim()).toBe(crated ? '-1' : '+8');
+    expect(cells[6].dataset.quantityTooltip).toContain(crated ? '2 units missing' : '8 units above target');
+    expect(cells[7].textContent).toContain(crated ? 'Partial' : 'OK');
+    expect(container.querySelector('thead')!.textContent).toContain(crated ? '(crates)' : '(units)');
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    expect(container.querySelector('[data-intermediate-readiness]')!.textContent).toContain(crated ? '0%' : '100%');
+    const depotCells = [...container.querySelectorAll('tbody tr')].find(row => row.textContent?.includes(bardiche.itemName))!.querySelectorAll('td');
+    expect(depotCells[1].textContent?.trim()).toBe(crated ? '4.33' : '13');
+    expect(depotCells[2].textContent?.trim()).toBe('5');
+    expect(depotCells[3].textContent?.trim()).toBe(crated ? '-1' : '+8');
+    expect(depotCells[3].dataset.quantityTooltip).toContain(crated ? '2 units missing' : '8 units above target');
+    expect(JSON.stringify(store.sections)).toBe(before);
   });
 
   test('keeps ammunition depot tooltips in crates only in both Stockpile views', async () => {
@@ -290,7 +354,8 @@ describe('saved templates and explicit comparison migration', () => {
     store.setTemplateFaction('colonial'); expect(store.filteredIcons).toHaveLength(1);
   });
 
-  test('MPF generation subtracts Backline units and transport Fit loads the nine missing Silverhands', async () => {
+  test.each([true, false])('MPF generation and transport Fit respect target packaging (crated: %s)', async crated => {
+    if (!crated) store.sections = [unitSection(30)];
     const snapshots = JSON.parse(localStorage.getItem('stockpile_csv_entries')!);
     snapshots.push({ id: 'back', header: null, items: { [silverhand.itemName]: 60 }, label: 'Back', depotName: 'Back', role: 'backline' });
     localStorage.setItem('stockpile_csv_entries', JSON.stringify(snapshots));
@@ -306,6 +371,21 @@ describe('saved templates and explicit comparison migration', () => {
     expect(row.textContent).toContain('Assembled shippable');
     (row.querySelector('.transport-qty-fit') as HTMLButtonElement).click();
     expect(row.querySelector<HTMLInputElement>('.transport-qty')!.value).toBe('9');
+    expect(row.querySelector('.transport-gap-cell')!.textContent).toBe('0');
+  });
+
+  test('transport Fit loads one physical crate for three missing vehicles in a unit target', async () => {
+    store.sections = [unitSection(5)]; store.useCrateEquivalentQuantities();
+    localStorage.setItem('stockpile_csv_entries', JSON.stringify([
+      { id: 'main', header: null, items: { [silverhand.itemName]: 2 }, label: 'Main', depotName: 'Main', role: 'intermediate' },
+      { id: 'back', header: null, items: { [`${silverhand.itemName} (Crate)`]: 5 }, label: 'Back', depotName: 'Back', role: 'backline' },
+    ]));
+    dismissCautionNotice(); view.mount(container); await tick();
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+    const row = [...document.querySelectorAll('#transport-cargo-rows tr')].find(row => row.textContent?.includes(silverhand.itemName))!;
+    (row.querySelector('.transport-qty-fit') as HTMLButtonElement).click();
+    expect(row.querySelector<HTMLInputElement>('.transport-qty')!.value).toBe('1');
     expect(row.querySelector('.transport-gap-cell')!.textContent).toBe('0');
   });
 });

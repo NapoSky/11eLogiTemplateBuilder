@@ -13,10 +13,21 @@
 
 /* Keep the production list usable when its catalogue cannot sit beside it. */
 @media (max-width: 767px) {
-  .production-planner #toolbar,
-  .production-planner #toolbar > div {
+  #toolbar,
+  #toolbar > div {
     flex-wrap: wrap;
     gap: 0.5rem;
+  }
+
+  #toolbar > div:first-child {
+    width: 100%;
+    min-width: 0;
+  }
+
+  [data-mode-tabs] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
   }
 
   .production-planner > main {
