@@ -8,6 +8,7 @@ import type { FacilitiesCatalog, FacilityItem, FacilityRecipe } from '../service
 import { FACILITY_DISCORD_LIMIT, canSupplyByPipeline, emptyFacilityMission, exportFacilityMission, facilityAmount, facilityDiscordChunks, facilityLiquidSupply, facilityStageAmount, facilitySupplyAmount, facilitySupplyTooltip, groupFacilitySupplies, planFacilities } from '../services/facilitiesPlanner';
 import type { FacilityPlan } from '../services/facilitiesPlanner';
 import { FacilitiesWorkspace, loadFacilitiesCatalog } from '../services/facilitiesStorage';
+import { requiredFacilityBuildings } from '../services/facilityRequirements';
 
 const html = (value: string) => value.replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]!));
 const field = 'w-full min-w-0 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-400';
@@ -34,6 +35,7 @@ export class FacilitiesView {
   private materialGroups: Record<'settings' | 'stock', MaterialGroup> = { settings: 'All', stock: 'All' };
   private allMaterials = false;
   private recipeDetailId = '';
+  private requirementsOpen = false;
   private settingsReturnFocus = 'fc-open-settings';
   private generation = 0;
   private rendering = false;
@@ -207,6 +209,7 @@ export class FacilitiesView {
                   <button id="fc-open-stock" class="${button}" data-fc-action="open-stock">Available Stock${plan.stock.length ? ` (${plan.stock.length})` : ''}</button>
                 </div>
               </section>
+              ${this.renderRequirements(plan)}
               ${plan.errors.length ? `<section role="alert" class="rounded-lg border border-amber-700 bg-amber-950/20 text-amber-200 p-4 text-sm"><strong>Review this mission</strong><ul class="list-disc pl-5 mt-2 space-y-1">${plan.errors.map(error => `<li>${html(error)}</li>`).join('')}</ul></section>` : this.renderPlan(plan)}
             </div>
             <aside class="min-w-0 xl:sticky xl:top-4 rounded-lg border border-gray-700 bg-gray-800 overflow-hidden" aria-label="Discord preview">
@@ -243,6 +246,54 @@ export class FacilitiesView {
 
   private itemLabel(item: FacilityItem): string {
     return `${item.name}${item.unit === 'crates' ? ' (crate)' : ''}`;
+  }
+
+  private renderRequirements(plan: FacilityPlan): string {
+    if (!this.workspace.mission.objectives.length || plan.errors.length) return '';
+    const buildings = requiredFacilityBuildings(plan);
+    const setupCount = buildings.reduce((total, building) => total + building.setups.length, 0);
+    return `<section id="fc-requirements" class="rounded-lg border border-gray-700 bg-gray-800 overflow-hidden" aria-label="Required facilities">
+      <button id="fc-toggle-requirements" type="button" data-fc-action="toggle-requirements" aria-expanded="${this.requirementsOpen}" aria-controls="fc-requirements-list" class="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-gray-700/50">
+        <svg aria-hidden="true" class="w-3 h-3 shrink-0 text-gray-400 ${this.requirementsOpen ? 'rotate-90' : ''}" viewBox="0 0 12 12" fill="currentColor"><path d="m4 2 4 4-4 4z"/></svg>
+        <span class="text-sm font-semibold">Required facilities</span><span class="ml-auto text-xs text-gray-400">${setupCount} ${setupCount === 1 ? 'setup' : 'setups'}</span>
+      </button>
+      <div id="fc-requirements-list" ${this.requirementsOpen ? '' : 'hidden'} class="p-3 sm:p-4 border-t border-gray-700">
+        <p class="text-xs text-gray-400 mb-3">Building tiers are shown beside their names. Additional requirements appear beside each upgrade.</p>
+        <div class="rounded overflow-hidden">
+          ${buildings.length ? `<div aria-hidden="true" class="hidden md:grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-5 px-3 py-2 bg-gray-900/50 text-[11px] font-medium text-gray-400">
+            <span>Building</span><div class="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-3"><span>Upgrade</span><span>Produces</span></div>
+          </div>` : ''}
+        ${buildings.map((building, index) => {
+          const color = building.tier === 3 ? 'bg-purple-900/40 text-purple-200' : building.tier === 2 ? 'bg-blue-900/40 text-blue-200' : 'bg-gray-700 text-gray-300';
+          return `<div data-fc-requirement-building class="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2 md:gap-5 px-3 py-3 border-t border-gray-700 ${index % 2 === 0 ? 'bg-gray-900/30' : 'bg-gray-700/20'}">
+            <div class="min-w-0"><h4 class="flex flex-wrap items-center gap-2">
+              <a href="${html(building.wikiUrl)}" target="_blank" rel="noopener noreferrer" class="text-sm font-semibold text-blue-200 hover:text-blue-100 hover:underline break-words">${html(building.source)}</a>
+              ${building.tier ? `<span aria-label="Tier ${building.tier} Facilities" title="Base building technology requirement" class="text-[11px] px-2 py-0.5 rounded ${color}">T${building.tier}</span>` : ''}
+              ${building.research.map(research => `<span class="text-[11px] px-2 py-0.5 rounded bg-gray-700 text-gray-300">Requires ${html(research)}</span>`).join('')}
+              ${building.worldStructure ? '<span class="text-[11px] px-2 py-0.5 rounded bg-gray-700 text-gray-300">World structure</span>' : ''}
+              ${building.unverified ? '<span class="text-[11px] px-2 py-0.5 rounded bg-amber-900/40 text-amber-300">Tech not verified</span>' : ''}
+            </h4></div>
+            <div class="min-w-0 space-y-2">
+              ${building.setups.map(setup => {
+                const tech = setup.technology;
+                const extraTier = tech?.tier && tech.tier > (building.tier ?? 0) ? tech.tier : undefined;
+                const extraResearch = tech?.research && !building.research.includes(tech.research) ? tech.research : undefined;
+                return `<div data-fc-requirement class="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-1.5 sm:gap-3 items-start">
+                <p class="flex flex-wrap items-center gap-1.5 text-xs font-medium text-gray-200 break-words sm:pt-1"><span>${html(setup.upgrade || 'Base production')}</span>
+                  ${extraTier ? `<span aria-label="Upgrade requires Tier ${extraTier} Facilities" class="text-[11px] px-1.5 py-0.5 rounded ${extraTier === 3 ? 'bg-purple-900/40 text-purple-200' : 'bg-blue-900/40 text-blue-200'}">T${extraTier}</span>` : ''}
+                  ${extraResearch ? `<span class="text-[11px] px-1.5 py-0.5 rounded bg-gray-700 text-gray-300">Requires ${html(extraResearch)}</span>` : ''}
+                  ${!tech ? '<span class="text-[11px] px-1.5 py-0.5 rounded bg-amber-900/40 text-amber-300">Tech not verified</span>' : ''}
+                </p>
+                <div class="flex flex-wrap gap-x-3 gap-y-1 min-w-0" aria-label="Produced items">${setup.products.map(item => `<span class="inline-flex items-center gap-2 min-w-0 max-w-full text-xs text-gray-300"><span class="shrink-0 [&>span]:w-5 [&>span]:h-5 [&_img]:w-5 [&_img]:h-5">${this.icon(item)}</span><span class="min-w-0 break-words">${html(this.itemLabel(item))}</span></span>`).join('')}</div>
+              </div>`;
+              }).join('')}
+            </div>
+          </div>`;
+        }).join('') || '<p class="text-sm text-gray-400 pb-2">No local production required with the current stock and supply settings.</p>'}
+        </div>
+        ${buildings.length ? '<p class="text-xs text-gray-500 pt-2">Setups list building/upgrade combinations, not the number of buildings to construct.</p>' : ''}
+      </div>
+    </section>`;
   }
 
   private itemGroup(item: FacilityItem): ObjectiveGroup {
@@ -542,6 +593,7 @@ export class FacilitiesView {
       this.workspace.mission.objectives.splice(Number(target.dataset.fcRemove), 1); this.save(); return;
     }
     switch (target.dataset.fcAction) {
+      case 'toggle-requirements': this.requirementsOpen = !this.requirementsOpen; this.render(); break;
       case 'retry': await this.load(); break;
       case 'toggle-picker':
         this.pickerOpen = !this.pickerOpen; this.render();

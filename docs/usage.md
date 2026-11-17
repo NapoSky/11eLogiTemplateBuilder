@@ -103,6 +103,8 @@ Older templates offer **Use crate equivalents** to switch their comparison rules
 **Facility Settings** and **Available Stock** open separately. Each has search and material filters; objectives are hidden from these ingredient lists.
 Hidden rows keep their saved settings. Escape, Done or the backdrop closes the dialog.
 
+Expand **Required facilities** below the profile to see compact rows grouped by building, with its base technology tier beside the name and its upgrades and illustrated products alongside. Buildings sort by **T1 → T2 → T3**, alphabetically within each tier; buildings with independent research requirements follow separately. Extra tier/research requirements appear beside the relevant upgrade: Small Assembly Station stays T1, with **Requires Dry Dock** beside Naval Works; Metalworks stays T2, with T3 beside Engineering Station. Rows follow the page's normal scroll and update with your recipes, allocated stock and pipeline supplies. Each setup appears once; it is not a building count. The panel starts collapsed and stays out of the Discord briefing. Check current building availability and item unlocks in game.
+
 **Clear** in Facility Settings resets all recipe choices. **Clear** in Available Stock removes all allocated quantities, including hidden rows.
 Both preserve objectives, profile details and pipeline connections. **Clear mission** preserves the reusable profile.
 

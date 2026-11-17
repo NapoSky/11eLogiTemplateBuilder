@@ -64,6 +64,14 @@ The planner combines shared ingredient demands, subtracts allocated stock, then 
 Physical crate inputs have separate identities and cannot be satisfied by loose-item stock.
 A craftable ingredient marked **Supply from outside** stops that production chain; **Produce here** restores its default production recipe.
 
+### Required production facilities
+
+The **Required facilities** panel groups the actual remaining production steps by building and upgrade. Fully allocated materials, external supplies and piped liquids do not add local production setups; partial stock still requires a setup when production remains. Shared steps appear once. This is a list of configurations, not a construction plan or a minimum number of buildings.
+
+Each building's heading and sort position use its base technology tier (T1, T2, T3), then its alphabetical name; buildings with independent research/world-structure requirements follow alphabetically. An upgrade's higher tier or additional research appears on that upgrade's own line. For example, Small Assembly Station stays T1 when using Naval Works (Dry Dock research), and Metalworks stays T2 when using Engineering Station (T3). Stock and recipe changes remove unused setups without relabelling the base building.
+
+Technology annotations are maintained separately in `src/services/facilityRequirements.ts`, from the wiki's Construction and Upgrades sections. They describe research requirements, not damage-resistance tiers. Specific research such as Dry Dock and Support Bunkers (Tier 3) remains distinct from Tier 2/3 Facilities. Unknown building/upgrade pairs display **Tech not verified** rather than inheriting an assumed tier. Recipe quantities, saved mission/profile formats and Discord output are unchanged; item-specific research unlocks and current in-game availability are not checked.
+
 ### Delivery quantities
 
 Liquid requirements are calculated in litres but displayed as cans, with exact volumes in hover/focus tooltips.

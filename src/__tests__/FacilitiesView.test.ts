@@ -41,6 +41,49 @@ test('opens its own objectives, collapsed settings and preview without legacy co
   expect(container.querySelector('#fc-discord')!.textContent).toContain('Add objectives');
   expect(container.querySelector('[data-fc-action="copy"]')!.hasAttribute('disabled')).toBe(true);
   expect(container.querySelector('#tl-title')).toBeNull();
+  expect(container.querySelector('#fc-requirements')).toBeNull();
+});
+
+test('Required facilities starts collapsed, keeps its open state during edits and follows remaining production without changing Discord', () => {
+  addItem(catalog.items.find(item => item.name === 'Callahan')!.id);
+  const briefing = container.querySelector<HTMLElement>('#fc-discord')!.dataset.raw;
+  const toggle = () => container.querySelector<HTMLButtonElement>('#fc-toggle-requirements')!;
+  expect(toggle().getAttribute('aria-expanded')).toBe('false');
+  expect(container.querySelector<HTMLElement>('#fc-requirements-list')!.hidden).toBe(true);
+  toggle().click();
+  expect(toggle().getAttribute('aria-expanded')).toBe('true');
+  expect(container.querySelector('#fc-requirements-list')!.textContent).toContain('Naval Works');
+  expect(container.querySelector('#fc-requirements-list')!.textContent).toContain('Dry Dock');
+  expect(container.querySelector('#fc-requirements-list [aria-label="Upgrade requires Tier 3 Facilities"]')).not.toBeNull();
+  expect(container.querySelector<HTMLElement>('#fc-discord')!.dataset.raw).toBe(briefing);
+  input('#fc-goal-0', '2', 'input');
+  expect(toggle().getAttribute('aria-expanded')).toBe('true');
+  expect(container.querySelectorAll('[data-fc-requirement-building] a').length).toBeGreaterThan(1);
+  const buildingRows = Array.from(container.querySelectorAll<HTMLElement>('[data-fc-requirement-building]'));
+  expect(buildingRows.map(row => row.querySelector('a')!.textContent)).toEqual(['Coal Refinery', 'Materials Factory', 'Oil Refinery', 'Small Assembly Station', 'Ammunition Factory', 'Metalworks Factory', 'Dry Dock']);
+  const metalworks = buildingRows.filter(row => row.querySelector('a')!.textContent === 'Metalworks Factory');
+  expect(metalworks).toHaveLength(1);
+  expect(metalworks[0].textContent).toContain('Engineering Station');
+  expect(metalworks[0].textContent).toContain('Blast Furnace');
+  expect(metalworks[0].querySelectorAll('[data-fc-requirement]')).toHaveLength(3);
+  expect(metalworks[0].querySelector('h4 [aria-label="Tier 2 Facilities"]')).not.toBeNull();
+  expect(metalworks[0].querySelector('[data-fc-requirement] [aria-label="Upgrade requires Tier 3 Facilities"]')).not.toBeNull();
+  const assembly = buildingRows.find(row => row.querySelector('a')!.textContent === 'Small Assembly Station')!;
+  expect(assembly.querySelector('h4 [aria-label="Tier 1 Facilities"]')).not.toBeNull();
+  expect(assembly.querySelector('h4')!.textContent).not.toContain('Dry Dock');
+  expect(assembly.querySelector('[data-fc-requirement]')!.textContent).toContain('Naval Works');
+  expect(assembly.querySelector('[data-fc-requirement]')!.textContent).toContain('Requires Dry Dock');
+  settings('stock');
+  for (const part of catalog.items.find(item => item.name === 'Callahan')!.recipes[0].inputs) {
+    const stock = Array.from(container.querySelectorAll<HTMLInputElement>('[data-fc-stock]')).find(element => element.dataset.fcStock === part.itemId)!;
+    stock.value = String(part.amount * 2); stock.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  container.querySelector<HTMLButtonElement>('#fc-close-stock')!.click();
+  expect(container.querySelectorAll('[data-fc-requirement]')).toHaveLength(1);
+  expect(container.querySelector('[data-fc-requirement]')!.textContent).toContain('Callahan');
+  expect(container.querySelector('#fc-requirements-list')!.textContent).not.toContain('Naval Works');
+  expect(container.querySelector('#fc-discord')!.textContent).not.toContain('Required facilities');
+  toggle().click(); expect(container.querySelector<HTMLElement>('#fc-requirements-list')!.hidden).toBe(true);
 });
 
 test('adds goals, updates quantities live and persists without altering other modules', async () => {
