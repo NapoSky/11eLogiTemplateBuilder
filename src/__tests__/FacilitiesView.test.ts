@@ -104,6 +104,7 @@ test('the MPF-style preview copies the original Markdown rather than rendered te
   const raw = preview.dataset.raw!;
   expect(preview.querySelector('u strong')!.textContent).toBe('Task Force — Test mission');
   expect(raw).toContain('__**Task Force — Test mission**__');
+  expect(raw).not.toMatch(/Material plan only|Power generation|Wiki data:/);
   expect(container.querySelector('#fc-char-count')!.textContent).toBe(`${raw.length} / 4000`);
   expect(container.querySelector('#fc-copy')!.classList.contains('bg-blue-600')).toBe(true);
   container.querySelector<HTMLButtonElement>('#fc-copy')!.click(); await settle();
@@ -222,6 +223,21 @@ test('Available stock pipeline checkboxes sync with the plan and preserve the fi
   expect(JSON.parse(localStorage.getItem(FACILITY_PROFILE_KEY)!).piped).toContain(heavy.id);
 });
 
+test('briefings between 1900 and 4000 characters only show the full copy button', async () => {
+  view.unmount();
+  const objectives = catalog.items.filter(defaultFacilityRecipe).slice(0, 10).map(item => ({ itemId: item.id, quantity: 1 }));
+  localStorage.setItem(FACILITY_MISSION_KEY, JSON.stringify({ ...emptyFacilityMission(), objectives }));
+  view = new FacilitiesView(); view.mount(container); await settle();
+  const raw = container.querySelector<HTMLElement>('#fc-discord')!.dataset.raw!;
+  expect(raw.length).toBeGreaterThan(1900);
+  expect(raw.length).toBeLessThanOrEqual(4000);
+  expect(container.querySelector('[data-fc-part]')).toBeNull();
+  const writeText = jest.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+  container.querySelector<HTMLButtonElement>('#fc-copy')!.click(); await settle();
+  expect(writeText).toHaveBeenCalledWith(raw);
+});
+
 test('long briefings retain full Markdown copy alongside the optional message copies', async () => {
   view.unmount();
   const objectives = catalog.items.filter(defaultFacilityRecipe).slice(0, 40).map(item => ({ itemId: item.id, quantity: 1 }));
@@ -237,7 +253,7 @@ test('long briefings retain full Markdown copy alongside the optional message co
   const part = container.querySelector<HTMLButtonElement>('[data-fc-part="0"]')!;
   expect(part.classList.contains('bg-blue-600')).toBe(true);
   part.click(); await settle();
-  expect(writeText.mock.lastCall![0].length).toBeLessThanOrEqual(1900);
+  expect(writeText.mock.lastCall![0].length).toBeLessThanOrEqual(4000);
   expect(writeText.mock.lastCall![0]).toContain('__**Task Force');
 });
 

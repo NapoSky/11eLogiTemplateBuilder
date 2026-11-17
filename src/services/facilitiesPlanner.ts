@@ -269,20 +269,20 @@ export function exportFacilityMission(catalog: FacilitiesCatalog, mission: Facil
       lines.push(`${point}・Produce ${safe(facilityStageAmount(step.produced, step.item, true))} — ${safe(step.recipe.source)}${step.recipe.category ? ` / ${safe(step.recipe.category)}` : ''} (${step.batches} batch${step.batches === 1 ? '' : 'es'})`);
     });
   }
-  lines.push('', 'Material plan only. Power generation fuel, maintenance and transport are excluded.');
   if (steps.some(step => step.byproducts.length)) lines.push('Byproducts are not deducted from requirements.');
-  lines.push(`Wiki data: ${catalog.capturedOn}`);
   return lines.join('\n');
 }
+
+export const FACILITY_DISCORD_LIMIT = 4000;
 
 /** Keep copy/paste useful for long briefings; prefer splitting at line boundaries. */
 export function facilityDiscordChunks(text: string): string[] {
   if (!text) return [];
   const chunks: string[] = [];
   let remaining = text;
-  while (remaining.length > 1900) {
-    let cut = remaining.lastIndexOf('\n', 1900);
-    if (cut < 1) cut = 1900;
+  while (remaining.length > FACILITY_DISCORD_LIMIT) {
+    let cut = remaining.lastIndexOf('\n', FACILITY_DISCORD_LIMIT);
+    if (cut < 1) cut = FACILITY_DISCORD_LIMIT;
     const code = remaining.charCodeAt(cut - 1);
     if (code >= 0xD800 && code <= 0xDBFF) cut--;
     chunks.push(remaining.slice(0, cut));

@@ -5,7 +5,7 @@ import { createStockpileTooltip } from '../services/stockpileTooltip';
 import { renderDiscordPreviewHtml } from '../services/discordPreview';
 import { defaultFacilityRecipe, FACILITY_SOURCES, isFacilityObjective } from '../services/facilitiesCatalog';
 import type { FacilitiesCatalog, FacilityItem, FacilityRecipe } from '../services/facilitiesCatalog';
-import { canSupplyByPipeline, emptyFacilityMission, exportFacilityMission, facilityAmount, facilityDiscordChunks, facilityLiquidSupply, facilityStageAmount, facilitySupplyAmount, facilitySupplyTooltip, groupFacilitySupplies, planFacilities } from '../services/facilitiesPlanner';
+import { FACILITY_DISCORD_LIMIT, canSupplyByPipeline, emptyFacilityMission, exportFacilityMission, facilityAmount, facilityDiscordChunks, facilityLiquidSupply, facilityStageAmount, facilitySupplyAmount, facilitySupplyTooltip, groupFacilitySupplies, planFacilities } from '../services/facilitiesPlanner';
 import type { FacilityPlan } from '../services/facilitiesPlanner';
 import { FacilitiesWorkspace, loadFacilitiesCatalog } from '../services/facilitiesStorage';
 
@@ -212,7 +212,7 @@ export class FacilitiesView {
             <aside class="min-w-0 xl:sticky xl:top-4 rounded-lg border border-gray-700 bg-gray-800 overflow-hidden" aria-label="Discord preview">
               <h3 class="px-4 py-3 border-b border-gray-700 text-sm">Discord Preview</h3>
               <div class="px-4 py-3 flex flex-wrap items-center gap-2 border-b border-gray-700">
-                <span id="fc-char-count" class="text-xs font-mono ${discord.length > 4000 ? 'text-red-400 font-bold' : 'text-gray-400'}">${discord.length} / 4000</span>
+                <span id="fc-char-count" class="text-xs font-mono ${discord.length > FACILITY_DISCORD_LIMIT ? 'text-red-400 font-bold' : 'text-gray-400'}">${discord.length} / ${FACILITY_DISCORD_LIMIT}</span>
                 <button id="fc-copy" type="button" class="ml-auto px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs disabled:opacity-40 disabled:cursor-not-allowed" data-fc-action="copy" ${discord ? '' : 'disabled'}>📋 Copy</button>
                 <button id="fc-download" type="button" class="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs disabled:opacity-40 disabled:cursor-not-allowed" data-fc-action="text" ${discord ? '' : 'disabled'}>⬇️ .txt</button>
               </div>

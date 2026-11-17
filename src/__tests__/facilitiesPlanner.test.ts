@@ -42,14 +42,21 @@ describe('facility batch planning', () => {
     expect(exportFacilityMission(catalog, doc, profile, supplied)).toContain('Bring 13 Coke');
   });
 
+  test.each([2015, 4000])('keeps a %i-character Discord briefing in one message', length => {
+    const briefing = 'x'.repeat(length);
+    expect(facilityDiscordChunks(briefing)).toEqual([briefing]);
+  });
+
   test('splits long Discord briefings into copyable messages without losing any text', () => {
-    const briefing = Array.from({ length: 200 }, (_, index) => `- Produce item ${index}`).join('\n');
+    const briefing = Array.from({ length: 300 }, (_, index) => `- Produce item ${index}`).join('\n');
     const chunks = facilityDiscordChunks(briefing);
     expect(chunks.length).toBeGreaterThan(1);
-    expect(chunks.every(chunk => chunk.length <= 1900)).toBe(true);
+    expect(chunks.every(chunk => chunk.length <= 4000)).toBe(true);
     expect(chunks.join('\n')).toBe(briefing);
     expect(facilityDiscordChunks('')).toEqual([]);
-    expect(facilityDiscordChunks('x'.repeat(3000)).join('')).toBe('x'.repeat(3000));
+    expect(facilityDiscordChunks('x'.repeat(4001))).toEqual(['x'.repeat(4000), 'x']);
+    const unicode = `${'x'.repeat(3999)}🚂`;
+    expect(facilityDiscordChunks(unicode)).toEqual(['x'.repeat(3999), '🚂']);
   });
   test('combines shared requirements before rounding and reports actual surplus', () => {
     const plan = planFacilities(simple, mission(['A', 1], ['B', 1]), emptyFacilityProfile());
@@ -426,7 +433,7 @@ describe('accepted wiki facility recipes', () => {
     expect(text).toContain('🇦・Bring ');
     expect(text).toContain('🇦・Produce ');
     expect(text).not.toContain('- [ ]');
-    expect(text).toContain('Power generation fuel');
+    expect(text).not.toMatch(/Material plan only|Power generation|Wiki data:/);
   });
 
   test('large sections keep A–Z checkable points by creating labelled continuation sections', () => {
