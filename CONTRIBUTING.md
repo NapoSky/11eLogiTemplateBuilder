@@ -83,7 +83,7 @@ Template backgrounds are located in **`public/assets/backgrounds/`** and declare
 
 Icons are extracted directly from Foxhole game files and organised according to the **official modding structure**.
 
-The public item/name data is generated from the accepted wiki snapshot. Add new asset keys in `scripts/data/iconMapping.legacy.json` while preserving existing historical labels, and add reviewed image exceptions or same-entity aliases in `scripts/data/wiki.compatibility.json`. Run `pnpm run build:mpf` and `pnpm run data:preview` to inspect the generated names and associations. Direct changes to generated `public/iconMapping.json` or `public/mpfData.json` are overwritten on the next build. See [Game data](README.md#game-data) for the commands and compatibility rules.
+The public item/name data is generated from the accepted wiki snapshot. Add new asset keys in `scripts/data/iconMapping.legacy.json` while preserving existing historical labels, and add reviewed image exceptions or same-entity aliases in `scripts/data/wiki.compatibility.json`. Run `pnpm run build:mpf` and `pnpm run data:preview` to inspect the generated names and associations. Direct changes to generated `public/iconMapping.json` or `public/mpfData.json` are overwritten on the next build. See [Game data](docs/game-data.md) for the commands and compatibility rules.
 
 #### Expected structure
 
@@ -114,7 +114,7 @@ Faction-specific icons carry a `C` (Colonial) or `W` (Warden) suffix.
 
 #### Steps
 
-1. Add your PNG file under `public/assets/icons/Textures/` or `Slate/`, keeping the pack's path. Preserve the three local mortar variants listed in the README when updating packs; leave `subtypes/` alone.
+1. Add your PNG file under `public/assets/icons/Textures/` or `Slate/`, keeping the pack's path. Preserve the three local mortar variants listed in the [icon pack guide](docs/game-data.md#icon-pack-layout) when updating packs; leave `subtypes/` alone.
 2. Declare the icon in `scripts/data/iconMapping.legacy.json`, then regenerate `public/iconMapping.json` with `pnpm run build:mpf` (see next section).
 3. Assign it a category in `public/categoryMapping.json` (see next section).
 4. Run `pnpm run dev` and verify the icon appears in the sidebar, in the correct category.
