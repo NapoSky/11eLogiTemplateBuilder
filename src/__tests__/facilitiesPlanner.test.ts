@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { buildWikiCatalog } from '../services/wikiCatalog';
-import { projectFacilitiesCatalog, defaultFacilityRecipe } from '../services/facilitiesCatalog';
+import { projectFacilitiesCatalog, defaultFacilityRecipe, isFacilityObjective } from '../services/facilitiesCatalog';
 import type { FacilitiesCatalog, FacilityItem, FacilityRecipe } from '../services/facilitiesCatalog';
 import { canSupplyByPipeline, emptyFacilityMission, emptyFacilityProfile, isFacilityProfile, planFacilities, exportFacilityMission, facilityAmount, facilityDiscordChunks, facilityLiquidSupply, facilityResourceSupply, facilityStageAmount, facilitySupplyAmount, facilitySupplyTooltip, groupFacilitySupplies } from '../services/facilitiesPlanner';
 import { FacilitiesWorkspace, FACILITY_MISSION_KEY, FACILITY_PROFILE_KEY, loadFacilitiesCatalog } from '../services/facilitiesStorage';
@@ -359,6 +359,55 @@ describe('accepted wiki facility recipes', () => {
     expect(crate.item.unit).toBe('crates'); expect(crate.amount).toBe(1);
     expect(facilityAmount(1, crate.item)).toBe('1 crate of No.2 Loughcaster');
     expect(plan.stock.find(row => row.item.id === rifle.id)).toBeUndefined();
+  });
+
+  test('50 sniper crates require 50 rifle crates, with crate outputs throughout the briefing', () => {
+    const sniper = real.items.find(entry => entry.name === 'Clancy-Raca M4' && entry.unit === 'crates')!;
+    expect(isFacilityObjective(sniper)).toBe(true);
+    expect(isFacilityObjective(item('Clancy-Raca M4'))).toBe(false);
+    const doc = mission([sniper.id, 50]);
+    const plan = planFacilities(real, doc, emptyFacilityProfile());
+    expect(plan.errors).toEqual([]);
+    const step = plan.steps.find(step => step.item.id === sniper.id)!;
+    expect(step).toMatchObject({ needed: 50, produced: 50, batches: 50, surplus: 0 });
+    expect(step.inputs.map(input => [input.item.name, input.amount])).toEqual([
+      ['Construction Materials', 2500], ['Processed Construction Materials', 2000], ['No.2 Loughcaster', 50],
+    ]);
+    expect(plan.supplies.find(row => row.item.name === 'No.2 Loughcaster')).toMatchObject({ amount: 50, item: { unit: 'crates' } });
+    const briefing = exportFacilityMission(real, doc, emptyFacilityProfile(), plan);
+    expect(briefing).toContain('- 50 crates of Clancy-Raca M4');
+    expect(briefing).toContain('Produce 50 crates of Clancy-Raca M4');
+    expect(briefing).toContain('Bring 50 crates of No.2 Loughcaster');
+  });
+
+  test('ammunition crate objectives still round to the recipe batch, while vehicles stay individual', () => {
+    const ammo = real.items.find(entry => entry.name === '40mm' && entry.unit === 'crates')!;
+    const plan = planFacilities(real, mission([ammo.id, 11]), emptyFacilityProfile());
+    expect(plan.errors).toEqual([]);
+    expect(plan.steps.find(step => step.item.id === ammo.id)).toMatchObject({ needed: 11, produced: 20, batches: 2, surplus: 9 });
+    const callahan = item('Callahan');
+    expect(isFacilityObjective(callahan)).toBe(true);
+    expect(planFacilities(real, mission([callahan.id, 2]), emptyFacilityProfile()).steps.find(step => step.item.id === callahan.id))
+      .toMatchObject({ needed: 2, produced: 2, batches: 2, item: { unit: 'units' } });
+    expect(real.items.some(entry => entry.kind === 'vehicle' && entry.unit === 'crates')).toBe(false);
+  });
+
+  test('crate objective stock never consumes loose weapons and legacy goals retain their quantities', () => {
+    const loose = item('Clancy-Raca M4');
+    const crate = real.items.find(entry => entry.name === loose.name && entry.unit === 'crates')!;
+    const doc = { ...mission([crate.id, 50]), available: { [loose.id]: 150, [crate.id]: 2 } };
+    const plan = planFacilities(real, doc, emptyFacilityProfile());
+    expect(plan.stock.map(row => [row.item.id, row.amount])).toEqual([[crate.id, 2]]);
+    expect(plan.steps.find(step => step.item.id === crate.id)).toMatchObject({ produced: 48, batches: 48 });
+    const workspace = new FacilitiesWorkspace();
+    const legacy = mission([loose.id, 50]);
+    workspace.importDocument(JSON.stringify({ version: 1, mission: legacy, profile: emptyFacilityProfile() }), 'mission');
+    expect(workspace.mission).toEqual(legacy);
+    expect(planFacilities(real, workspace.mission, workspace.profile).steps.find(step => step.item.id === loose.id))
+      .toMatchObject({ needed: 50, produced: 51, batches: 17 });
+    workspace.mission = doc; workspace.save();
+    const restored = new FacilitiesWorkspace(); restored.load();
+    expect(restored.mission).toEqual(doc);
   });
 
   test('all default facility objectives form calculable graphs with no unresolved ingredients', () => {

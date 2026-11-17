@@ -61,6 +61,40 @@ test('adds goals, updates quantities live and persists without altering other mo
   expect(localStorage.getItem('productionRun')).toBe('{"keep":true}');
 });
 
+test('recipe packaging determines the quantity input and briefing without a unit selector', async () => {
+  const sniper = catalog.items.find(item => item.name === 'Clancy-Raca M4' && item.unit === 'crates')!;
+  const candidates = Array.from(container.querySelectorAll<HTMLButtonElement>('[data-fc-add-item]'))
+    .filter(button => button.getAttribute('aria-label')!.includes('Clancy-Raca M4'));
+  expect(candidates).toHaveLength(1);
+  addItem(sniper.id);
+  input('#fc-goal-0', '50', 'input');
+  const objective = container.querySelector('[data-fc-objective="0"]')!;
+  expect(objective.querySelector('label')!.textContent).toBe('crates');
+  expect(objective.querySelector('select')).toBeNull();
+  const stage = Array.from(container.querySelectorAll<HTMLElement>('[data-fc-step]')).find(row => row.dataset.fcStep === sniper.id)!;
+  expect(stage.querySelector('strong')!.textContent).toBe('50 crates of Clancy-Raca M4');
+  const briefing = container.querySelector<HTMLElement>('#fc-discord')!.dataset.raw!;
+  expect(briefing).toContain('- 50 crates of Clancy-Raca M4');
+  expect(briefing).toContain('Bring 50 crates of No.2 Loughcaster');
+  addItem(catalog.items.find(item => item.name === 'Callahan')!.id);
+  expect(container.querySelector('[data-fc-objective="1"] label')!.textContent).toBe('units');
+  view.unmount(); view = new FacilitiesView(); view.mount(container); await settle();
+  expect(container.querySelector<HTMLInputElement>('#fc-goal-0')!.value).toBe('50');
+  expect(container.querySelector('[data-fc-objective="0"] label')!.textContent).toBe('crates');
+});
+
+test('saved equipment missions retain their original unit quantities', async () => {
+  view.unmount();
+  const sniper = catalog.items.find(item => item.name === 'Clancy-Raca M4' && item.unit === 'units')!;
+  const mission = { ...emptyFacilityMission(), objectives: [{ itemId: sniper.id, quantity: 50 }] };
+  localStorage.setItem(FACILITY_MISSION_KEY, JSON.stringify(mission));
+  view = new FacilitiesView(); view.mount(container); await settle();
+  expect(container.querySelector<HTMLInputElement>('#fc-goal-0')!.value).toBe('50');
+  expect(container.querySelector('[data-fc-objective="0"] label')!.textContent).toBe('units');
+  expect(container.querySelector<HTMLElement>('#fc-discord')!.dataset.raw).toContain('Bring 17 crates of No.2 Loughcaster');
+  expect(JSON.parse(localStorage.getItem(FACILITY_MISSION_KEY)!)).toEqual(mission);
+});
+
 test('the MPF-style preview copies the original Markdown rather than rendered text', async () => {
   const writeText = jest.fn().mockResolvedValue(undefined);
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });

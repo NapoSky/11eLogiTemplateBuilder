@@ -14038,6 +14038,115 @@
       "icon": "Textures/UI/VehicleIcons/FieldMortarCIcon.png"
     },
     {
+      "id": "item:10159:NavalUniformW:Gentleman's Peacoat:crate:15",
+      "name": "Gentleman's Peacoat",
+      "kind": "item",
+      "factions": [
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"\",2,[{\"name\":\"Construction Materials\",\"amount\":110,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":15},12,[]]:crate:15",
+          "source": "Infantry Kit Factory",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 110
+            }
+          ],
+          "byproducts": [],
+          "power": 12
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/Uniforms/NavalUniformW.png"
+    },
+    {
+      "id": "item:10160:NavalUniformC:Remex Garb:crate:15",
+      "name": "Remex Garb",
+      "kind": "item",
+      "factions": [
+        "colonial"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"\",2,[{\"name\":\"Construction Materials\",\"amount\":110,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":15},12,[]]:crate:15",
+          "source": "Infantry Kit Factory",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 110
+            }
+          ],
+          "byproducts": [],
+          "power": 12
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/Uniforms/NavalUniformC.png"
+    },
+    {
+      "id": "item:1119:RainUniformC:Legionary's Oilcoat:crate:15",
+      "name": "Legionary's Oilcoat",
+      "kind": "item",
+      "factions": [
+        "colonial"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"\",2,[{\"name\":\"Construction Materials\",\"amount\":110,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":15},12,[]]:crate:15",
+          "source": "Infantry Kit Factory",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 110
+            }
+          ],
+          "byproducts": [],
+          "power": 12
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/Uniforms/RainUniformCIcon.png"
+    },
+    {
+      "id": "item:11561:PilotUniformW:Aviator's Raiment:crate:1",
+      "name": "Aviator's Raiment",
+      "kind": "item",
+      "factions": [
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Special-Issue Firearms Assembly\",1,[{\"name\":\"Rare Materials\",\"amount\":2,\"kind\":\"item\"},{\"name\":\"Officer's Regalia\",\"amount\":1,\"kind\":\"crate\",\"crateCapacity\":3}],{\"amount\":1,\"crated\":true,\"crateCapacity\":1},4,[]]:crate:1",
+          "source": "Infantry Kit Factory",
+          "category": "Special-Issue Firearms Assembly",
+          "amount": 1,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:4469:FacilityMaterials12:Rare Materials",
+              "amount": 2
+            },
+            {
+              "itemId": "item:5418:OfficerUniformW:Officer's Regalia:crate:3",
+              "amount": 1
+            }
+          ],
+          "byproducts": [],
+          "power": 4
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/Uniforms/PilotUniformWIcon.png"
+    },
+    {
       "id": "item:5418:OfficerUniformW:Officer's Regalia:crate:3",
       "name": "Officer's Regalia",
       "kind": "item",
@@ -14062,6 +14171,37 @@
         }
       ],
       "icon": "Textures/UI/ItemIcons/Uniforms/OfficerUniformWIcon.png"
+    },
+    {
+      "id": "item:11562:PilotUniformC:Lodesman's Lorica:crate:1",
+      "name": "Lodesman's Lorica",
+      "kind": "item",
+      "factions": [
+        "colonial"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Special-Issue Firearms Assembly\",1,[{\"name\":\"Rare Materials\",\"amount\":2,\"kind\":\"item\"},{\"name\":\"Officialis' Attire\",\"amount\":1,\"kind\":\"crate\",\"crateCapacity\":3}],{\"amount\":1,\"crated\":true,\"crateCapacity\":1},4,[]]:crate:1",
+          "source": "Infantry Kit Factory",
+          "category": "Special-Issue Firearms Assembly",
+          "amount": 1,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:4469:FacilityMaterials12:Rare Materials",
+              "amount": 2
+            },
+            {
+              "itemId": "item:5419:OfficerUniformC:Officialis' Attire:crate:3",
+              "amount": 1
+            }
+          ],
+          "byproducts": [],
+          "power": 4
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/Uniforms/PilotUniformCIcon.png"
     },
     {
       "id": "item:5419:OfficerUniformC:Officialis' Attire:crate:3",
@@ -14090,6 +14230,37 @@
       "icon": "Textures/UI/ItemIcons/Uniforms/OfficerUniformCIcon.png"
     },
     {
+      "id": "item:11576:ParatrooperUniformW:Cloudrunner's Vesture:crate:15",
+      "name": "Cloudrunner's Vesture",
+      "kind": "item",
+      "factions": [
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Special-Issue Firearms Assembly\",1,[{\"name\":\"Processed Construction Materials\",\"amount\":10,\"kind\":\"item\"},{\"name\":\"Outrider's Mantle\",\"amount\":1,\"kind\":\"crate\",\"crateCapacity\":15}],{\"amount\":1,\"crated\":true,\"crateCapacity\":15},4,[]]:crate:15",
+          "source": "Infantry Kit Factory",
+          "category": "Special-Issue Firearms Assembly",
+          "amount": 1,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2107:FacilityMaterials2:Processed Construction Materials",
+              "amount": 10
+            },
+            {
+              "itemId": "item:5427:ScoutUniformW:Outrider's Mantle:crate:15",
+              "amount": 1
+            }
+          ],
+          "byproducts": [],
+          "power": 4
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/Uniforms/ParatrooperUniformWIcon.png"
+    },
+    {
       "id": "item:5427:ScoutUniformW:Outrider's Mantle:crate:15",
       "name": "Outrider's Mantle",
       "kind": "item",
@@ -14114,6 +14285,37 @@
         }
       ],
       "icon": "Textures/UI/ItemIcons/Uniforms/ScoutUniformWIcon.png"
+    },
+    {
+      "id": "item:11577:ParatrooperUniformC:Auster's Harness:crate:15",
+      "name": "Auster's Harness",
+      "kind": "item",
+      "factions": [
+        "colonial"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Special-Issue Firearms Assembly\",1,[{\"name\":\"Processed Construction Materials\",\"amount\":10,\"kind\":\"item\"},{\"name\":\"Recon Camo\",\"amount\":1,\"kind\":\"crate\",\"crateCapacity\":15}],{\"amount\":1,\"crated\":true,\"crateCapacity\":15},4,[]]:crate:15",
+          "source": "Infantry Kit Factory",
+          "category": "Special-Issue Firearms Assembly",
+          "amount": 1,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2107:FacilityMaterials2:Processed Construction Materials",
+              "amount": 10
+            },
+            {
+              "itemId": "item:5428:ScoutUniformC:Recon Camo:crate:15",
+              "amount": 1
+            }
+          ],
+          "byproducts": [],
+          "power": 4
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/Uniforms/ParatrooperUniformCIcon.png"
     },
     {
       "id": "item:5428:ScoutUniformC:Recon Camo:crate:15",
@@ -14142,26 +14344,277 @@
       "icon": "Textures/UI/ItemIcons/Uniforms/ScoutUniformCIcon.png"
     },
     {
-      "id": "item:398:RifleC:Argenti r.II Rifle:crate:20",
-      "name": "Argenti r.II Rifle",
+      "id": "item:11617:ParatrooperBackpack:Paratrooper's Ruck:crate:10",
+      "name": "Paratrooper's Ruck",
+      "kind": "item",
+      "factions": [
+        "colonial",
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Special-Issue Firearms Assembly\",1,[{\"name\":\"Construction Materials\",\"amount\":20,\"kind\":\"item\"}],{\"amount\":1,\"crated\":true,\"crateCapacity\":10},2,[]]:crate:10",
+          "source": "Infantry Kit Factory",
+          "category": "Special-Issue Firearms Assembly",
+          "amount": 1,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 20
+            }
+          ],
+          "byproducts": [],
+          "power": 2
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/ParatrooperBackpackItemIcon.png"
+    },
+    {
+      "id": "item:1209:ATRPGLightC:Ignifist 30:crate:10",
+      "name": "Ignifist 30",
       "kind": "item",
       "factions": [
         "colonial"
       ],
       "unit": "crates",
-      "recipes": [],
-      "icon": "Textures/UI/ItemIcons/RifleCItemIcon.png"
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Small Arms Workshop\",2,[{\"name\":\"Explosive Powder\",\"amount\":385,\"kind\":\"item\"},{\"name\":\"Construction Materials\",\"amount\":95,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":10},12,[]]:crate:10",
+          "source": "Infantry Kit Factory",
+          "category": "Small Arms Workshop",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:1266:Explosive:Explosive Powder",
+              "amount": 385
+            },
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 95
+            }
+          ],
+          "byproducts": [],
+          "power": 12
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/ATRPGLightCItemIcon.png"
     },
     {
-      "id": "item:1223:RifleW:No.2 Loughcaster:crate:20",
-      "name": "No.2 Loughcaster",
+      "id": "item:1311:SmokeGrenade:PT-815 Smoke Grenade:crate:15",
+      "name": "PT-815 Smoke Grenade",
+      "kind": "item",
+      "factions": [
+        "colonial",
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Small Arms Workshop\",2,[{\"name\":\"Construction Materials\",\"amount\":135,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":15},12,[]]:crate:15",
+          "source": "Infantry Kit Factory",
+          "category": "Small Arms Workshop",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 135
+            }
+          ],
+          "byproducts": [],
+          "power": 12
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/Smokegrenadeicon1.png"
+    },
+    {
+      "id": "item:1472:RpgAmmo:RPG:crate:15",
+      "name": "RPG",
+      "kind": "item",
+      "factions": [
+        "colonial",
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Heavy Munitions Foundry\",2,[{\"name\":\"Construction Materials\",\"amount\":65,\"kind\":\"item\"},{\"name\":\"Explosive Powder\",\"amount\":495,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":15},24,[]]:crate:15",
+          "source": "Infantry Kit Factory",
+          "category": "Heavy Munitions Foundry",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 65
+            },
+            {
+              "itemId": "item:1266:Explosive:Explosive Powder",
+              "amount": 495
+            }
+          ],
+          "byproducts": [],
+          "power": 24
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/RpgAmmoItemIcon.png"
+    },
+    {
+      "id": "item:1729:MortarAmmoFL:Flare Mortar Shell:crate:15",
+      "name": "Flare Mortar Shell",
+      "kind": "item",
+      "factions": [
+        "colonial",
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Small Arms Workshop\",2,[{\"name\":\"Explosive Powder\",\"amount\":80,\"kind\":\"item\"},{\"name\":\"Construction Materials\",\"amount\":65,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":15},12,[]]:crate:15",
+          "source": "Infantry Kit Factory",
+          "category": "Small Arms Workshop",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:1266:Explosive:Explosive Powder",
+              "amount": 80
+            },
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 65
+            }
+          ],
+          "byproducts": [],
+          "power": 12
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/MortarAmmoIconFlare.png"
+    },
+    {
+      "id": "item:1830:HELaunchedGrenade:Tremola Grenade GPb-1:crate:20",
+      "name": "Tremola Grenade GPb-1",
+      "kind": "item",
+      "factions": [
+        "colonial",
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Heavy Munitions Foundry\",2,[{\"name\":\"Construction Materials\",\"amount\":80,\"kind\":\"item\"},{\"name\":\"Explosive Powder\",\"amount\":550,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":20},24,[]]:crate:20",
+          "source": "Infantry Kit Factory",
+          "category": "Heavy Munitions Foundry",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 80
+            },
+            {
+              "itemId": "item:1266:Explosive:Explosive Powder",
+              "amount": 550
+            }
+          ],
+          "byproducts": [],
+          "power": 24
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/HELaunchedGrenadeItemIcon.png"
+    },
+    {
+      "id": "item:1912:MortarAmmo:Mortar Shell:crate:15",
+      "name": "Mortar Shell",
+      "kind": "item",
+      "factions": [
+        "colonial",
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Small Arms Workshop\",2,[{\"name\":\"Explosive Powder\",\"amount\":385,\"kind\":\"item\"},{\"name\":\"Construction Materials\",\"amount\":65,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":15},12,[]]:crate:15",
+          "source": "Infantry Kit Factory",
+          "category": "Small Arms Workshop",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:1266:Explosive:Explosive Powder",
+              "amount": 385
+            },
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 65
+            }
+          ],
+          "byproducts": [],
+          "power": 12
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/MortarAmmoIcon.png"
+    },
+    {
+      "id": "item:2017:LightTankAmmo:40mm:crate:20",
+      "name": "40mm",
+      "kind": "item",
+      "factions": [
+        "colonial",
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Heavy Munitions Foundry\",2,[{\"name\":\"Construction Materials\",\"amount\":175,\"kind\":\"item\"},{\"name\":\"Explosive Powder\",\"amount\":1320,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":20},24,[]]:crate:20",
+          "source": "Infantry Kit Factory",
+          "category": "Heavy Munitions Foundry",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 175
+            },
+            {
+              "itemId": "item:1266:Explosive:Explosive Powder",
+              "amount": 1320
+            }
+          ],
+          "byproducts": [],
+          "power": 24
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/LightTankAmmoItemIcon.png"
+    },
+    {
+      "id": "item:2245:AmmoUniformW:Specialist's Overcoat:crate:15",
+      "name": "Specialist's Overcoat",
       "kind": "item",
       "factions": [
         "warden"
       ],
       "unit": "crates",
-      "recipes": [],
-      "icon": "Textures/UI/ItemIcons/RifleW.png"
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"\",2,[{\"name\":\"Construction Materials\",\"amount\":110,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":15},12,[]]:crate:15",
+          "source": "Infantry Kit Factory",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 110
+            }
+          ],
+          "byproducts": [],
+          "power": 12
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/Uniforms/AmmoUniformWIcon.png"
     },
     {
       "id": "item:2407:MortarAmmoSH:Shrapnel Mortar Shell:crate:15",
@@ -14196,6 +14649,641 @@
       "icon": "Textures/UI/ItemIcons/MortarAmmoIconShrapnel.png"
     },
     {
+      "id": "item:2967:ATRifleAmmo:14.5mm:crate:10",
+      "name": "14.5mm",
+      "kind": "item",
+      "factions": [
+        "colonial",
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Small Arms Workshop\",2,[{\"name\":\"Construction Materials\",\"amount\":110,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":10},12,[]]:crate:10",
+          "source": "Infantry Kit Factory",
+          "category": "Small Arms Workshop",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 110
+            }
+          ],
+          "byproducts": [],
+          "power": 12
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/ATRifleAmmoItemIcon.png"
+    },
+    {
+      "id": "item:3278:SniperRifleC:KRR3-792 Auger:crate:5",
+      "name": "KRR3-792 Auger",
+      "kind": "item",
+      "factions": [
+        "colonial"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Special-Issue Firearms Assembly\",1,[{\"name\":\"Construction Materials\",\"amount\":50,\"kind\":\"item\"},{\"name\":\"Processed Construction Materials\",\"amount\":40,\"kind\":\"item\"},{\"name\":\"Argenti r.II Rifle\",\"amount\":1,\"kind\":\"crate\",\"crateCapacity\":20}],{\"amount\":1,\"crated\":true,\"crateCapacity\":5},2,[]]:crate:5",
+          "source": "Infantry Kit Factory",
+          "category": "Special-Issue Firearms Assembly",
+          "amount": 1,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 50
+            },
+            {
+              "itemId": "item:2107:FacilityMaterials2:Processed Construction Materials",
+              "amount": 40
+            },
+            {
+              "itemId": "item:398:RifleC:Argenti r.II Rifle:crate:20",
+              "amount": 1
+            }
+          ],
+          "byproducts": [],
+          "power": 2
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/SniperRifleCItemIcon.png"
+    },
+    {
+      "id": "item:398:RifleC:Argenti r.II Rifle:crate:20",
+      "name": "Argenti r.II Rifle",
+      "kind": "item",
+      "factions": [
+        "colonial"
+      ],
+      "unit": "crates",
+      "recipes": [],
+      "icon": "Textures/UI/ItemIcons/RifleCItemIcon.png"
+    },
+    {
+      "id": "item:4042:ATRPGAmmo:AP⧸RPG:crate:15",
+      "name": "AP/RPG",
+      "kind": "item",
+      "factions": [
+        "colonial",
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Heavy Munitions Foundry\",2,[{\"name\":\"Construction Materials\",\"amount\":65,\"kind\":\"item\"},{\"name\":\"Explosive Powder\",\"amount\":825,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":15},24,[]]:crate:15",
+          "source": "Infantry Kit Factory",
+          "category": "Heavy Munitions Foundry",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 65
+            },
+            {
+              "itemId": "item:1266:Explosive:Explosive Powder",
+              "amount": 825
+            }
+          ],
+          "byproducts": [],
+          "power": 24
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/ATRpgAmmoItemIcon.png"
+    },
+    {
+      "id": "item:419:ATRPGIndirectAmmo:ARC⧸RPG:crate:15",
+      "name": "ARC/RPG",
+      "kind": "item",
+      "factions": [
+        "colonial",
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Heavy Munitions Foundry\",2,[{\"name\":\"Construction Materials\",\"amount\":65,\"kind\":\"item\"},{\"name\":\"Explosive Powder\",\"amount\":825,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":15},24,[]]:crate:15",
+          "source": "Infantry Kit Factory",
+          "category": "Heavy Munitions Foundry",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 65
+            },
+            {
+              "itemId": "item:1266:Explosive:Explosive Powder",
+              "amount": 825
+            }
+          ],
+          "byproducts": [],
+          "power": 24
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/ATMortarAmmoItemIcon.png"
+    },
+    {
+      "id": "item:4201:MiniTankAmmo:30mm:crate:20",
+      "name": "30mm",
+      "kind": "item",
+      "factions": [
+        "colonial",
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Heavy Munitions Foundry\",2,[{\"name\":\"Construction Materials\",\"amount\":45,\"kind\":\"item\"},{\"name\":\"Explosive Powder\",\"amount\":220,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":20},24,[]]:crate:20",
+          "source": "Infantry Kit Factory",
+          "category": "Heavy Munitions Foundry",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 45
+            },
+            {
+              "itemId": "item:1266:Explosive:Explosive Powder",
+              "amount": 220
+            }
+          ],
+          "byproducts": [],
+          "power": 24
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/MiniTankAmmoItemIcon.png"
+    },
+    {
+      "id": "item:4342:ArmourUniformC:Velian Flak Vest:crate:10",
+      "name": "Velian Flak Vest",
+      "kind": "item",
+      "factions": [
+        "colonial"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"\",2,[{\"name\":\"Construction Materials\",\"amount\":220,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":10},12,[]]:crate:10",
+          "source": "Infantry Kit Factory",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 220
+            }
+          ],
+          "byproducts": [],
+          "power": 12
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/Uniforms/ArmourUniformC.png"
+    },
+    {
+      "id": "item:4446:ArmourUniformW:Gunner's Breastplate:crate:5",
+      "name": "Gunner's Breastplate",
+      "kind": "item",
+      "factions": [
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"\",2,[{\"name\":\"Construction Materials\",\"amount\":220,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":5},12,[]]:crate:5",
+          "source": "Infantry Kit Factory",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 220
+            }
+          ],
+          "byproducts": [],
+          "power": 12
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/Uniforms/ArmourUniformW.png"
+    },
+    {
+      "id": "item:4479:SniperRifleW:Clancy-Raca M4:crate:3",
+      "name": "Clancy-Raca M4",
+      "kind": "item",
+      "factions": [
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Special-Issue Firearms Assembly\",1,[{\"name\":\"Construction Materials\",\"amount\":50,\"kind\":\"item\"},{\"name\":\"Processed Construction Materials\",\"amount\":40,\"kind\":\"item\"},{\"name\":\"No.2 Loughcaster\",\"amount\":1,\"kind\":\"crate\",\"crateCapacity\":20}],{\"amount\":1,\"crated\":true,\"crateCapacity\":3},2,[]]:crate:3",
+          "source": "Infantry Kit Factory",
+          "category": "Special-Issue Firearms Assembly",
+          "amount": 1,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 50
+            },
+            {
+              "itemId": "item:2107:FacilityMaterials2:Processed Construction Materials",
+              "amount": 40
+            },
+            {
+              "itemId": "item:1223:RifleW:No.2 Loughcaster:crate:20",
+              "amount": 1
+            }
+          ],
+          "byproducts": [],
+          "power": 2
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/SniperRifleItemIcon.png"
+    },
+    {
+      "id": "item:1223:RifleW:No.2 Loughcaster:crate:20",
+      "name": "No.2 Loughcaster",
+      "kind": "item",
+      "factions": [
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [],
+      "icon": "Textures/UI/ItemIcons/RifleW.png"
+    },
+    {
+      "id": "item:5421:GrenadeUniformC:Grenadier's Baldric:crate:15",
+      "name": "Grenadier's Baldric",
+      "kind": "item",
+      "factions": [
+        "colonial"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"\",2,[{\"name\":\"Construction Materials\",\"amount\":110,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":15},12,[]]:crate:15",
+          "source": "Infantry Kit Factory",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 110
+            }
+          ],
+          "byproducts": [],
+          "power": 12
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/Uniforms/GrenadeUniformCIcon.png"
+    },
+    {
+      "id": "item:5423:SnowUniformC:Heavy Topcoat:crate:15",
+      "name": "Heavy Topcoat",
+      "kind": "item",
+      "factions": [
+        "colonial"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"\",2,[{\"name\":\"Construction Materials\",\"amount\":110,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":15},12,[]]:crate:15",
+          "source": "Infantry Kit Factory",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 110
+            }
+          ],
+          "byproducts": [],
+          "power": 12
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/Uniforms/SnowUniformCIcon.png"
+    },
+    {
+      "id": "item:5424:SnowUniformW:Caoivish Parka:crate:15",
+      "name": "Caoivish Parka",
+      "kind": "item",
+      "factions": [
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"\",2,[{\"name\":\"Construction Materials\",\"amount\":110,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":15},12,[]]:crate:15",
+          "source": "Infantry Kit Factory",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 110
+            }
+          ],
+          "byproducts": [],
+          "power": 12
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/Uniforms/SnowUniformWIcon.png"
+    },
+    {
+      "id": "item:5425:TankUniformW:Padded Boiler Suit:crate:15",
+      "name": "Padded Boiler Suit",
+      "kind": "item",
+      "factions": [
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"\",2,[{\"name\":\"Construction Materials\",\"amount\":110,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":15},12,[]]:crate:15",
+          "source": "Infantry Kit Factory",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 110
+            }
+          ],
+          "byproducts": [],
+          "power": 12
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/Uniforms/TankUniformWIcon.png"
+    },
+    {
+      "id": "item:5426:TankUniformC:Tankman's Coveralls:crate:15",
+      "name": "Tankman's Coveralls",
+      "kind": "item",
+      "factions": [
+        "colonial"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"\",2,[{\"name\":\"Construction Materials\",\"amount\":110,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":15},12,[]]:crate:15",
+          "source": "Infantry Kit Factory",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 110
+            }
+          ],
+          "byproducts": [],
+          "power": 12
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/Uniforms/TankUniformCIcon.png"
+    },
+    {
+      "id": "item:5429:MedicUniformW:Physician's Jacket:crate:15",
+      "name": "Physician's Jacket",
+      "kind": "item",
+      "factions": [
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"\",2,[{\"name\":\"Construction Materials\",\"amount\":110,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":15},12,[]]:crate:15",
+          "source": "Infantry Kit Factory",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 110
+            }
+          ],
+          "byproducts": [],
+          "power": 12
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/Uniforms/MedicUniformWIcon.png"
+    },
+    {
+      "id": "item:5430:MedicUniformC:Medic Fatigues:crate:15",
+      "name": "Medic Fatigues",
+      "kind": "item",
+      "factions": [
+        "colonial"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"\",2,[{\"name\":\"Construction Materials\",\"amount\":110,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":15},12,[]]:crate:15",
+          "source": "Infantry Kit Factory",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 110
+            }
+          ],
+          "byproducts": [],
+          "power": 12
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/Uniforms/MedicUniformCIcon.png"
+    },
+    {
+      "id": "item:5431:EngineerUniformW:Sapper Gear:crate:15",
+      "name": "Sapper Gear",
+      "kind": "item",
+      "factions": [
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"\",2,[{\"name\":\"Construction Materials\",\"amount\":110,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":15},12,[]]:crate:15",
+          "source": "Infantry Kit Factory",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 110
+            }
+          ],
+          "byproducts": [],
+          "power": 12
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/Uniforms/EngineerUniformWIcon.png"
+    },
+    {
+      "id": "item:5432:EngineerUniformC:Fabri Rucksack:crate:15",
+      "name": "Fabri Rucksack",
+      "kind": "item",
+      "factions": [
+        "colonial"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"\",2,[{\"name\":\"Construction Materials\",\"amount\":110,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":15},12,[]]:crate:15",
+          "source": "Infantry Kit Factory",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 110
+            }
+          ],
+          "byproducts": [],
+          "power": 12
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/Uniforms/EngineerUniformCIcon.png"
+    },
+    {
+      "id": "item:558:ATGrenadeW:BF5 White Ash Flask Grenade:crate:10",
+      "name": "BF5 White Ash Flask Grenade",
+      "kind": "item",
+      "factions": [
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Small Arms Workshop\",2,[{\"name\":\"Explosive Powder\",\"amount\":440,\"kind\":\"item\"},{\"name\":\"Construction Materials\",\"amount\":110,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":10},12,[]]:crate:10",
+          "source": "Infantry Kit Factory",
+          "category": "Small Arms Workshop",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:1266:Explosive:Explosive Powder",
+              "amount": 440
+            },
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 110
+            }
+          ],
+          "byproducts": [],
+          "power": 12
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/ATGrenadeWIcon.png"
+    },
+    {
+      "id": "item:8189:ATLaunchedGrenadeW:B2 Varsi Anti-Tank Grenade:crate:20",
+      "name": "B2 Varsi Anti-Tank Grenade",
+      "kind": "item",
+      "factions": [
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Heavy Munitions Foundry\",2,[{\"name\":\"Construction Materials\",\"amount\":105,\"kind\":\"item\"},{\"name\":\"Explosive Powder\",\"amount\":685,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":20},24,[]]:crate:20",
+          "source": "Infantry Kit Factory",
+          "category": "Heavy Munitions Foundry",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 105
+            },
+            {
+              "itemId": "item:1266:Explosive:Explosive Powder",
+              "amount": 685
+            }
+          ],
+          "byproducts": [],
+          "power": 24
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/ATLaunchedGrenadeWIcon.png"
+    },
+    {
+      "id": "item:8191:MortarAmmoFlame:Incendiary Mortar Shell:crate:15",
+      "name": "Incendiary Mortar Shell",
+      "kind": "item",
+      "factions": [
+        "colonial",
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Special-Issue Firearms Assembly\",1,[{\"name\":\"Construction Materials\",\"amount\":5,\"kind\":\"item\"},{\"name\":\"Flame Ammo\",\"amount\":1,\"kind\":\"item\"},{\"name\":\"Shrapnel Mortar Shell\",\"amount\":1,\"kind\":\"crate\",\"crateCapacity\":15}],{\"amount\":1,\"crated\":true,\"crateCapacity\":15},2,[]]:crate:15",
+          "source": "Infantry Kit Factory",
+          "category": "Special-Issue Firearms Assembly",
+          "amount": 1,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 5
+            },
+            {
+              "itemId": "item:2459:FlameAmmo:Flame Ammo",
+              "amount": 1
+            },
+            {
+              "itemId": "item:2407:MortarAmmoSH:Shrapnel Mortar Shell:crate:15",
+              "amount": 1
+            }
+          ],
+          "byproducts": [],
+          "power": 2
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/MortarAmmoIconFire.png"
+    },
+    {
+      "id": "item:8192:ATRifleAutomaticW:Booker Greyhound Model 910:crate:3",
+      "name": "Booker Greyhound Model 910",
+      "kind": "item",
+      "factions": [
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Special-Issue Firearms Assembly\",1,[{\"name\":\"Processed Construction Materials\",\"amount\":3,\"kind\":\"item\"},{\"name\":\"Assembly Materials I\",\"amount\":5,\"kind\":\"item\"},{\"name\":\"Booker Storm Rifle Model 838\",\"amount\":1,\"kind\":\"crate\",\"crateCapacity\":20}],{\"amount\":1,\"crated\":true,\"crateCapacity\":3},4,[]]:crate:3",
+          "source": "Infantry Kit Factory",
+          "category": "Special-Issue Firearms Assembly",
+          "amount": 1,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2107:FacilityMaterials2:Processed Construction Materials",
+              "amount": 3
+            },
+            {
+              "itemId": "item:3678:FacilityMaterials4:Assembly Materials I",
+              "amount": 5
+            },
+            {
+              "itemId": "item:2885:AssaultRifleHeavyW:Booker Storm Rifle Model 838:crate:20",
+              "amount": 1
+            }
+          ],
+          "byproducts": [],
+          "power": 4
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/ATRifleAutomaticWItemIcon.png"
+    },
+    {
       "id": "item:2885:AssaultRifleHeavyW:Booker Storm Rifle Model 838:crate:20",
       "name": "Booker Storm Rifle Model 838",
       "kind": "item",
@@ -14205,6 +15293,41 @@
       "unit": "crates",
       "recipes": [],
       "icon": "Textures/UI/ItemIcons/AssaultRifleHeavyWItemIcon.png"
+    },
+    {
+      "id": "item:8193:ATRifleAssaultW:228 Satterley Heavy Storm Rifle:crate:5",
+      "name": "228 Satterley Heavy Storm Rifle",
+      "kind": "item",
+      "factions": [
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Special-Issue Firearms Assembly\",1,[{\"name\":\"Processed Construction Materials\",\"amount\":3,\"kind\":\"item\"},{\"name\":\"Assembly Materials II\",\"amount\":5,\"kind\":\"item\"},{\"name\":\"Neville Anti-Tank Rifle\",\"amount\":1,\"kind\":\"crate\",\"crateCapacity\":3}],{\"amount\":1,\"crated\":true,\"crateCapacity\":5},4,[]]:crate:5",
+          "source": "Infantry Kit Factory",
+          "category": "Special-Issue Firearms Assembly",
+          "amount": 1,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2107:FacilityMaterials2:Processed Construction Materials",
+              "amount": 3
+            },
+            {
+              "itemId": "item:4459:FacilityMaterials5:Assembly Materials II",
+              "amount": 5
+            },
+            {
+              "itemId": "item:1139:ATRifleW:Neville Anti-Tank Rifle:crate:3",
+              "amount": 1
+            }
+          ],
+          "byproducts": [],
+          "power": 4
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/ATRifleAssaultWIcontga.png"
     },
     {
       "id": "item:1139:ATRifleW:Neville Anti-Tank Rifle:crate:3",
@@ -14218,6 +15341,41 @@
       "icon": "Textures/UI/ItemIcons/ATRifleItemIcon.png"
     },
     {
+      "id": "item:8198:ATRifleLightC:“Dawn” Ve.II:crate:3",
+      "name": "\"Dawn\" Ve.II",
+      "kind": "item",
+      "factions": [
+        "colonial"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Special-Issue Firearms Assembly\",1,[{\"name\":\"Processed Construction Materials\",\"amount\":3,\"kind\":\"item\"},{\"name\":\"Assembly Materials II\",\"amount\":5,\"kind\":\"item\"},{\"name\":\"“Dusk” ce.III\",\"amount\":1,\"kind\":\"crate\",\"crateCapacity\":20}],{\"amount\":1,\"crated\":true,\"crateCapacity\":3},4,[]]:crate:3",
+          "source": "Infantry Kit Factory",
+          "category": "Special-Issue Firearms Assembly",
+          "amount": 1,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2107:FacilityMaterials2:Processed Construction Materials",
+              "amount": 3
+            },
+            {
+              "itemId": "item:4459:FacilityMaterials5:Assembly Materials II",
+              "amount": 5
+            },
+            {
+              "itemId": "item:3135:AssaultRifleHeavyC:“Dusk” ce.III:crate:20",
+              "amount": 1
+            }
+          ],
+          "byproducts": [],
+          "power": 4
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/ATRifleLightCIcon.png"
+    },
+    {
       "id": "item:3135:AssaultRifleHeavyC:“Dusk” ce.III:crate:20",
       "name": "\"Dusk\" ce.III",
       "kind": "item",
@@ -14229,6 +15387,41 @@
       "icon": "Textures/UI/ItemIcons/AssaultRifleHeavyCItemIcon.png"
     },
     {
+      "id": "item:8199:ATRifleSniperC:“Quickhatch” Rt.I:crate:3",
+      "name": "\"Quickhatch\" Rt.I",
+      "kind": "item",
+      "factions": [
+        "colonial"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Special-Issue Firearms Assembly\",1,[{\"name\":\"Processed Construction Materials\",\"amount\":25,\"kind\":\"item\"},{\"name\":\"Assembly Materials I\",\"amount\":5,\"kind\":\"item\"},{\"name\":\"Catara mo.II\",\"amount\":1,\"kind\":\"crate\",\"crateCapacity\":20}],{\"amount\":1,\"crated\":true,\"crateCapacity\":3},4,[]]:crate:3",
+          "source": "Infantry Kit Factory",
+          "category": "Special-Issue Firearms Assembly",
+          "amount": 1,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2107:FacilityMaterials2:Processed Construction Materials",
+              "amount": 25
+            },
+            {
+              "itemId": "item:3678:FacilityMaterials4:Assembly Materials I",
+              "amount": 5
+            },
+            {
+              "itemId": "item:1235:AssaultRifleC:Catara mo.II:crate:20",
+              "amount": 1
+            }
+          ],
+          "byproducts": [],
+          "power": 4
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/ATRifleSniperCIcontga.png"
+    },
+    {
       "id": "item:1235:AssaultRifleC:Catara mo.II:crate:20",
       "name": "Catara mo.II",
       "kind": "item",
@@ -14238,6 +15431,70 @@
       "unit": "crates",
       "recipes": [],
       "icon": "Textures/UI/ItemIcons/LightMachineGunIcon.png"
+    },
+    {
+      "id": "item:942:StickyBomb:Anti-Tank Sticky Bomb:crate:10",
+      "name": "Anti-Tank Sticky Bomb",
+      "kind": "item",
+      "factions": [
+        "colonial",
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Small Arms Workshop\",2,[{\"name\":\"Explosive Powder\",\"amount\":550,\"kind\":\"item\"},{\"name\":\"Construction Materials\",\"amount\":55,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":10},12,[]]:crate:10",
+          "source": "Infantry Kit Factory",
+          "category": "Small Arms Workshop",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:1266:Explosive:Explosive Powder",
+              "amount": 550
+            },
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 55
+            }
+          ],
+          "byproducts": [],
+          "power": 12
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/StickyBombIcon.png"
+    },
+    {
+      "id": "item:985:ATAmmo:68mm:crate:20",
+      "name": "68mm",
+      "kind": "item",
+      "factions": [
+        "colonial",
+        "warden"
+      ],
+      "unit": "crates",
+      "recipes": [
+        {
+          "id": "[\"Infantry Kit Factory\",\"Heavy Munitions Foundry\",2,[{\"name\":\"Construction Materials\",\"amount\":130,\"kind\":\"item\"},{\"name\":\"Explosive Powder\",\"amount\":1320,\"kind\":\"item\"}],{\"amount\":10,\"crated\":true,\"crateCapacity\":20},24,[]]:crate:20",
+          "source": "Infantry Kit Factory",
+          "category": "Heavy Munitions Foundry",
+          "amount": 10,
+          "crated": true,
+          "inputs": [
+            {
+              "itemId": "item:2263:FacilityMaterials1:Construction Materials",
+              "amount": 130
+            },
+            {
+              "itemId": "item:1266:Explosive:Explosive Powder",
+              "amount": 1320
+            }
+          ],
+          "byproducts": [],
+          "power": 24
+        }
+      ],
+      "icon": "Textures/UI/ItemIcons/ATAmmoIcon.png"
     }
   ]
 }

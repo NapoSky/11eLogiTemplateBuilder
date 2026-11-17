@@ -57,6 +57,11 @@ export function projectFacilitiesCatalog(catalog: WikiCatalog, variants: IconVar
       if (recipe.output.high !== undefined || recipe.status) return null;
       const capacity = recipe.output.crateCapacity ?? item.declaredCrateCapacity;
       if (recipe.output.crated && !capacity) throw new Error(`Unknown facility output crate: ${item.name}`);
+      // Expose the recipe's physical output as an objective, just like a crate input.
+      // Keep the loose identity for ingredients, allocated stock and saved missions.
+      if (recipe.output.crated && item.kind === 'item') {
+        crates.set(`${item.sourceKey}:crate:${capacity}`, { item, capacity: capacity! });
+      }
       const inputs = recipe.inputs.map(input => {
         const ingredient = resolveItem(input.name, input.kind);
         const crateCapacity = input.crateCapacity ?? ingredient.declaredCrateCapacity;
@@ -100,4 +105,10 @@ export function defaultFacilityRecipe(item: FacilityItem): FacilityRecipe | unde
   // Gathering/extraction is outside the default material-production chain.
   if (['Salvage', 'Components', 'Coal', 'Sulfur', 'Oil', 'Water'].includes(item.name)) return undefined;
   return item.recipes.find(recipe => FACILITY_SOURCES.has(recipe.source));
+}
+
+/** Objective quantities follow recipe packaging; vehicles and structures stay individual. */
+export function isFacilityObjective(item: FacilityItem): boolean {
+  return item.recipes.some(recipe => FACILITY_SOURCES.has(recipe.source) &&
+    (item.kind !== 'item' || item.unit === 'crates' || !recipe.crated));
 }

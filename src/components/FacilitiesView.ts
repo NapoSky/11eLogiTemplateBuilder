@@ -3,7 +3,7 @@ import { iconAssetUrl } from '../services/iconPaths';
 import { showToast } from '../services/toast';
 import { createStockpileTooltip } from '../services/stockpileTooltip';
 import { renderDiscordPreviewHtml } from '../services/discordPreview';
-import { defaultFacilityRecipe, FACILITY_SOURCES } from '../services/facilitiesCatalog';
+import { defaultFacilityRecipe, FACILITY_SOURCES, isFacilityObjective } from '../services/facilitiesCatalog';
 import type { FacilitiesCatalog, FacilityItem, FacilityRecipe } from '../services/facilitiesCatalog';
 import { canSupplyByPipeline, emptyFacilityMission, exportFacilityMission, facilityAmount, facilityDiscordChunks, facilityLiquidSupply, facilityStageAmount, facilitySupplyAmount, facilitySupplyTooltip, groupFacilitySupplies, planFacilities } from '../services/facilitiesPlanner';
 import type { FacilityPlan } from '../services/facilitiesPlanner';
@@ -255,7 +255,7 @@ export class FacilitiesView {
   private renderPicker(): string {
     const faction = this.workspace.mission.faction;
     const query = this.search.trim().toLowerCase();
-    const candidates = this.catalog!.items.filter(item => item.recipes.some(recipe => FACILITY_SOURCES.has(recipe.source)) &&
+    const candidates = this.catalog!.items.filter(item => isFacilityObjective(item) &&
       (faction === 'all' || !item.factions.length || item.factions.includes(faction)) &&
       (this.objectiveGroup === 'All' || this.itemGroup(item) === this.objectiveGroup) && this.itemLabel(item).toLowerCase().includes(query))
       .sort((a, b) => a.name.localeCompare(b.name, 'en'));
@@ -579,7 +579,7 @@ export class FacilitiesView {
   private addObjective(id: string): void {
     if (this.workspace.mission.objectives.length >= 100) return;
     const item = this.catalog?.items.find(item => item.id === id);
-    if (!item || !item.recipes.some(recipe => FACILITY_SOURCES.has(recipe.source))) return;
+    if (!item || !isFacilityObjective(item)) return;
     const faction = this.workspace.mission.faction;
     if (faction !== 'all' && item.factions.length && !item.factions.includes(faction)) return;
     if (!defaultFacilityRecipe(item) && !Object.hasOwn(this.workspace.profile.recipes, item.id)) {

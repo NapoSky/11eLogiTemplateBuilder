@@ -56,6 +56,10 @@ Factory recipes show four crates at the ordinary undiscounted price. Facility re
 
 ## Facility planning
 
+Objective quantities follow the recipe output: equipment and ammunition produced in crates are entered in crates; vehicles, structures and loose materials are entered in units (liquids in litres). There is no packaging selector.
+For example, **50 crates of Clancy-Raca M4** require **50 crates of No.2 Loughcaster**, plus **2,500 Cmat and 2,000 Pcmat**. A **50 Callahan** objective means 50 individual vehicles.
+Production stages and Discord briefings keep the same output unit. A recipe producing 10 crates per batch still rounds up to complete batches.
+
 The planner combines shared ingredient demands, subtracts allocated stock, then rounds the selected recipes to whole batches.
 Physical crate inputs have separate identities and cannot be satisfied by loose-item stock.
 A craftable ingredient marked **Supply from outside** stops that production chain; **Produce here** restores its default production recipe.
@@ -139,5 +143,6 @@ Historical Factory or partial todolist lines remain readable/exportable with the
 ### Facilities
 
 Mission and profile use separate `facilitiesMission.v1` and `facilitiesProfile.v1` keys.
+Historical equipment objectives keep their loose-item identities and unit quantities when loaded or imported. New objectives use the recipe's crate identity where applicable.
 Used default recipes are saved with their complete contents. Saved liquid amounts remain in litres and solid amounts in exact units.
 Profiles without pipeline settings retain their previous behavior.
