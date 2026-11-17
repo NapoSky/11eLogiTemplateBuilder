@@ -1,5 +1,6 @@
 import { store } from '../store';
 import { StockpileImportModal } from './StockpileImportModal';
+import { isTransportSupply } from '../services/transportScope';
 import { Template, Section, SectionIcon, MpfDataEntry, TodoListItem, TodoList, MpfCategory, IconCategory, CATEGORIES, generateId } from '../types';
 import { getBaseUrl } from '../config';
 import { renderTodoList } from '../services/todoListExporter';
@@ -636,6 +637,31 @@ export class StockpileView {
     return !metadata?.faction?.length || metadata.faction.includes(this.officialFaction);
   }
 
+  private isTransportItem(itemName: string): boolean {
+    const name = translateFrenchItemName(itemName).replace(/ \(Crate\)$/i, '');
+    return isTransportSupply(name, this.metadataFor(name));
+  }
+
+  private transportItems(items: Map<string, number>): Map<string, number> {
+    return new Map([...items].filter(([name]) => this.isTransportItem(name)));
+  }
+
+  private transportTargets(): Array<StockpileRow & { itemName: string }> {
+    return (this.result?.rows ?? []).filter((row): row is StockpileRow & { itemName: string } =>
+      row.itemName !== null && this.isTransportItem(row.itemName));
+  }
+
+  private renderTransportScopeNotice(): string {
+    const excluded = [...new Set((this.result?.rows ?? [])
+      .filter(row => row.itemName !== null && !this.isTransportItem(row.itemName))
+      .map(row => row.itemName!))];
+    if (!excluded.length) return '';
+    return `<details data-transport-scope-notice class="mb-3 rounded border border-amber-800/60 bg-amber-950/20 p-3 text-xs text-amber-300">
+      <summary class="cursor-pointer">${excluded.length} template objective${excluded.length === 1 ? '' : 's'} outside transport scope</summary>
+      <p class="mt-2">${excluded.map(escapeHtml).join(', ')}. Manage industrial and bulk resources in Facilities.</p>
+    </details>`;
+  }
+
   private quantitiesFor(items: Map<string, number>, itemName: string, iconPath?: string): StockQuantities {
     return readStockQuantities(items, itemName, this.metadataFor(itemName, iconPath), this.getQuantityMode());
   }
@@ -1067,6 +1093,7 @@ export class StockpileView {
         <!-- Content -->
         <div class="flex-1 overflow-y-auto p-4" data-quantity-mode="${this.getQuantityMode()}">
           ${this.renderLoadedStockpiles()}
+          ${this.stockViewMode === 'depots' ? this.renderTransportScopeNotice() : ''}
           ${this.getQuantityMode() === 'legacy' ? `
             <div class="mb-3 flex flex-wrap items-center gap-3 text-xs text-gray-400">
               <span>This saved template uses the previous quantity calculation.</span><button id="btn-use-crate-equivalents" class="px-2 py-1 rounded bg-blue-700 hover:bg-blue-600 text-white">Use crate equivalents</button>
@@ -1117,9 +1144,7 @@ export class StockpileView {
     if (!intermediate) return '<span class="text-amber-400">No Main depot</span>';
 
     const quantities = this.aggregateEntries(intermediate.entries);
-    const rows = this.result.rows.filter(
-      (row): row is StockpileRow & { itemName: string } => row.itemName !== null && row.targetQty !== -1,
-    );
+    const rows = this.transportTargets().filter(row => row.targetQty !== -1);
     const statuses = rows.map(row => {
       const quantity = this.comparisonQuantity(this.quantitiesFor(quantities, row.itemName, row.iconPath), row);
       if (quantity === null) return 'unknown';
@@ -1180,7 +1205,8 @@ export class StockpileView {
 
     const activeIndex = Math.min(this.activeDepotTab[role] ?? 0, roleDepots.length - 1);
     const depot = roleDepots[activeIndex];
-    const totals = normalizeStockItems(this.aggregateEntries(depot.entries), directCargoNames, this.getLooseItemNames());
+    const stock = this.aggregateEntries(depot.entries);
+    const totals = normalizeStockItems(this.stockViewMode === 'depots' ? this.transportItems(stock) : stock, directCargoNames, this.getLooseItemNames());
     const totalCrates = totals.reduce((sum, item) => sum + item.crates, 0);
     const totalAssembled = totals.reduce((sum, item) => sum + item.assembled, 0);
     const totalLoose = totals.reduce((sum, item) => sum + (item.loose ?? 0), 0);
@@ -1269,10 +1295,10 @@ export class StockpileView {
     if (!this.result) return '';
     const depots = this.getDepots();
     const directCargoNames = this.getDirectCargoNames();
-    type DepotMatrixRow = Pick<StockpileRow, 'itemName' | 'targetQty' | 'sectionTitle' | 'sectionColor' | 'iconPath' | 'isCrateTarget'> & { itemName: string };
+    type DepotMatrixRow = Pick<StockpileRow, 'sectionTitle' | 'sectionColor' | 'iconPath' | 'isCrateTarget'> & { itemName: string; targetQty: number | null };
     const depotItems = new Map(depots.map(depot => [
       depot.name,
-      new Map(normalizeStockItems(this.aggregateEntries(depot.entries), directCargoNames, this.getLooseItemNames()).map(item => [item.itemName, item])),
+      new Map(normalizeStockItems(this.transportItems(this.aggregateEntries(depot.entries)), directCargoNames, this.getLooseItemNames()).map(item => [item.itemName, item])),
     ]));
     const facilitiesOnly = new Set(store.itemData.filter(item => item.iconUsage === 'facilities').map(item => item.iconFilename));
     const iconPathsByName = new Map(Object.entries(this.iconMapping).filter(([path]) => !facilitiesOnly.has(path)).map(([path, itemName]) => [
@@ -1280,16 +1306,14 @@ export class StockpileView {
       `${getBaseUrl()}assets/icons/${path}`,
     ]));
     const rowsByName = new Map<string, DepotMatrixRow>(
-      this.result.rows
-        .filter((row): row is StockpileRow & { itemName: string } => row.itemName !== null)
-        .filter(row => !row.sectionTitle.toLowerCase().includes('facility'))
-        .map(row => [row.itemName, row]),
+      this.transportTargets().map(row => [row.itemName, row]),
     );
     for (const items of depotItems.values()) {
-      for (const itemName of items.keys()) {
+      for (const { itemName, crates, assembled, loose } of items.values()) {
+        if (crates + assembled + (loose ?? 0) <= 0) continue;
         if (!rowsByName.has(itemName) && this.matchesOfficialFaction(itemName)) rowsByName.set(itemName, {
           itemName,
-          targetQty: -1,
+          targetQty: null,
           isCrateTarget: crateTargetFor(this.metadataFor(itemName)),
           sectionTitle: 'Not in template',
           sectionColor: '#4b5563',
@@ -1301,14 +1325,14 @@ export class StockpileView {
     const intermediate = depots.find(depot => depot.role === 'intermediate');
     const intermediateItems = intermediate ? this.aggregateEntries(intermediate.entries) : new Map<string, number>();
     const getStatus = (row: DepotMatrixRow): RowStatus => {
-      if (row.targetQty === -1) return 'unknown';
+      if (row.targetQty === null || row.targetQty === -1) return 'unknown';
       const quantity = this.comparisonQuantity(this.quantitiesFor(intermediateItems, row.itemName, row.iconPath || undefined), row);
       if (quantity === null) return 'unknown';
       if (quantity >= row.targetQty) return 'ok';
       return quantity > 0 ? 'partial' : 'missing';
     };
     const getGap = (row: DepotMatrixRow): number => {
-      if (row.targetQty === -1) return Infinity;
+      if (row.targetQty === null || row.targetQty === -1) return Infinity;
       const quantity = this.comparisonQuantity(this.quantitiesFor(intermediateItems, row.itemName, row.iconPath || undefined), row);
       return quantity === null ? Infinity : quantity - row.targetQty;
     };
@@ -1385,7 +1409,7 @@ export class StockpileView {
           </div>
         </td>
         ${depotCells}
-        <td class="${rowBg} px-2 py-2 text-right font-mono text-gray-400 tabular-nums">${target ?? '∞'}</td>
+        <td class="${rowBg} px-2 py-2 text-right font-mono text-gray-400 tabular-nums">${row.targetQty === null ? '—' : target ?? '∞'}</td>
         <td class="${rowBg} px-2 py-2 text-right tabular-nums" tabindex="0" data-quantity-tooltip="${escapeHtml(this.quantityTooltip(totalQuantity, target, metadata, row.isCrateTarget))}">${gapDisplay}</td>
         <td class="${rowBg} px-2 py-2 text-right font-medium text-gray-200 tabular-nums" tabindex="0" data-quantity-tooltip="${escapeHtml(this.quantityTooltip(totalQuantity, null, metadata))}">${calculatedTotal === null ? '—' : formatCrateQuantity(calculatedTotal)}</td>
       `;
@@ -2051,12 +2075,11 @@ export class StockpileView {
     const exclusionOptions = [
       'Heavy Explosive Powder',
       'Refined Materials',
-      'Rare Metal',
-      'Rare Alloys',
       'Basic Materials',
     ];
     // Catalogue complet des noms d'items connus, pour proposer des suggestions plutôt que d'imposer une saisie exacte.
-    const allKnownItemNames = [...new Set(store.icons.map(icon => icon.displayName))].sort((left, right) => left.localeCompare(right));
+    const allKnownItemNames = [...new Set(store.icons.map(icon => icon.displayName))]
+      .filter(name => this.isTransportItem(name)).sort((left, right) => left.localeCompare(right));
     // Score de correspondance approximative (sous-séquence ordonnée, bonus consécutif/début de mot) : tolère fautes de frappe et ordre partiel sans dépendance externe.
     const fuzzyMatchScore = (query: string, target: string): number | null => {
       const q = query.toLowerCase();
@@ -2091,7 +2114,7 @@ export class StockpileView {
     let transportExclusions = (() => {
       try {
         const saved = localStorage.getItem(TRANSPORT_EXCLUSIONS_KEY);
-        if (saved) return new Set(JSON.parse(saved) as string[]);
+        if (saved) return new Set((JSON.parse(saved) as string[]).filter(name => this.isTransportItem(name)));
       } catch (error) {
         console.warn('StockpileView: failed to restore transport exclusions', error);
       }
@@ -2104,7 +2127,7 @@ export class StockpileView {
 
     const getAvailableCargo = (): TransportCargoItem[] => {
       const source = depots.find(depot => depot.name === sourceName)!;
-      return buildBacklineCargo(this.aggregateEntries(source.entries), directCargoNames, transportExclusions, this.getLooseItemNames());
+      return buildBacklineCargo(this.transportItems(this.aggregateEntries(source.entries)), directCargoNames, transportExclusions, this.getLooseItemNames());
     };
     const cargoKey = (item: TransportCargoItem): string => `${item.kind}:${item.itemName}`;
     const getRemainingCargo = (routes: TransportRoute[] = plannedRoutes): TransportCargoItem[] => getAvailableCargo().map(item => {
@@ -2261,13 +2284,13 @@ export class StockpileView {
     const renderModal = (): void => {
       const available = getRemainingCargo();
       const sourceDepot = depots.find(depot => depot.name === sourceName)!;
-      const hasLooseItems = normalizeStockItems(this.aggregateEntries(sourceDepot.entries), directCargoNames, this.getLooseItemNames()).some(item => (item.loose ?? 0) > 0);
+      const hasLooseItems = normalizeStockItems(this.transportItems(this.aggregateEntries(sourceDepot.entries)), directCargoNames, this.getLooseItemNames()).some(item => (item.loose ?? 0) > 0);
       // Gap = stock actuel de la destination moins l'objectif du template ; null si l'item n'a pas
       // de cible connue (pas dans le template, ou cible infinie).
       const destinationDepot = depots.find(depot => depot.name === destinationName);
       const destinationItems = destinationDepot ? this.aggregateEntries(destinationDepot.entries) : new Map<string, number>();
       const targetByItemName = new Map<string, StockpileRow>();
-      for (const row of this.result?.rows ?? []) {
+      for (const row of this.transportTargets()) {
         if (row.itemName) targetByItemName.set(row.itemName, row);
       }
       // Cargaisons déjà planifiées (toutes routes confondues) vers cette destination : elles comblent le manque avant même d'arriver.

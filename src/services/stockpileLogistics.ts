@@ -1,4 +1,5 @@
 import { translateFrenchItemName } from './frenchItemNames';
+import { isTransportSupply } from './transportScope';
 
 export type DepotRole = 'backline' | 'intermediate' | 'front';
 export type CargoKind = 'container-crate' | 'direct-crate' | 'assembled';
@@ -51,8 +52,6 @@ export interface TransportList {
 export const DEFAULT_TRANSPORT_EXCLUSIONS = new Set([
   'Heavy Explosive Powder',
   'Refined Materials',
-  'Rare Metal',
-  'Rare Alloys',
 ]);
 
 export function inferDepotName(location: string): string {
@@ -188,7 +187,7 @@ export function buildBacklineCargo(
   looseItemNames?: ReadonlySet<string>,
 ): TransportCargoItem[] {
   return normalizeStockItems(items, directCargoNames, looseItemNames).flatMap(item => {
-    if (exclusions.has(item.itemName)) return [];
+    if (!isTransportSupply(item.itemName) || exclusions.has(item.itemName)) return [];
     const cargo: TransportCargoItem[] = [];
     if (item.crates > 0) {
       cargo.push({

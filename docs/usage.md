@@ -65,6 +65,12 @@ The basket keeps the latest dated snapshot for each stockpile. Identical loaded 
 
 On Windows, focus the paste field and use **Win+V** to select previous copies one at a time (clipboard history must be enabled). The site only receives what you paste; it cannot browse Windows clipboard history. If clipboard access is refused, use the paste field instead.
 
+**Transport planning** covers depot replenishment. Keep finished equipment and ammunition (including facility-made 120/150 mm), vehicles, Basic Materials, Refined Materials, Explosive Powder, Heavy Explosive Powder, Diesel and Petrol. Industrial materials/liquids and bulk resources such as Construction/Assembly Materials, Rare Metal/Alloys, oil, water, coal and salvage are outside this scope; plan their production and supply in **Facilities**. Imported snapshots and saved template targets are preserved.
+
+The overview, Main readiness, depot totals and **Prepare transport** use this same scope. Template objectives remain visible even without stock. Supplies absent from the template appear only if some depot has positive stock; their target is **—**, while an explicit unlimited target remains **∞**. Unknown names with stock remain visible. If a template targets an excluded resource, the overview flags that objective as outside transport scope.
+
+**Transport what's missing** retains the targets of facility-made finished goods. **Transport everything** also excludes industrial/bulk resources. The configurable exclusions apply within the transport scope; Refined Materials and Heavy Explosive Powder remain excluded from cargo by default and can be enabled explicitly.
+
 In **Prepare transport**, all four modes use quantity-first cargo labels, such as `20 Bandages, 20 Blood Plasma and 20 12.7mm`. A shared note specifies quantities in crates, or units for assembled shippables. Train tasks retain the number of flatbed cars, for example `One train (3 flatbed cars) with …`.
 
 Each task describes **one load**; its final `(xN)` repeats identical loads. Different loads, including the last incomplete vehicle, are listed separately. For example, 130 crates on flatbeds become `One flatbed with 60 Bandages (x2)` and `One flatbed with 10 Bandages`.
