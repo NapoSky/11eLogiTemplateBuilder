@@ -1,8 +1,16 @@
 {
   "presets": [
     {
-      "name": "Default 11e Template",
+      "name": "Default 11e Template (Old - 2021)",
       "path": "/assets/backgrounds/template_default.png"
+    },
+    {
+      "name": "Default 11e Template (Warden)",
+      "path": "/assets/backgrounds/template_11e_warden.png"
+    },
+    {
+      "name": "Default 11e Template (Colonial)",
+      "path": "/assets/backgrounds/template_11e_colonial.png"
     },
     {
       "name": "Frontline Command",

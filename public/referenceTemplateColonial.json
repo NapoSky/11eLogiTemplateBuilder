@@ -1369,7 +1369,7 @@
   "iconScale": "xlarge",
   "background": {
     "kind": "preset",
-    "path": "/assets/backgrounds/template_naval_logistics.png"
+    "path": "/assets/backgrounds/template_11e_colonial.png"
   },
   "quantityMode": "crate-equivalents-v1"
 }
