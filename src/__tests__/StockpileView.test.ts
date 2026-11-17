@@ -1196,6 +1196,120 @@ describe('StockpileView – dépôts et transport', () => {
     expect(preview).toMatch(/^B-One freighter/m);
   });
 
+  test.each(['flatbed', 'train'])('replanifie les manquants en %s après un premier plan en freighter', mode => {
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Mercy - Seaport - 11e,now\n7.92mm,10\nDunne Transport,1' },
+    }));
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+    selectHaulerMode('freighter');
+    (document.querySelector('#transport-auto-fill-gap') as HTMLButtonElement).click();
+    expect(document.querySelector('#transport-summary')?.textContent).toContain('90 units planned');
+
+    selectHaulerMode(mode);
+    (document.querySelector('#transport-auto-fill-gap') as HTMLButtonElement).click();
+    const preview = (document.querySelector('#transport-preview') as HTMLTextAreaElement).value;
+    expect(document.querySelector('#transport-summary')?.textContent).toContain('90 units planned');
+    expect(preview).toContain(`One ${mode}`);
+    expect(preview).not.toContain('One freighter');
+    expect(document.querySelectorAll('.transport-remove-line').length).toBeGreaterThan(0);
+    (document.querySelector('#transport-undo-auto-fill') as HTMLButtonElement).click();
+    expect((document.querySelector('#transport-preview') as HTMLTextAreaElement).value).toContain('One freighter');
+    expect(document.querySelector('#transport-summary')?.textContent).toContain('90 units planned');
+  });
+
+  test.each(['container', 'flatbed', 'freighter', 'train'])('relancer les manquants en %s conserve le même chargement', mode => {
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Mercy - Seaport - 11e,now\n7.92mm,10\nDunne Transport,1' },
+    }));
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+    selectHaulerMode(mode);
+    (document.querySelector('#transport-auto-fill-gap') as HTMLButtonElement).click();
+    const preview = (document.querySelector('#transport-preview') as HTMLTextAreaElement).value;
+    expect(document.querySelector('#transport-summary')?.textContent).toContain('90 units planned');
+    (document.querySelector('#transport-auto-fill-gap') as HTMLButtonElement).click();
+    expect((document.querySelector('#transport-preview') as HTMLTextAreaElement).value).toBe(preview);
+    expect(document.querySelector('#transport-summary')?.textContent).toContain('90 units planned');
+  });
+
+  test.each(['container', 'flatbed', 'freighter', 'train'])('relancer tout le transport en %s libère les réservations du trajet remplacé', mode => {
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Kirknell - Storage Depot - 11e,now\n7.92mm,180' },
+    }));
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+    selectHaulerMode(mode);
+    (document.querySelector('#transport-auto-fill-all') as HTMLButtonElement).click();
+    const preview = (document.querySelector('#transport-preview') as HTMLTextAreaElement).value;
+    expect(document.querySelector('#transport-summary')?.textContent).toContain('180 units planned');
+    (document.querySelector('#transport-auto-fill-all') as HTMLButtonElement).click();
+    expect((document.querySelector('#transport-preview') as HTMLTextAreaElement).value).toBe(preview);
+    expect(document.querySelector('#transport-summary')?.textContent).toContain('180 units planned');
+  });
+
+  test('préserve les réservations de la source vers une autre destination lors du recalcul des manquants', () => {
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Kirknell - Storage Depot - 11e,now\n7.92mm,180' },
+    }));
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Mercy - Seaport - 11e,now\n7.92mm,10\nDunne Transport,1' },
+    }));
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Cinderwick - Storage Depot - 11e,now\n7.92mm,0' },
+    }));
+    setDepotRole(container, 'Cinderwick', 'front');
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+    selectHaulerMode('freighter');
+    const destination = document.querySelector<HTMLSelectElement>('#transport-destination')!;
+    destination.value = 'Cinderwick';
+    destination.dispatchEvent(new Event('change'));
+    const input = document.querySelector<HTMLInputElement>('.transport-qty')!;
+    input.value = '120';
+    input.dispatchEvent(new Event('input'));
+    (document.querySelector('#transport-add-line') as HTMLButtonElement).click();
+    const main = document.querySelector<HTMLSelectElement>('#transport-destination')!;
+    main.value = 'Mercy';
+    main.dispatchEvent(new Event('change'));
+    selectHaulerMode('train');
+    (document.querySelector('#transport-auto-fill-gap') as HTMLButtonElement).click();
+    const preview = (document.querySelector('#transport-preview') as HTMLTextAreaElement).value;
+    expect(preview).toContain('__Kirknell -> Cinderwick__\nA-One freighter with 120 7.92mm');
+    expect(preview).toContain('__Kirknell -> Mercy__\nB-One train (14 flatbed cars) with 60 7.92mm');
+    expect(document.querySelector('#transport-summary')?.textContent).toContain('180 units planned');
+    (document.querySelector('#transport-auto-fill-gap') as HTMLButtonElement).click();
+    expect((document.querySelector('#transport-preview') as HTMLTextAreaElement).value).toBe(preview);
+  });
+
+  test('déduit les livraisons des autres sources vers la même destination sans les supprimer', () => {
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Mercy - Seaport - 11e,now\n7.92mm,10\nDunne Transport,1' },
+    }));
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - SecondSource - Storage Depot - 11e,now\n7.92mm,20' },
+    }));
+    setDepotRole(container, 'SecondSource', 'backline');
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+    const other = document.querySelector<HTMLSelectElement>('#transport-source')!;
+    other.value = 'SecondSource';
+    other.dispatchEvent(new Event('change'));
+    selectHaulerMode('freighter');
+    (document.querySelector('#transport-auto-fill-all') as HTMLButtonElement).click();
+    const source = document.querySelector<HTMLSelectElement>('#transport-source')!;
+    source.value = 'Kirknell';
+    source.dispatchEvent(new Event('change'));
+    selectHaulerMode('train');
+    (document.querySelector('#transport-auto-fill-gap') as HTMLButtonElement).click();
+    const preview = (document.querySelector('#transport-preview') as HTMLTextAreaElement).value;
+    expect(preview).toContain('__SecondSource -> Mercy__\nA-One freighter with 20 7.92mm');
+    expect(preview).toContain('__Kirknell -> Mercy__\nB-One train (14 flatbed cars) with 70 7.92mm');
+    expect(document.querySelector('#transport-summary')?.textContent).toContain('90 units planned');
+    (document.querySelector('#transport-auto-fill-gap') as HTMLButtonElement).click();
+    expect((document.querySelector('#transport-preview') as HTMLTextAreaElement).value).toBe(preview);
+  });
+
   test('propose d\'annuler le plan automatique en un clic, uniquement après avoir planifié automatiquement', () => {
     (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
     (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();

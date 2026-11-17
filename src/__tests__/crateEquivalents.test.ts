@@ -388,4 +388,24 @@ describe('saved templates and explicit comparison migration', () => {
     expect(row.querySelector<HTMLInputElement>('.transport-qty')!.value).toBe('1');
     expect(row.querySelector('.transport-gap-cell')!.textContent).toBe('0');
   });
+
+  test.each(['flatbed', 'train'])('replans missing physical crates in %s without counting the replaced delivery', async mode => {
+    store.sections = [unitSection(5)]; store.useCrateEquivalentQuantities();
+    localStorage.setItem('stockpile_csv_entries', JSON.stringify([
+      { id: 'main', header: null, items: { [silverhand.itemName]: 2 }, label: 'Main', depotName: 'Main', role: 'intermediate' },
+      { id: 'back', header: null, items: { [`${silverhand.itemName} (Crate)`]: 5 }, label: 'Back', depotName: 'Back', role: 'backline' },
+    ]));
+    dismissCautionNotice(); view.mount(container); await tick();
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+    const select = document.querySelector<HTMLSelectElement>('#transport-mode')!;
+    select.value = mode;
+    select.dispatchEvent(new Event('change'));
+    (document.querySelector('#transport-auto-fill-gap') as HTMLButtonElement).click();
+    const preview = (document.querySelector('#transport-preview') as HTMLTextAreaElement).value;
+    expect(preview).toContain(`1 crated ${silverhand.itemName}`);
+    expect(document.querySelector('#transport-summary')?.textContent).toContain('1 units planned');
+    (document.querySelector('#transport-auto-fill-gap') as HTMLButtonElement).click();
+    expect((document.querySelector('#transport-preview') as HTMLTextAreaElement).value).toBe(preview);
+  });
 });

@@ -2106,8 +2106,8 @@ export class StockpileView {
       return buildBacklineCargo(this.aggregateEntries(source.entries), directCargoNames, transportExclusions, this.getLooseItemNames());
     };
     const cargoKey = (item: TransportCargoItem): string => `${item.kind}:${item.itemName}`;
-    const getRemainingCargo = (): TransportCargoItem[] => getAvailableCargo().map(item => {
-      const plannedQuantity = plannedRoutes
+    const getRemainingCargo = (routes: TransportRoute[] = plannedRoutes): TransportCargoItem[] => getAvailableCargo().map(item => {
+      const plannedQuantity = routes
         .filter(route => route.source === sourceName)
         .flatMap(route => route.missions)
         .reduce((total, mission) => {
@@ -2270,8 +2270,6 @@ export class StockpileView {
         if (row.itemName) targetByItemName.set(row.itemName, row);
       }
       // Cargaisons déjà planifiées (toutes routes confondues) vers cette destination : elles comblent le manque avant même d'arriver.
-      const plannedInboundByItemName = new Map<string, number>();
-      const unknownInbound = new Set<string>();
       const cargoEquivalent = (cargoItem: TransportCargoItem): number | null => {
         if (this.getQuantityMode() === 'legacy') return cargoItem.quantity;
         const isCrateTarget = targetByItemName.get(cargoItem.itemName)?.isCrateTarget ?? true;
@@ -2279,23 +2277,29 @@ export class StockpileView {
         const capacity = this.metadataFor(cargoItem.itemName)?.unitsPerCrate;
         return capacity ? isCrateTarget ? cargoItem.quantity / capacity : cargoItem.quantity * capacity : null;
       };
-      for (const route of plannedRoutes) {
-        if (route.destination !== destinationName) continue;
-        for (const plannedMission of route.missions) {
-          for (const cargoItem of plannedMission.cargo) {
-            const amount = cargoEquivalent(cargoItem);
-            if (amount === null) unknownInbound.add(cargoItem.itemName);
-            else plannedInboundByItemName.set(cargoItem.itemName, (plannedInboundByItemName.get(cargoItem.itemName) ?? 0) + amount);
+      const inboundFor = (routes: TransportRoute[]) => {
+        const quantities = new Map<string, number>();
+        const unknown = new Set<string>();
+        for (const route of routes) {
+          if (route.destination !== destinationName) continue;
+          for (const plannedMission of route.missions) {
+            for (const cargoItem of plannedMission.cargo) {
+              const amount = cargoEquivalent(cargoItem);
+              if (amount === null) unknown.add(cargoItem.itemName);
+              else quantities.set(cargoItem.itemName, (quantities.get(cargoItem.itemName) ?? 0) + amount);
+            }
           }
         }
-      }
-      const destinationGapFor = (itemName: string): number | null => {
+        return { quantities, unknown };
+      };
+      const plannedInbound = inboundFor(plannedRoutes);
+      const destinationGapFor = (itemName: string, inbound = plannedInbound): number | null => {
         const row = targetByItemName.get(itemName);
         if (!row || row.targetQty === -1) return null;
-        const plannedInbound = plannedInboundByItemName.get(itemName) ?? 0;
+        const inboundQuantity = inbound.quantities.get(itemName) ?? 0;
         const stock = this.comparisonQuantity(this.quantitiesFor(destinationItems, itemName, row.iconPath), row);
-        if (stock === null || unknownInbound.has(itemName)) return null;
-        const gap = stock + plannedInbound - row.targetQty;
+        if (stock === null || inbound.unknown.has(itemName)) return null;
+        const gap = stock + inboundQuantity - row.targetQty;
         return Math.abs(gap) < 1e-10 ? 0 : gap;
       };
       // Largest quantity of `targetItem` that fills this single trip to capacity alongside the
@@ -2745,11 +2749,12 @@ export class StockpileView {
         renderModal();
       });
       // Ne garde de chaque cargaison que ce qui manque réellement à la destination (borné par le stock disponible).
-      const capCargoToGap = (cargo: TransportCargoItem[]): TransportCargoItem[] => {
+      const capCargoToGap = (cargo: TransportCargoItem[], routes: TransportRoute[]): TransportCargoItem[] => {
+        const inbound = inboundFor(routes);
         const remaining = new Map<string, number>();
         return cargo
         .map(item => {
-          const gap = remaining.has(item.itemName) ? -remaining.get(item.itemName)! : destinationGapFor(item.itemName);
+          const gap = remaining.has(item.itemName) ? -remaining.get(item.itemName)! : destinationGapFor(item.itemName, inbound);
           if (gap === null || gap >= 0) return null;
           const factor = cargoEquivalent({ ...item, quantity: 1 });
           if (factor === null) return null;
@@ -2760,10 +2765,15 @@ export class StockpileView {
         })
         .filter((item): item is TransportCargoItem => item !== null && item.quantity > 0);
       };
-      const runAutoFill = (cargo: TransportCargoItem[]): void => {
-        preAutoFillSnapshot = plannedRoutes.map(route => ({ ...route, missions: route.missions.map(m => ({ ...m, cargo: [...m.cargo] })) }));
-        plannedRoutes = plannedRoutes.filter(route => route.source !== sourceName || route.destination !== destinationName);
+      const runAutoFill = (onlyMissing: boolean): void => {
+        // This action replaces the current route. Release its reservations BEFORE calculating
+        // source availability and destination needs, while retaining every other route.
+        const retainedRoutes = plannedRoutes.filter(route => route.source !== sourceName || route.destination !== destinationName);
+        const availableCargo = getRemainingCargo(retainedRoutes);
+        const cargo = onlyMissing ? capCargoToGap(availableCargo, retainedRoutes) : availableCargo;
         const missions = suggestTransportMissions(cargo, mode, trainCars);
+        preAutoFillSnapshot = plannedRoutes.map(route => ({ ...route, missions: route.missions.map(m => ({ ...m, cargo: [...m.cargo] })) }));
+        plannedRoutes = retainedRoutes;
         if (missions.length > 0) {
           plannedRoutes.push({ source: sourceName, destination: destinationName, missions });
         }
@@ -2775,10 +2785,10 @@ export class StockpileView {
         autoFillMenuOpen = (event.target as HTMLDetailsElement).open;
       });
       modal.querySelector('#transport-auto-fill-all')?.addEventListener('click', () => {
-        runAutoFill(getRemainingCargo());
+        runAutoFill(false);
       });
       modal.querySelector('#transport-auto-fill-gap')?.addEventListener('click', () => {
-        runAutoFill(capCargoToGap(getRemainingCargo()));
+        runAutoFill(true);
       });
       modal.querySelector('#transport-undo-auto-fill')?.addEventListener('click', () => {
         if (!preAutoFillSnapshot) return;
