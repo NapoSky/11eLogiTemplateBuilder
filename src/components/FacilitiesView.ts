@@ -251,14 +251,14 @@ export class FacilitiesView {
   private renderRequirements(plan: FacilityPlan): string {
     if (!this.workspace.mission.objectives.length || plan.errors.length) return '';
     const buildings = requiredFacilityBuildings(plan);
-    const setupCount = buildings.reduce((total, building) => total + building.setups.length, 0);
+    const setupCount = buildings.length;
     return `<section id="fc-requirements" class="rounded-lg border border-gray-700 bg-gray-800 overflow-hidden" aria-label="Required facilities">
       <button id="fc-toggle-requirements" type="button" data-fc-action="toggle-requirements" aria-expanded="${this.requirementsOpen}" aria-controls="fc-requirements-list" class="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-gray-700/50">
         <svg aria-hidden="true" class="w-3 h-3 shrink-0 text-gray-400 ${this.requirementsOpen ? 'rotate-90' : ''}" viewBox="0 0 12 12" fill="currentColor"><path d="m4 2 4 4-4 4z"/></svg>
         <span class="text-sm font-semibold">Required facilities</span><span class="ml-auto text-xs text-gray-400">${setupCount} ${setupCount === 1 ? 'setup' : 'setups'}</span>
       </button>
       <div id="fc-requirements-list" ${this.requirementsOpen ? '' : 'hidden'} class="p-3 sm:p-4 border-t border-gray-700">
-        <p class="text-xs text-gray-400 mb-3">Building tiers are shown beside their names. Additional requirements appear beside each upgrade.</p>
+        <p class="text-xs text-gray-400 mb-3">One upgrade per building. Different upgrades are shown on separate lines; tiers beside names refer to the base building.</p>
         <div class="rounded overflow-hidden">
           ${buildings.length ? `<div aria-hidden="true" class="hidden md:grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-5 px-3 py-2 bg-gray-900/50 text-[11px] font-medium text-gray-400">
             <span>Building</span><div class="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-3"><span>Upgrade</span><span>Produces</span></div>
@@ -279,7 +279,7 @@ export class FacilitiesView {
                 const extraTier = tech?.tier && tech.tier > (building.tier ?? 0) ? tech.tier : undefined;
                 const extraResearch = tech?.research && !building.research.includes(tech.research) ? tech.research : undefined;
                 return `<div data-fc-requirement class="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-1.5 sm:gap-3 items-start">
-                <p class="flex flex-wrap items-center gap-1.5 text-xs font-medium text-gray-200 break-words sm:pt-1"><span>${html(setup.upgrade || 'Base production')}</span>
+                <p class="flex flex-wrap items-center gap-1.5 text-xs font-medium text-gray-200 break-words sm:pt-1"><span ${!setup.upgrade && building.sharedBase ? 'title="Base recipes can run in either of this building’s upgraded configurations."' : ''}>${html(setup.upgrade || (building.sharedBase ? 'Shared base production' : 'Base production'))}</span>
                   ${extraTier ? `<span aria-label="Upgrade requires Tier ${extraTier} Facilities" class="text-[11px] px-1.5 py-0.5 rounded ${extraTier === 3 ? 'bg-purple-900/40 text-purple-200' : 'bg-blue-900/40 text-blue-200'}">T${extraTier}</span>` : ''}
                   ${extraResearch ? `<span class="text-[11px] px-1.5 py-0.5 rounded bg-gray-700 text-gray-300">Requires ${html(extraResearch)}</span>` : ''}
                   ${!tech ? '<span class="text-[11px] px-1.5 py-0.5 rounded bg-amber-900/40 text-amber-300">Tech not verified</span>' : ''}
@@ -291,7 +291,7 @@ export class FacilitiesView {
           </div>`;
         }).join('') || '<p class="text-sm text-gray-400 pb-2">No local production required with the current stock and supply settings.</p>'}
         </div>
-        ${buildings.length ? '<p class="text-xs text-gray-500 pt-2">Setups list building/upgrade combinations, not the number of buildings to construct.</p>' : ''}
+        ${buildings.length ? '<p class="text-xs text-gray-500 pt-2">Separate upgrades require separate buildings. Base recipes remain available in upgraded buildings; production capacity is not estimated.</p>' : ''}
       </div>
     </section>`;
   }

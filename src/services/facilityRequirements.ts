@@ -63,6 +63,8 @@ export interface FacilityRequirement {
 export interface RequiredFacilityBuilding {
   source: string;
   wikiUrl: string;
+  upgrade?: string;
+  sharedBase?: boolean;
   tier?: 1 | 2 | 3;
   research: string[];
   worldStructure: boolean;
@@ -70,7 +72,7 @@ export interface RequiredFacilityBuilding {
   setups: FacilityRequirement[];
 }
 
-/** Keep the base building's unlock separate from the selected upgrades' requirements. */
+/** One configuration per upgrade: a facility cannot have two upgrades installed together. */
 export function requiredFacilityBuildings(plan: FacilityPlan): RequiredFacilityBuilding[] {
   const bySource = new Map<string, RequiredFacilityBuilding>();
   for (const setup of requiredFacilities(plan)) {
@@ -84,7 +86,24 @@ export function requiredFacilityBuildings(plan: FacilityPlan): RequiredFacilityB
     }
     building.setups.push(setup);
   }
-  return [...bySource.values()].sort((a, b) => (a.tier ?? 4) - (b.tier ?? 4) || a.source.localeCompare(b.source, 'en'));
+  const configurations = [...bySource.values()].flatMap(building => {
+    const upgraded = building.setups.filter(setup => setup.upgrade);
+    const base = building.setups.filter(setup => !setup.upgrade);
+    if (!upgraded.length) return [building];
+    // Reviewed upgrades add production options; recipes without a required upgrade
+    // remain usable. Show those once, without inventing an extra unmodified building.
+    // Do not assume that a future, unreviewed upgrade retains base recipes.
+    const baseHost = upgraded.findIndex(setup => !!setup.technology);
+    const rows: RequiredFacilityBuilding[] = upgraded.map((setup, index) => ({
+      ...building, upgrade: setup.upgrade,
+      sharedBase: index === baseHost && base.length > 0 && upgraded.filter(setup => !!setup.technology).length > 1,
+      setups: index === baseHost ? [setup, ...base] : [setup],
+    }));
+    if (base.length && baseHost === -1) rows.unshift({ ...building, setups: base });
+    return rows;
+  });
+  return configurations.sort((a, b) => (a.tier ?? 4) - (b.tier ?? 4) || a.source.localeCompare(b.source, 'en') ||
+    (a.upgrade ?? '').localeCompare(b.upgrade ?? '', 'en'));
 }
 
 /** Only actual production steps count: supplied, piped and fully allocated items need no local setup. */

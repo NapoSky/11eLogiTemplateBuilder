@@ -36,11 +36,16 @@ test('building headers sort by base tier then name and keep upgrade unlocks on t
   const buildings = requiredFacilityBuildings(plan);
   expect(buildings.map(building => [building.source, building.tier])).toEqual([
     ['Coal Refinery', 1], ['Materials Factory', 1], ['Oil Refinery', 1], ['Small Assembly Station', 1],
-    ['Ammunition Factory', 2], ['Metalworks Factory', 2], ['Dry Dock', undefined],
+    ['Ammunition Factory', 2], ['Metalworks Factory', 2], ['Metalworks Factory', 2], ['Dry Dock', undefined],
   ]);
-  const metalworks = buildings.find(building => building.source === 'Metalworks Factory')!;
-  expect(metalworks.setups.map(setup => setup.upgrade)).toEqual([undefined, 'Blast Furnace', 'Engineering Station']);
-  expect(metalworks.setups.find(setup => setup.upgrade === 'Engineering Station')!.technology).toEqual({ tier: 3 });
+  const metalworks = buildings.filter(building => building.source === 'Metalworks Factory');
+  expect(metalworks.map(building => building.upgrade)).toEqual(['Blast Furnace', 'Engineering Station']);
+  expect(metalworks[0].setups.map(setup => setup.upgrade)).toEqual(['Blast Furnace', undefined]);
+  expect(metalworks[0].sharedBase).toBe(true);
+  expect(metalworks[1].setups.map(setup => setup.upgrade)).toEqual(['Engineering Station']);
+  expect(metalworks[1].setups[0].technology).toEqual({ tier: 3 });
+  expect(buildings.filter(building => building.source === 'Materials Factory')).toHaveLength(1);
+  expect(buildings.find(building => building.source === 'Materials Factory')!.sharedBase).toBe(false);
   const assembly = buildings.find(building => building.source === 'Small Assembly Station')!;
   expect(assembly.research).toEqual([]);
   expect(assembly.setups[0].technology).toEqual({ research: 'Dry Dock' });
@@ -49,6 +54,8 @@ test('building headers sort by base tier then name and keep upgrade unlocks on t
   expect(updated.find(building => building.source === 'Metalworks Factory')!.tier).toBe(2);
   expect(updated.filter(building => building.tier === 2).map(building => building.source)).toEqual(['Ammunition Factory', 'Metalworks Factory']);
   expect(updated.find(building => building.source === 'Small Assembly Station')!.tier).toBe(1);
+  expect(updated.filter(building => building.source === 'Metalworks Factory')).toHaveLength(1);
+  expect(updated.find(building => building.source === 'Metalworks Factory')!.sharedBase).toBe(false);
 });
 
 test('allocated naval parts remove their entire local production chain, while partial stock retains it', () => {
