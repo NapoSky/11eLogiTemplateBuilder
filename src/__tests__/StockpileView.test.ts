@@ -508,6 +508,70 @@ describe('StockpileView – événements window', () => {
 
 // ─── StockpileView — persistance localStorage ────────────────────────────────
 
+describe('StockpileView – import cumulatif', () => {
+  let container: HTMLElement;
+  let view: StockpileView;
+
+  beforeEach(async () => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    global.fetch = jest.fn().mockImplementation(async (url: string) => ({
+      ok: true,
+      json: async () => url.includes('iconMapping') ? iconMapping : { sections: [] },
+    }));
+    view = new StockpileView();
+    view.mount(container);
+    await flushPromises();
+  });
+
+  afterEach(() => {
+    view.unmount();
+    document.body.innerHTML = '';
+    jest.restoreAllMocks();
+  });
+
+  const pasteIntoModal = (stock: string) => {
+    const event = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'clipboardData', {
+      value: { getData: () => `Callahan - Lochan - Seaport - ${stock},2026.11.17-11.00.00\nArgenti r.II Rifle,10\n` },
+    });
+    document.querySelector('#csv-modal-text')!.dispatchEvent(event);
+  };
+
+  test('valide plusieurs collages en une seule sauvegarde, sans modales de rôle successives', () => {
+    window.dispatchEvent(new CustomEvent('stockpile:open-load-modal'));
+    window.dispatchEvent(new CustomEvent('stockpile:open-load-modal'));
+    expect(document.querySelectorAll('#csv-load-modal')).toHaveLength(1);
+    pasteIntoModal('LOC-2');
+    pasteIntoModal('LOC-3');
+    expect(localStorageMock.getItem('stockpile_csv_entries')).toBeNull();
+    document.querySelector<HTMLButtonElement>('[data-role-group] [data-depot-role="backline"]')!.click();
+    (document.querySelector('#csv-modal-import') as HTMLButtonElement).click();
+    const saved = JSON.parse(localStorageMock.getItem('stockpile_csv_entries')!);
+    expect(saved).toHaveLength(2);
+    expect(saved.map((entry: { role: string }) => entry.role)).toEqual(['backline', 'backline']);
+    expect(localStorageMock.setItem.mock.calls.filter(([key]) => key === 'stockpile_csv_entries')).toHaveLength(1);
+    expect(document.querySelector('#assign-role-modal')).toBeNull();
+    expect(document.querySelector('#csv-load-modal')).toBeNull();
+    expect(container.querySelector('[data-depot-name="Lochan"]')).not.toBeNull();
+    window.dispatchEvent(new CustomEvent('stockpile:open-load-modal'));
+    pasteIntoModal('LOC-2');
+    expect(document.querySelector<HTMLInputElement>('[data-candidate]')!.disabled).toBe(true);
+  });
+
+  test('fermer ou quitter la vue abandonne le panier sans sauvegarder', () => {
+    window.dispatchEvent(new CustomEvent('stockpile:open-load-modal'));
+    pasteIntoModal('LOC-2');
+    (document.querySelector('#csv-modal-close') as HTMLButtonElement).click();
+    window.dispatchEvent(new CustomEvent('stockpile:open-load-modal'));
+    expect(document.querySelectorAll('[data-candidate]')).toHaveLength(0);
+    pasteIntoModal('LOC-3');
+    view.unmount();
+    expect(document.querySelector('#csv-load-modal')).toBeNull();
+    expect(localStorageMock.getItem('stockpile_csv_entries')).toBeNull();
+  });
+});
+
 describe('StockpileView – persistance localStorage', () => {
   afterEach(() => {
     document.body.innerHTML = '';
@@ -909,9 +973,63 @@ describe('StockpileView – dépôts et transport', () => {
     expect((document.querySelector('#transport-add-line') as HTMLButtonElement).disabled).toBe(false);
 
     (document.querySelector('#transport-add-line') as HTMLButtonElement).click();
-    // Un container ne mutualise qu'un seul type de caisse (60 max) : chaque item doit apparaître
-    // sur sa propre ligne avec le nombre de containers réellement nécessaires (ceil(400/60) = 7).
-    expect((document.querySelector('#transport-preview') as HTMLTextAreaElement).value).toMatch(/^A-Container of Basic Materials \(x7\)/m);
+    const preview = (document.querySelector('#transport-preview') as HTMLTextAreaElement).value;
+    expect(preview).toMatch(/^A-Container of 60 Basic Materials \(x6\)/m);
+    expect(preview).toMatch(/^B-Container of 40 Basic Materials \(x1\)/m);
+    expect(document.querySelector('#transport-summary')?.textContent).toContain('7 actions');
+  });
+
+  test('garde le même conteneur mixte dans les slots et la liste avant et après ajout du brouillon', () => {
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Kirknell - Storage Depot - 11e,now\nBandages,20\nBlood Plasma,20\n12.7mm,20' },
+    }));
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+    const load = (name: string) => {
+      const row = [...document.querySelectorAll('#transport-cargo-rows tr')].find(row => row.querySelector('td')?.textContent?.trim() === name)!;
+      const input = row.querySelector<HTMLInputElement>('.transport-qty')!;
+      input.value = '20';
+      input.dispatchEvent(new Event('input'));
+    };
+    load('Bandages');
+    (document.querySelector('#transport-add-line') as HTMLButtonElement).click();
+    load('Blood Plasma');
+    load('12.7mm');
+    const preview = () => (document.querySelector('#transport-preview') as HTMLTextAreaElement).value;
+    const before = preview();
+    expect(before.match(/^[A-Z]-/gm)).toHaveLength(1);
+    for (const name of ['Bandages', 'Blood Plasma', '12.7mm']) expect(before).toContain(`20 ${name}`);
+    expect(before).toContain('(x1)');
+    expect(document.querySelector('#transport-load-meter')?.textContent).toContain('1/1 used · 1 container');
+    expect(document.querySelectorAll('#transport-load-meter [data-tooltip]')).toHaveLength(1);
+    const tooltip = document.querySelector<HTMLElement>('#transport-load-meter [data-tooltip]')!.dataset.tooltip;
+    for (const name of ['Bandages', 'Blood Plasma', '12.7mm']) expect(tooltip).toContain(`20 ${name}`);
+    expect(document.querySelector('#transport-summary')?.textContent).toContain('60 units planned across 1 action');
+    (document.querySelector('#transport-add-line') as HTMLButtonElement).click();
+    expect(preview()).toBe(before);
+  });
+
+  test('affiche le nombre de wagons et les quantités par train, avec un dernier chargement distinct', () => {
+    window.dispatchEvent(new CustomEvent('stockpile:paste-csv', {
+      detail: { text: 'Basin - Kirknell - Storage Depot - 11e,now\nBasic Materials,400' },
+    }));
+    (container.querySelector('[data-stock-view="depots"]') as HTMLButtonElement).click();
+    (container.querySelector('#btn-prepare-transport') as HTMLButtonElement).click();
+    selectHaulerMode('train');
+    const cars = document.querySelector<HTMLInputElement>('#transport-train-cars')!;
+    cars.value = '3';
+    cars.dispatchEvent(new Event('change'));
+    const row = [...document.querySelectorAll('#transport-cargo-rows tr')].find(row => row.textContent?.includes('Basic Materials'))!;
+    const quantity = row.querySelector<HTMLInputElement>('.transport-qty')!;
+    quantity.value = '400';
+    quantity.dispatchEvent(new Event('input'));
+    const preview = (document.querySelector('#transport-preview') as HTMLTextAreaElement).value;
+    expect(preview).toMatch(/^A-One train \(3 flatbed cars\) with 180 Basic Materials \(x2\)$/m);
+    expect(preview).toMatch(/^B-One train \(3 flatbed cars\) with 40 Basic Materials$/m);
+    expect(document.querySelector('#transport-summary')?.textContent).toContain('400 units planned across 3 actions');
+    expect(document.querySelector('#transport-load-meter')?.textContent).toContain('7/9 used');
+    (document.querySelector('#transport-add-line') as HTMLButtonElement).click();
+    expect((document.querySelector('#transport-preview') as HTMLTextAreaElement).value).toBe(preview);
   });
 
   test('fusionne les conteneurs français et anglais dans Prepare transport', () => {

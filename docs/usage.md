@@ -54,10 +54,22 @@ Loading calculates materials to bring into production; the Stockpile transport p
 
 Use a CSV exported from a **Seaport or Storage Depot**.
 
-1. Open **Stockpile** and click **Load Stockpile CSV**, or drop a `.csv` file into the view.
+1. Open **Stockpile** and click **Load Stockpile CSV**. Paste successive exports with **Ctrl+V** in the import window, use **Paste from clipboard**, or add/drop several `.csv` / `.txt` files. The window stays open as the basket grows.
 2. Choose a comparison template: **Current**, **Official (W)**, **Official (C)** or **Load file** for a JSON template.
 3. Filter by **Missing / Partial / OK**, search for an item, or use **Sort by gap**.
 4. Click **Generate Todolist** to prepare MPF orders for eligible missing items.
+
+Before clicking **Import**, select the snapshots to apply and check **Backline / Main / Front** once per depot. Known depots keep their saved role. Only one depot can be **Main**; moving an existing Main to Backline requires explicitly checking the confirmation in the import window.
+
+The basket keeps the latest dated snapshot for each stockpile. Identical loaded snapshots are not selected. Older versions, or different contents with the same recorded date as a loaded snapshot, require explicit selection to replace it. Separate stockpiles within the same depot remain separate and contribute to its total. Closing the import window or **Clear basket** leaves loaded stocks unchanged.
+
+On Windows, focus the paste field and use **Win+V** to select previous copies one at a time (clipboard history must be enabled). The site only receives what you paste; it cannot browse Windows clipboard history. If clipboard access is refused, use the paste field instead.
+
+In **Prepare transport**, all four modes use quantity-first cargo labels, such as `20 Bandages, 20 Blood Plasma and 20 12.7mm`. A shared note specifies quantities in crates, or units for assembled shippables. Train tasks retain the number of flatbed cars, for example `One train (3 flatbed cars) with …`.
+
+Each task describes **one load**; its final `(xN)` repeats identical loads. Different loads, including the last incomplete vehicle, are listed separately. For example, 130 crates on flatbeds become `One flatbed with 60 Bandages (x2)` and `One flatbed with 10 Bandages`.
+
+In **Container/Shippable** mode, shipping containers can mix item types up to 60 crates total. The slots and the 11eForge list use the same packing: 20 Bandages + 20 Blood Plasma + 20 ammunition crates produce one container task. Partial containers and crated/assembled shippables remain distinct tasks.
 
 | Status | Meaning |
 | --- | --- |

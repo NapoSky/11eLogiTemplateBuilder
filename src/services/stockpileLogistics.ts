@@ -301,6 +301,32 @@ export function transportSlotsPerTrip(mission: TransportMission): number {
   return Math.min(14, Math.max(1, Math.floor(mission.trainCars ?? 1)));
 }
 
+/** Fill shared 60-crate containers in cargo order, preserving each item's exact quantity. */
+export function packShippingContainers(cargo: readonly TransportCargoItem[]): Array<Array<{ itemName: string; quantity: number }>> {
+  const bins: Array<Array<{ itemName: string; quantity: number }>> = [];
+  let bin: Array<{ itemName: string; quantity: number }> = [];
+  let space = 60;
+  for (const item of cargo) {
+    if (item.kind !== 'container-crate') continue;
+    let remaining = item.quantity;
+    while (remaining > 0) {
+      if (space === 0) {
+        bins.push(bin);
+        bin = [];
+        space = 60;
+      }
+      const take = Math.min(remaining, space);
+      const existing = bin.find(entry => entry.itemName === item.itemName);
+      if (existing) existing.quantity += take;
+      else bin.push({ itemName: item.itemName, quantity: take });
+      space -= take;
+      remaining -= take;
+    }
+  }
+  if (bin.length) bins.push(bin);
+  return bins;
+}
+
 export function usedTransportSlots(mission: TransportMission): number {
   const containerCrates = mission.cargo
     .filter(item => item.kind === 'container-crate')
@@ -322,37 +348,49 @@ function formatDate(date: Date): string {
 }
 
 function formatCargoItem(item: TransportCargoItem): string {
-  return item.kind === 'assembled' ? `assembled ${item.itemName}` : item.itemName;
+  const state = item.kind === 'assembled' ? 'assembled ' : item.kind === 'direct-crate' ? 'crated ' : '';
+  return `${item.quantity} ${state}${item.itemName}`;
 }
 
-// Le mode 'container' n'a pas de véhicule qui mutualise plusieurs items dans un même chargement :
-// un container ne transporte qu'un seul type de caisse (jusqu'à 60), donc chaque item devient sa
-// propre ligne autonome avec sa quantité réelle (nb de containers, ou nb de caisses/unités pour
-// ce qui ne se poolée pas), plutôt qu'un "Load with X and Y" qui ne dit pas combien en prendre.
-function formatContainerCargoItem(item: TransportCargoItem): string {
-  if (item.kind === 'container-crate') {
-    return `Container of ${item.itemName} (x${Math.ceil(item.quantity / 60)})`;
+function formatShippable(item: TransportCargoItem): string {
+  return `${formatCargoItem({ ...item, quantity: 1 })} (x${item.quantity})`;
+}
+
+function joinCargo(items: string[]): string {
+  return items.length < 3 ? items.join(' and ') : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`;
+}
+
+function formatContainers(cargo: TransportCargoItem[]): string[] {
+  const loads: Array<{ text: string; count: number }> = [];
+  for (const bin of packShippingContainers(cargo)) {
+    // (xN) stays reserved for 11eForge's task factor. Item quantities describe ONE container.
+    const text = `Container of ${joinCargo(bin.map(item => formatCargoItem({ ...item, kind: 'container-crate' })))}`;
+    const previous = loads.at(-1);
+    if (previous?.text === text) previous.count++;
+    else loads.push({ text, count: 1 });
   }
-  if (item.kind === 'assembled') {
-    return `Assembled ${item.itemName} (x${item.quantity})`;
-  }
-  return `Crate of ${item.itemName} (x${item.quantity})`;
+  return loads.map(load => `${load.text} (x${load.count})`);
 }
 
 function formatMission(mission: TransportMission): string {
+  const cars = transportSlotsPerTrip(mission);
   const carrier = mission.mode === 'train'
-    ? `One train with ${transportSlotsPerTrip(mission)} flatbed cars`
+    ? `One train (${cars} flatbed car${cars === 1 ? '' : 's'})`
     : `One ${mission.mode}`;
-  const cargoItems = mission.cargo.map(formatCargoItem);
-  const cargo = cargoItems.length < 3
-    ? cargoItems.join(' and ')
-    : `${cargoItems.slice(0, -1).join(', ')} and ${cargoItems.at(-1)}`;
+  // Planned cargo contains totals across all identical trips. Describe just ONE load;
+  // 11eForge's final factor repeats that load, not the full cargo total.
+  const cargoItems = mission.cargo.map(item => formatCargoItem({ ...item, quantity: item.quantity / mission.tripCount }));
+  const cargo = joinCargo(cargoItems);
   const factor = mission.tripCount > 1 ? ` (x${mission.tripCount})` : '';
   return `${carrier} with ${cargo}${factor}`;
 }
 
 export function renderTransportList(list: TransportList): string {
-  const lines = [`__**${list.title ?? 'TRANSPORT LIST'} -- ${formatDate(list.date)}**__`, ''];
+  const lines = [
+    `__**${list.title ?? 'TRANSPORT LIST'} -- ${formatDate(list.date)}**__`,
+    'Quantities per load: crates, or units for assembled shippables.',
+    '',
+  ];
   for (const note of list.notes ?? []) lines.push(note);
   if (list.notes?.length) lines.push('');
 
@@ -362,16 +400,24 @@ export function renderTransportList(list: TransportList): string {
     for (const note of route.notes ?? []) lines.push(note);
     for (const mission of route.missions) {
       if (mission.mode === 'container') {
-        for (const item of mission.cargo) {
+        const tasks = [
+          ...formatContainers(mission.cargo),
+          ...mission.cargo.filter(item => item.kind !== 'container-crate').map(formatShippable),
+        ];
+        for (const task of tasks) {
           const letter = String.fromCharCode(65 + (missionIndex % 26));
-          lines.push(`${letter}-${formatContainerCargoItem(item)}`);
+          lines.push(`${letter}-${task}`);
           missionIndex += 1;
         }
         continue;
       }
-      const letter = String.fromCharCode(65 + (missionIndex % 26));
-      lines.push(`${letter}-${formatMission(mission)}`);
-      missionIndex += 1;
+      // A manually scaled mission can end with a different, incomplete vehicle. Use the
+      // same direct-slot / 60-crate packing order as the meter, grouping identical loads only.
+      for (const load of suggestTransportMissions(mission.cargo, mission.mode, mission.trainCars)) {
+        const letter = String.fromCharCode(65 + (missionIndex % 26));
+        lines.push(`${letter}-${formatMission(load)}`);
+        missionIndex += 1;
+      }
     }
     lines.push('');
   }

@@ -1,4 +1,5 @@
 import { store } from '../store';
+import { StockpileImportModal } from './StockpileImportModal';
 import { Template, Section, SectionIcon, MpfDataEntry, TodoListItem, TodoList, MpfCategory, IconCategory, CATEGORIES, generateId } from '../types';
 import { getBaseUrl } from '../config';
 import { renderTodoList } from '../services/todoListExporter';
@@ -32,6 +33,7 @@ import {
   formatLocationLabel,
   inferDepotName,
   normalizeStockItems,
+  packShippingContainers,
   suggestDepotRole,
   upsertStockpileSnapshot,
 } from '../services/stockpileLogistics';
@@ -356,6 +358,7 @@ export class StockpileView {
 
   // CSV state
   private csvEntries: CsvEntry[] = [];
+  private importModal: StockpileImportModal | null = null;
   private result: ComparisonResult | null = null;
 
   // UI state
@@ -428,6 +431,8 @@ export class StockpileView {
   }
 
   unmount(): void {
+    this.importModal?.close();
+    this.importModal = null;
     this.quantityTooltipController?.destroy();
     this.quantityTooltipController = null;
     window.removeEventListener('stockpile:load-csv',       this.onLoadCsv);
@@ -1817,93 +1822,28 @@ export class StockpileView {
   }
 
   private showLoadCsvModal(): void {
-    const modal = document.createElement('div');
-    modal.id = 'csv-load-modal';
-    modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
-    modal.innerHTML = `
-      <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-[520px] max-w-[95vw]">
-        <!-- Header -->
-        <div class="flex items-center justify-between mb-5">
-          <h2 class="text-lg font-semibold text-white">Load Stockpile CSV</h2>
-          <button id="csv-modal-close" class="text-gray-400 hover:text-white transition-colors" title="Close">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-          </button>
-        </div>
-        <!-- Panels -->
-        <div class="grid grid-cols-2 gap-4">
-          <!-- Left: two stacked action cards -->
-          <div class="flex flex-col gap-4">
-            <label id="csv-modal-load-label" class="flex flex-col items-center justify-center gap-2 p-5 bg-gray-700/50 rounded-lg border border-gray-600 hover:border-blue-500 hover:bg-gray-700 cursor-pointer transition-colors group flex-1">
-              <svg class="w-8 h-8 text-blue-400 group-hover:text-blue-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-              </svg>
-              <p class="font-semibold text-sm text-white">Load file</p>
-              <p class="text-xs text-gray-400 text-center">.csv / .txt</p>
-              <input type="file" accept=".csv,.txt" id="csv-modal-file-input" class="hidden" />
-            </label>
-            <button id="csv-modal-paste" class="flex flex-col items-center justify-center gap-2 p-5 bg-gray-700/50 rounded-lg border border-gray-600 hover:border-blue-500 hover:bg-gray-700 cursor-pointer transition-colors group flex-1">
-              <svg class="w-8 h-8 text-gray-400 group-hover:text-blue-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-              </svg>
-              <p class="font-semibold text-sm text-white">Paste</p>
-              <p class="text-xs text-gray-400 text-center">From clipboard</p>
-            </button>
-          </div>
-          <!-- Right: drag & drop -->
-          <div id="csv-modal-dropzone" class="flex flex-col items-center justify-center gap-3 p-5 bg-gray-700/50 rounded-lg border border-dashed border-gray-600 hover:border-gray-400 transition-colors min-h-[180px]">
-            <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-            </svg>
-            <p class="font-semibold text-sm text-white">Drag &amp; drop</p>
-            <p class="text-xs text-gray-400 text-center">Drop a .csv file here</p>
-          </div>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    const close = this.attachEscapeClose(() => modal.remove());
-
-    modal.querySelector('#csv-modal-close')!.addEventListener('click', close);
-    modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
-
-    // Load file
-    modal.querySelector('#csv-modal-file-input')!.addEventListener('change', (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      close();
-      this.handleLoadCsv(file);
-    });
-
-    // Paste
-    modal.querySelector('#csv-modal-paste')!.addEventListener('click', async () => {
-      try {
-        const text = await navigator.clipboard.readText();
-        if (!text.trim()) { alert('Clipboard is empty.'); return; }
-        close();
-        this.handlePasteCsv(text);
-      } catch {
-        alert('Could not read clipboard. Make sure clipboard access is allowed.');
-      }
-    });
-
-    // Drag & drop
-    const dropzone = modal.querySelector('#csv-modal-dropzone') as HTMLElement;
-    dropzone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      dropzone.classList.add('border-blue-400', 'bg-gray-700');
-    });
-    dropzone.addEventListener('dragleave', () => {
-      dropzone.classList.remove('border-blue-400', 'bg-gray-700');
-    });
-    dropzone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      dropzone.classList.remove('border-blue-400', 'bg-gray-700');
-      const file = e.dataTransfer?.files[0];
-      if (file) { close(); this.handleLoadCsv(file); }
+    if (document.getElementById('csv-load-modal')) {
+      this.importModal?.focus();
+      return;
+    }
+    const knownItemNames = new Set([
+      ...Object.values(this.iconMapping),
+      ...store.itemData.map(item => item.itemName),
+      ...this.getMpfData().map(item => item.itemName),
+    ]);
+    this.importModal = new StockpileImportModal({
+      existing: this.csvEntries,
+      parse: parseCSV,
+      knownItemNames,
+      onImport: (snapshots, frenchDetected) => {
+        this.csvEntries = snapshots;
+        this.result = this.compare();
+        this.saveCSV();
+        this.filterStatus = 'all';
+        this.render();
+        if (frenchDetected) showFrenchWarningToast();
+        showToast('Stockpile import applied.');
+      },
     });
   }
 
@@ -2201,7 +2141,12 @@ export class StockpileView {
       }));
       if (draft?.cargo.length) {
         const current = routes.find(route => route.source === sourceName && route.destination === destinationName);
-        if (current) current.missions.push(draft);
+        if (current) {
+          const last = current.missions.at(-1);
+          if (last?.mode === 'container' && draft.mode === 'container') {
+            current.missions[current.missions.length - 1] = { ...last, cargo: mergeCargoTotals(last.cargo, draft.cargo) };
+          } else current.missions.push(draft);
+        }
         else routes.push({
           source: sourceName,
           destination: destinationName,
@@ -2227,27 +2172,7 @@ export class StockpileView {
       // Mode 'container' : aucune capacité de véhicule à plafonner, la jauge affiche exactement ce
       // qui est chargé (pas de slot vide), contrairement aux autres haulers (perTripCapacity x tripCount).
       const capacity = mission.mode === 'container' ? usedSlots : perTripCapacity * tripCount;
-      // Les caisses en conteneur partagent un même pool de 60 : on répartit chaque item, dans l'ordre, dans des conteneurs de 60 pour savoir ce que contient chaque conteneur.
-      const containerBins: Array<Array<{ itemName: string; quantity: number }>> = [];
-      {
-        let currentBin: Array<{ itemName: string; quantity: number }> = [];
-        let currentBinRemaining = 60;
-        for (const item of crateItems) {
-          let remaining = item.quantity;
-          while (remaining > 0) {
-            if (currentBinRemaining === 0) {
-              containerBins.push(currentBin);
-              currentBin = [];
-              currentBinRemaining = 60;
-            }
-            const take = Math.min(remaining, currentBinRemaining);
-            currentBin.push({ itemName: item.itemName, quantity: take });
-            currentBinRemaining -= take;
-            remaining -= take;
-          }
-        }
-        if (currentBin.length > 0) containerBins.push(currentBin);
-      }
+      const containerBins = packShippingContainers(mission.cargo);
       const slots = Array.from({ length: capacity }, (_, index) => {
         // Un véhicule au-delà du premier ne provient pas de la saisie manuelle mais de la mise à
         // l'échelle automatique (quantité > capacité d'un seul véhicule) : on le distingue par une
@@ -2735,7 +2660,7 @@ export class StockpileView {
               </label>
               <textarea id="transport-preview" readonly class="flex-1 min-h-56 bg-gray-950 border border-gray-700 rounded p-3 text-xs font-mono text-gray-300 resize-none">${escapeHtml(discordText)}</textarea>
               <div class="mt-3 flex items-center justify-between gap-3">
-                <span id="transport-summary" class="text-xs text-gray-500">${allMissions.reduce((total, item) => total + item.cargo.reduce((cargoTotal, cargo) => cargoTotal + cargo.quantity, 0), 0)} units planned across ${allMissions.reduce((total, item) => total + item.tripCount, 0)} action${allMissions.reduce((total, item) => total + item.tripCount, 0) !== 1 ? 's' : ''}</span>
+                <span id="transport-summary" class="text-xs text-gray-500">${allMissions.reduce((total, item) => total + item.cargo.reduce((cargoTotal, cargo) => cargoTotal + cargo.quantity, 0), 0)} units planned across ${allMissions.reduce((total, item) => total + (item.mode === 'container' ? usedTransportSlots(item) : item.tripCount), 0)} action${allMissions.reduce((total, item) => total + (item.mode === 'container' ? usedTransportSlots(item) : item.tripCount), 0) !== 1 ? 's' : ''}</span>
                 <button id="transport-copy" ${!fits ? 'disabled' : ''} class="px-3 py-1.5 rounded text-xs font-medium ${fits ? 'bg-emerald-700 hover:bg-emerald-600 text-white' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}">Copy list</button>
               </div>
             </div>
@@ -2754,7 +2679,7 @@ export class StockpileView {
           notes: globalNotes.split('\n').filter(Boolean),
           routes: currentRoutes,
         }) : '';
-        const actions = currentMissions.reduce((total, item) => total + item.tripCount, 0);
+        const actions = currentMissions.reduce((total, item) => total + (item.mode === 'container' ? usedTransportSlots(item) : item.tripCount), 0);
         const units = currentMissions.reduce((total, item) => total + item.cargo.reduce((cargoTotal, cargo) => cargoTotal + cargo.quantity, 0), 0);
         const loadFits = missionFits(currentMission) && currentMission.cargo.length > 0;
         const addButton = modal.querySelector<HTMLButtonElement>('#transport-add-line');

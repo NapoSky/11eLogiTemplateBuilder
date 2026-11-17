@@ -261,14 +261,14 @@ export class Toolbar {
           <div>
             <h3 class="font-semibold text-gray-200 mb-2">📦 ${fr ? 'Stocks et transports' : 'Stock and transport'}</h3>
             <ol class="space-y-2 text-gray-400">
-              <li><span class="text-blue-400 font-semibold">1.</span> ${fr ? 'Importez les CSV. Un même emplacement remplace automatiquement son ancien relevé.' : 'Import CSV files. The same location automatically replaces its previous snapshot.'}</li>
+              <li><span class="text-blue-400 font-semibold">1.</span> ${fr ? 'Ouvrez Load Stockpile CSV, collez les relevés successifs (Ctrl+V) ou ajoutez plusieurs fichiers. Vérifiez les rôles par dépôt, puis importez le lot. Les doublons et relevés anciens sont signalés.' : 'Open Load Stockpile CSV, paste successive exports (Ctrl+V) or add several files. Check each depot’s role, then import the batch. Duplicates and older snapshots are flagged.'}</li>
               <li><span class="text-blue-400 font-semibold">2.</span> ${fr ? 'Regroupez les relevés par dépôt puis attribuez les rôles Backline, Intermediate et Front.' : 'Group snapshots by depot, then assign Backline, Intermediate, and Front roles.'}</li>
               <li><span class="text-blue-400 font-semibold">3.</span> <span class="text-gray-200">MPF production needs</span> ${fr ? 'compare les stocks hors Front au template et génère la Todolist MPF.' : 'compares non-Front stock against the template and generates the MPF Todolist.'}</li>
               <li><span class="text-blue-400 font-semibold">4.</span> <span class="text-gray-200">Transport planning</span> ${fr ? 'compare les dépôts à l’Intermediate. Les filtres et la readiness utilisent ses objectifs.' : 'compares depots against the Intermediate. Filters and readiness use its targets.'}</li>
               <li><span class="text-blue-400 font-semibold">5.</span> <span class="text-gray-200">Prepare transport</span> ${fr ? ': choisissez chaque route, planifiez-la automatiquement ou saisissez le chargement par trajet, puis ajoutez-la. Les routes précédentes restent dans la même liste.' : ': choose each route, plan it automatically or enter its load per trip, then add it. Previous routes remain in the same list.'}</li>
             </ol>
           </div>
-          <p class="rounded border border-amber-800/60 bg-amber-950/20 px-3 py-2 text-xs text-amber-300">${fr ? 'La jauge indique les slots utilisés et signale les conteneurs incomplets. Les dépôts Front restent exclus des totaux calculés.' : 'The meter shows used slots and warns about incomplete containers. Front depots remain excluded from calculated totals.'}</p>
+          <p class="rounded border border-amber-800/60 bg-amber-950/20 px-3 py-2 text-xs text-amber-300">${fr ? 'La jauge et la liste partagent le même remplissage : jusqu’à 60 caisses de types différents par conteneur. Les quantités précèdent les noms et décrivent un seul chargement, en caisses (en unités pour les véhicules assemblés). Le facteur (xN) répète les chargements identiques ; les véhicules et conteneurs incomplets restent distincts. Les dépôts Front restent exclus des totaux calculés.' : 'The meter and list share the same packing: up to 60 crates of mixed item types per container. Quantities precede names and describe one load, in crates (units for assembled shippables). The (xN) factor repeats identical loads; incomplete containers and vehicles remain distinct. Front depots remain excluded from calculated totals.'}</p>
           ${shortcuts}
         </div>
       `;
@@ -358,7 +358,7 @@ export class Toolbar {
       window.dispatchEvent(new CustomEvent('focus-text-block', { detail: { id } }));
     });
 
-    // Stockpile CSV upload — open the choice modal (drag&drop / paste / load file)
+    // Stockpile CSV upload — accumulate files and pastes in one import basket.
     this.container.querySelector('#btn-load-stockpile')?.addEventListener('click', () => {
       window.dispatchEvent(new CustomEvent('stockpile:open-load-modal'));
     });
