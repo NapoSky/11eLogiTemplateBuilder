@@ -395,7 +395,7 @@
           "iconId": "Textures/UI/ItemIcons/ATLaunchedGrenadeWIcon.png",
           "filename": "Textures/UI/ItemIcons/ATLaunchedGrenadeWIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/ATLaunchedGrenadeWIcon.png",
-          "quantity": 200,
+          "quantity": 100,
           "gridRow": 0,
           "gridCol": 4,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
@@ -1211,7 +1211,7 @@
       "title": "Structures",
       "color": "#6b5234",
       "x": 1503.1171669698822,
-      "y": 18,
+      "y": 22.94845360824742,
       "width": 389.3906552029639,
       "height": 232,
       "icons": [
@@ -1222,7 +1222,7 @@
           "path": "/assets/icons/Textures/UI/StructureIcons/HeavyArtilleryW.png",
           "quantity": 5,
           "gridRow": 0,
-          "gridCol": 0,
+          "gridCol": 1,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -1231,8 +1231,8 @@
           "filename": "Textures/UI/StructureIcons/EmplacedATIcon.png",
           "path": "/assets/icons/Textures/UI/StructureIcons/EmplacedATIcon.png",
           "quantity": 5,
-          "gridRow": 0,
-          "gridCol": 1,
+          "gridRow": 1,
+          "gridCol": 2,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -1242,7 +1242,7 @@
           "path": "/assets/icons/Textures/UI/StructureIcons/EmplacedMGIcon.png",
           "quantity": 5,
           "gridRow": 0,
-          "gridCol": 2,
+          "gridCol": 3,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -1252,7 +1252,7 @@
           "path": "/assets/icons/Textures/UI/VehicleIcons/EmplacedAircraftWIcon.png",
           "quantity": 3,
           "gridRow": 1,
-          "gridCol": 0
+          "gridCol": 3
         },
         {
           "id": "e189cfc7-9b42-4258-8da5-1d9765d04d7d",
@@ -1260,8 +1260,8 @@
           "filename": "Textures/UI/StructureIcons/EmplacedHowitzerIcon.png",
           "path": "/assets/icons/Textures/UI/StructureIcons/EmplacedHowitzerIcon.png",
           "quantity": 5,
-          "gridRow": 1,
-          "gridCol": 1,
+          "gridRow": 0,
+          "gridCol": 0,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         }
       ]

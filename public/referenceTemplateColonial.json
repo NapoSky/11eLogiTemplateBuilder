@@ -365,7 +365,7 @@
           "iconId": "Textures/UI/ItemIcons/HELaunchedGrenadeItemIcon.png",
           "filename": "Textures/UI/ItemIcons/HELaunchedGrenadeItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/HELaunchedGrenadeItemIcon.png",
-          "quantity": 200,
+          "quantity": 100,
           "gridRow": 0,
           "gridCol": 4,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
