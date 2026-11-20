@@ -44,7 +44,7 @@
           "iconId": "Textures/UI/ItemIcons/SubMachineGunAmmoIcon.png",
           "filename": "Textures/UI/ItemIcons/SubMachineGunAmmoIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/SubMachineGunAmmoIcon.png",
-          "quantity": 80,
+          "quantity": 100,
           "gridRow": 1,
           "gridCol": 6,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
@@ -465,7 +465,7 @@
           "iconId": "Textures/UI/ItemIcons/ATMortarAmmoItemIcon.png",
           "filename": "Textures/UI/ItemIcons/ATMortarAmmoItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/ATMortarAmmoItemIcon.png",
-          "quantity": 50,
+          "quantity": 60,
           "gridRow": 1,
           "gridCol": 2,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
