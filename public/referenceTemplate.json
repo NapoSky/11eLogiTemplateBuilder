@@ -265,7 +265,7 @@
           "iconId": "Textures/UI/ItemIcons/ATRifleAmmoItemIcon.png",
           "filename": "Textures/UI/ItemIcons/ATRifleAmmoItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/ATRifleAmmoItemIcon.png",
-          "quantity": 40,
+          "quantity": 30,
           "gridRow": 2,
           "gridCol": 1,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
@@ -285,7 +285,7 @@
           "iconId": "Textures/UI/ItemIcons/MiniTankAmmoItemIcon.png",
           "filename": "Textures/UI/ItemIcons/MiniTankAmmoItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/MiniTankAmmoItemIcon.png",
-          "quantity": 80,
+          "quantity": 30,
           "gridRow": 1,
           "gridCol": 0,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
@@ -295,7 +295,7 @@
           "iconId": "Textures/UI/ItemIcons/MortarItemIcon.png",
           "filename": "Textures/UI/ItemIcons/MortarItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/MortarItemIcon.png",
-          "quantity": 40,
+          "quantity": 30,
           "gridRow": 1,
           "gridCol": 3,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
@@ -305,7 +305,7 @@
           "iconId": "Textures/UI/ItemIcons/MortarAmmoIcon.png",
           "filename": "Textures/UI/ItemIcons/MortarAmmoIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/MortarAmmoIcon.png",
-          "quantity": 80,
+          "quantity": 60,
           "gridRow": 1,
           "gridCol": 7,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
@@ -355,7 +355,7 @@
           "iconId": "Textures/UI/ItemIcons/MortarAmmoIconFire.png",
           "filename": "Textures/UI/ItemIcons/MortarAmmoIconFire.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/MortarAmmoIconFire.png",
-          "quantity": 60,
+          "quantity": 40,
           "gridRow": 1,
           "gridCol": 4,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
@@ -385,7 +385,7 @@
           "iconId": "Textures/UI/ItemIcons/ATRPGHeavyWIcon.png",
           "filename": "Textures/UI/ItemIcons/ATRPGHeavyWIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/ATRPGHeavyWIcon.png",
-          "quantity": 40,
+          "quantity": 60,
           "gridRow": 0,
           "gridCol": 6,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
@@ -395,7 +395,7 @@
           "iconId": "Textures/UI/ItemIcons/ATLaunchedGrenadeWIcon.png",
           "filename": "Textures/UI/ItemIcons/ATLaunchedGrenadeWIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/ATLaunchedGrenadeWIcon.png",
-          "quantity": 100,
+          "quantity": 60,
           "gridRow": 0,
           "gridCol": 4,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
@@ -405,7 +405,7 @@
           "iconId": "Textures/UI/ItemIcons/MGHeavyTWItemIcon.png",
           "filename": "Textures/UI/ItemIcons/MGHeavyTWItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/MGHeavyTWItemIcon.png",
-          "quantity": 40,
+          "quantity": 30,
           "gridRow": 2,
           "gridCol": 2,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
@@ -415,7 +415,7 @@
           "iconId": "Textures/UI/ItemIcons/ATRPGTWIcon.png",
           "filename": "Textures/UI/ItemIcons/ATRPGTWIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/ATRPGTWIcon.png",
-          "quantity": 40,
+          "quantity": 30,
           "gridRow": 2,
           "gridCol": 3,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
@@ -425,7 +425,7 @@
           "iconId": "Textures/UI/ItemIcons/FlamegunWICon.png",
           "filename": "Textures/UI/ItemIcons/FlamegunWICon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/FlamegunWICon.png",
-          "quantity": 30,
+          "quantity": 20,
           "gridRow": 2,
           "gridCol": 0,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
@@ -435,7 +435,7 @@
           "iconId": "Textures/UI/ItemIcons/RpgAmmoItemIcon.png",
           "filename": "Textures/UI/ItemIcons/RpgAmmoItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/RpgAmmoItemIcon.png",
-          "quantity": 30,
+          "quantity": 100,
           "gridRow": 1,
           "gridCol": 1,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
@@ -445,7 +445,7 @@
           "iconId": "Textures/UI/ItemIcons/ATRifleAutomaticWItemIcon.png",
           "filename": "Textures/UI/ItemIcons/ATRifleAutomaticWItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/ATRifleAutomaticWItemIcon.png",
-          "quantity": 50,
+          "quantity": 30,
           "gridRow": 2,
           "gridCol": 5,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
@@ -465,7 +465,7 @@
           "iconId": "Textures/UI/ItemIcons/ATMortarAmmoItemIcon.png",
           "filename": "Textures/UI/ItemIcons/ATMortarAmmoItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/ATMortarAmmoItemIcon.png",
-          "quantity": 25,
+          "quantity": 50,
           "gridRow": 1,
           "gridCol": 2,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
@@ -485,7 +485,7 @@
           "iconId": "Textures/UI/ItemIcons/ATMortarWTripodItemIcon.png",
           "filename": "Textures/UI/ItemIcons/ATMortarWTripodItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/ATMortarWTripodItemIcon.png",
-          "quantity": 40,
+          "quantity": 30,
           "gridRow": 2,
           "gridCol": 4,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
@@ -495,7 +495,7 @@
           "iconId": "Textures/UI/ItemIcons/HELaunchedGrenadeItemIcon.png",
           "filename": "Textures/UI/ItemIcons/HELaunchedGrenadeItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/HELaunchedGrenadeItemIcon.png",
-          "quantity": 50,
+          "quantity": 60,
           "gridRow": 0,
           "gridCol": 3
         }
@@ -535,7 +535,7 @@
           "iconId": "Textures/UI/ItemIcons/MortarTankIcon.png",
           "filename": "Textures/UI/ItemIcons/MortarTankIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/MortarTankIcon.png",
-          "quantity": 30,
+          "quantity": 50,
           "gridRow": 0,
           "gridCol": 2,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
@@ -545,7 +545,7 @@
           "iconId": "Textures/UI/ItemIcons/ATAmmoIcon.png",
           "filename": "Textures/UI/ItemIcons/ATAmmoIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/ATAmmoIcon.png",
-          "quantity": 80,
+          "quantity": 100,
           "gridRow": 0,
           "gridCol": 3,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
@@ -565,7 +565,7 @@
           "iconId": "Textures/UI/VehicleIcons/LightAAAmmoIcon.png",
           "filename": "Textures/UI/VehicleIcons/LightAAAmmoIcon.png",
           "path": "/assets/icons/Textures/UI/VehicleIcons/LightAAAmmoIcon.png",
-          "quantity": 30,
+          "quantity": 40,
           "gridRow": 0,
           "gridCol": 5,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
@@ -955,7 +955,7 @@
           "iconId": "Textures/UI/ItemIcons/FlamePackWIcon.png",
           "filename": "Textures/UI/ItemIcons/FlamePackWIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/FlamePackWIcon.png",
-          "quantity": 50,
+          "quantity": 40,
           "gridRow": 0,
           "gridCol": 4,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
@@ -965,7 +965,7 @@
           "iconId": "Textures/UI/ItemIcons/GrenadeAdapterIcon.png",
           "filename": "Textures/UI/ItemIcons/GrenadeAdapterIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/GrenadeAdapterIcon.png",
-          "quantity": 100,
+          "quantity": 60,
           "gridRow": 2,
           "gridCol": 4,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
@@ -1155,7 +1155,7 @@
           "iconId": "Textures/UI/ItemIcons/Uniforms/SnowUniformWIcon.png",
           "filename": "Textures/UI/ItemIcons/Uniforms/SnowUniformWIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/Uniforms/SnowUniformWIcon.png",
-          "quantity": 20,
+          "quantity": 30,
           "gridRow": 0,
           "gridCol": 2
         },
@@ -1173,7 +1173,7 @@
           "iconId": "Textures/UI/ItemIcons/Uniforms/EngineerUniformWIcon.png",
           "filename": "Textures/UI/ItemIcons/Uniforms/EngineerUniformWIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/Uniforms/EngineerUniformWIcon.png",
-          "quantity": 20,
+          "quantity": 50,
           "gridRow": 1,
           "gridCol": 4
         },
@@ -1309,10 +1309,9 @@
           "iconId": "Textures/UI/VehicleIcons/MediumTank2RangeWIcon.png",
           "filename": "Textures/UI/VehicleIcons/MediumTank2RangeWIcon.png",
           "path": "/assets/icons/Textures/UI/VehicleIcons/MediumTank2RangeWIcon.png",
-          "quantity": 8,
+          "quantity": 10,
           "gridRow": 1,
-          "gridCol": 1,
-          "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
+          "gridCol": 1
         },
         {
           "id": "9ab0d838-03b1-4945-98ef-af4f7ac8f6d7",
