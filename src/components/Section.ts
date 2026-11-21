@@ -203,15 +203,19 @@ export class SectionComponent {
   private renderIcon(icon: SectionIcon, row: number, col: number, cellSize: number, iconSize: number, imgSize: number): string {
     const subtypeSize = Math.round(imgSize * 0.4);
     const subtypeHtml = icon.subtype 
-      ? `<img src="${icon.subtype}" alt="" class="absolute -top-0.5 -left-0.5 pointer-events-none drop-shadow-md" style="width: ${subtypeSize}px; height: ${subtypeSize}px;" />`
+      ? `<img src="${icon.subtype}" alt="" class="absolute -bottom-0.5 -left-0.5 pointer-events-none drop-shadow-md" style="width: ${subtypeSize}px; height: ${subtypeSize}px;" />`
       : '';
+    // Keep room for the subtype beside long quantities at small icon sizes.
+    const quantityBadgeClasses = icon.subtype && iconSize <= ICON_SCALES.medium.icon
+      ? 'text-xs px-0.5'
+      : 'text-sm px-1.5';
     let quantityHtml = '';
     if (icon.quantity === 0) {
-      quantityHtml = `<span class="absolute -bottom-0.5 -right-0.5 bg-gradient-to-br from-purple-600 to-purple-800 text-white text-sm font-bold px-1.5 py-0.5 rounded shadow-lg border border-white/20">?</span>`;
+      quantityHtml = `<span class="absolute -bottom-0.5 -right-0.5 bg-gradient-to-br from-purple-600 to-purple-800 text-white ${quantityBadgeClasses} font-bold py-0.5 rounded shadow-lg border border-white/20">?</span>`;
     } else if (icon.quantity === -1) {
-      quantityHtml = `<span class="absolute -bottom-0.5 -right-0.5 bg-gradient-to-br from-amber-600 to-amber-800 text-white text-sm font-bold px-1.5 py-0.5 rounded shadow-lg border border-white/20">★</span>`;
+      quantityHtml = `<span class="absolute -bottom-0.5 -right-0.5 bg-gradient-to-br from-amber-600 to-amber-800 text-white ${quantityBadgeClasses} font-bold py-0.5 rounded shadow-lg border border-white/20">★</span>`;
     } else if (icon.quantity > 1) {
-      quantityHtml = `<span class="absolute -bottom-0.5 -right-0.5 bg-gradient-to-br from-gray-800 to-gray-900 text-white text-sm font-bold px-1.5 py-0.5 rounded shadow-lg border border-white/20">${icon.quantity}</span>`;
+      quantityHtml = `<span class="absolute -bottom-0.5 -right-0.5 bg-gradient-to-br from-gray-800 to-gray-900 text-white ${quantityBadgeClasses} font-bold py-0.5 rounded shadow-lg border border-white/20">${icon.quantity}</span>`;
     }
     
     return `

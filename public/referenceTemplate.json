@@ -15,8 +15,8 @@
           "filename": "Textures/UI/ItemIcons/AssaultRifleAmmoItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/AssaultRifleAmmoItemIcon.png",
           "quantity": 100,
-          "gridRow": 0,
-          "gridCol": 7,
+          "gridRow": 1,
+          "gridCol": 5,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -25,8 +25,8 @@
           "filename": "Textures/UI/ItemIcons/RifleAmmoItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/RifleAmmoItemIcon.png",
           "quantity": 100,
-          "gridRow": 1,
-          "gridCol": 5,
+          "gridRow": 0,
+          "gridCol": 6,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -35,7 +35,7 @@
           "filename": "Textures/UI/ItemIcons/ShotgunAmmoItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/ShotgunAmmoItemIcon.png",
           "quantity": 50,
-          "gridRow": 2,
+          "gridRow": 1,
           "gridCol": 7,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
@@ -46,7 +46,7 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/SubMachineGunAmmoIcon.png",
           "quantity": 100,
           "gridRow": 1,
-          "gridCol": 6,
+          "gridCol": 2,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -56,7 +56,7 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/Smokegrenadeicon1.png",
           "quantity": 50,
           "gridRow": 2,
-          "gridCol": 5,
+          "gridCol": 7,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -74,9 +74,9 @@
           "iconId": "Textures/UI/ItemIcons/MachineGunAmmoIcon.png",
           "filename": "Textures/UI/ItemIcons/MachineGunAmmoIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/MachineGunAmmoIcon.png",
-          "quantity": 100,
-          "gridRow": 1,
-          "gridCol": 7,
+          "quantity": 80,
+          "gridRow": 2,
+          "gridCol": 1,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -95,8 +95,8 @@
           "filename": "Textures/UI/ItemIcons/AssaultRifleHeavyWItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/AssaultRifleHeavyWItemIcon.png",
           "quantity": 50,
-          "gridRow": 0,
-          "gridCol": 6,
+          "gridRow": 1,
+          "gridCol": 4,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -105,8 +105,8 @@
           "filename": "Textures/UI/ItemIcons/PistolLightWItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/PistolLightWItemIcon.png",
           "quantity": 15,
-          "gridRow": 1,
-          "gridCol": 2,
+          "gridRow": 0,
+          "gridCol": 7,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -116,7 +116,7 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/RevolvingRifleWItemIcon.png",
           "quantity": 20,
           "gridRow": 2,
-          "gridCol": 0,
+          "gridCol": 2,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -136,7 +136,7 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/ShotgunWItemIcon.png",
           "quantity": 35,
           "gridRow": 1,
-          "gridCol": 1,
+          "gridCol": 6,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -145,8 +145,8 @@
           "filename": "Textures/UI/ItemIcons/MGWItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/MGWItemIcon.png",
           "quantity": 60,
-          "gridRow": 0,
-          "gridCol": 4,
+          "gridRow": 2,
+          "gridCol": 0,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -155,8 +155,8 @@
           "filename": "Textures/UI/ItemIcons/AssaultRifleItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/AssaultRifleItemIcon.png",
           "quantity": 100,
-          "gridRow": 0,
-          "gridCol": 5,
+          "gridRow": 1,
+          "gridCol": 3,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -175,8 +175,8 @@
           "filename": "Textures/UI/ItemIcons/RifleLongW.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/RifleLongW.png",
           "quantity": 15,
-          "gridRow": 2,
-          "gridCol": 1,
+          "gridRow": 0,
+          "gridCol": 4,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -185,8 +185,8 @@
           "filename": "Textures/UI/ItemIcons/SniperRifleItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/SniperRifleItemIcon.png",
           "quantity": 15,
-          "gridRow": 2,
-          "gridCol": 2,
+          "gridRow": 0,
+          "gridCol": 5,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -196,7 +196,7 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/GrenadeItemIcon.png",
           "quantity": 100,
           "gridRow": 2,
-          "gridCol": 4,
+          "gridCol": 5,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -215,8 +215,8 @@
           "filename": "Textures/UI/ItemIcons/SMGHeavyWItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/SMGHeavyWItemIcon.png",
           "quantity": 20,
-          "gridRow": 0,
-          "gridCol": 3,
+          "gridRow": 1,
+          "gridCol": 1,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -225,7 +225,7 @@
           "filename": "Textures/UI/ItemIcons/RifleShortWIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/RifleShortWIcon.png",
           "quantity": 20,
-          "gridRow": 1,
+          "gridRow": 0,
           "gridCol": 3,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
@@ -235,8 +235,8 @@
           "filename": "Textures/UI/ItemIcons/RevolverItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/RevolverItemIcon.png",
           "quantity": 15,
-          "gridRow": 1,
-          "gridCol": 4,
+          "gridRow": 2,
+          "gridCol": 3,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -246,7 +246,7 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/RevolverAmmoItemIcon.png",
           "quantity": 20,
           "gridRow": 2,
-          "gridCol": 3,
+          "gridCol": 4,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         }
       ]
@@ -267,7 +267,7 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/ATRifleAmmoItemIcon.png",
           "quantity": 30,
           "gridRow": 2,
-          "gridCol": 1,
+          "gridCol": 2,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -275,8 +275,8 @@
           "iconId": "Textures/UI/ItemIcons/ATRpgAmmoItemIcon.png",
           "filename": "Textures/UI/ItemIcons/ATRpgAmmoItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/ATRpgAmmoItemIcon.png",
-          "quantity": 100,
-          "gridRow": 0,
+          "quantity": 80,
+          "gridRow": 1,
           "gridCol": 7,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
@@ -286,8 +286,8 @@
           "filename": "Textures/UI/ItemIcons/MiniTankAmmoItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/MiniTankAmmoItemIcon.png",
           "quantity": 30,
-          "gridRow": 1,
-          "gridCol": 0,
+          "gridRow": 2,
+          "gridCol": 5,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -296,7 +296,7 @@
           "filename": "Textures/UI/ItemIcons/MortarItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/MortarItemIcon.png",
           "quantity": 30,
-          "gridRow": 1,
+          "gridRow": 0,
           "gridCol": 3,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
@@ -305,9 +305,9 @@
           "iconId": "Textures/UI/ItemIcons/MortarAmmoIcon.png",
           "filename": "Textures/UI/ItemIcons/MortarAmmoIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/MortarAmmoIcon.png",
-          "quantity": 60,
-          "gridRow": 1,
-          "gridCol": 7,
+          "quantity": 100,
+          "gridRow": 0,
+          "gridCol": 4,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -336,8 +336,8 @@
           "filename": "Textures/UI/ItemIcons/MortarAmmoIconFlare.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/MortarAmmoIconFlare.png",
           "quantity": 40,
-          "gridRow": 1,
-          "gridCol": 5,
+          "gridRow": 0,
+          "gridCol": 7,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -346,7 +346,7 @@
           "filename": "Textures/UI/ItemIcons/MortarAmmoIconShrapnel.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/MortarAmmoIconShrapnel.png",
           "quantity": 40,
-          "gridRow": 1,
+          "gridRow": 0,
           "gridCol": 6,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
@@ -355,9 +355,9 @@
           "iconId": "Textures/UI/ItemIcons/MortarAmmoIconFire.png",
           "filename": "Textures/UI/ItemIcons/MortarAmmoIconFire.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/MortarAmmoIconFire.png",
-          "quantity": 40,
-          "gridRow": 1,
-          "gridCol": 4,
+          "quantity": 50,
+          "gridRow": 0,
+          "gridCol": 5,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -375,9 +375,9 @@
           "iconId": "Textures/UI/ItemIcons/RpgItemIcon.png",
           "filename": "Textures/UI/ItemIcons/RpgItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/RpgItemIcon.png",
-          "quantity": 60,
-          "gridRow": 0,
-          "gridCol": 5,
+          "quantity": 80,
+          "gridRow": 1,
+          "gridCol": 1,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -386,7 +386,7 @@
           "filename": "Textures/UI/ItemIcons/ATRPGHeavyWIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/ATRPGHeavyWIcon.png",
           "quantity": 60,
-          "gridRow": 0,
+          "gridRow": 1,
           "gridCol": 6,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
@@ -396,8 +396,8 @@
           "filename": "Textures/UI/ItemIcons/ATLaunchedGrenadeWIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/ATLaunchedGrenadeWIcon.png",
           "quantity": 60,
-          "gridRow": 0,
-          "gridCol": 4,
+          "gridRow": 2,
+          "gridCol": 7,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -407,7 +407,7 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/MGHeavyTWItemIcon.png",
           "quantity": 30,
           "gridRow": 2,
-          "gridCol": 2,
+          "gridCol": 3,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -416,8 +416,8 @@
           "filename": "Textures/UI/ItemIcons/ATRPGTWIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/ATRPGTWIcon.png",
           "quantity": 30,
-          "gridRow": 2,
-          "gridCol": 3,
+          "gridRow": 1,
+          "gridCol": 0,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -427,7 +427,7 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/FlamegunWICon.png",
           "quantity": 20,
           "gridRow": 2,
-          "gridCol": 0,
+          "gridCol": 4,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -437,7 +437,7 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/RpgAmmoItemIcon.png",
           "quantity": 100,
           "gridRow": 1,
-          "gridCol": 1,
+          "gridCol": 2,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -447,7 +447,7 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/ATRifleAutomaticWItemIcon.png",
           "quantity": 30,
           "gridRow": 2,
-          "gridCol": 5,
+          "gridCol": 1,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -457,7 +457,7 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/ATRifleItemIcon.png",
           "quantity": 15,
           "gridRow": 2,
-          "gridCol": 6,
+          "gridCol": 0,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -467,7 +467,7 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/ATMortarAmmoItemIcon.png",
           "quantity": 60,
           "gridRow": 1,
-          "gridCol": 2,
+          "gridCol": 5,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -476,8 +476,8 @@
           "filename": "Textures/UI/ItemIcons/ATMortarItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/ATMortarItemIcon.png",
           "quantity": 40,
-          "gridRow": 2,
-          "gridCol": 7,
+          "gridRow": 1,
+          "gridCol": 4,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -486,8 +486,8 @@
           "filename": "Textures/UI/ItemIcons/ATMortarWTripodItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/ATMortarWTripodItemIcon.png",
           "quantity": 30,
-          "gridRow": 2,
-          "gridCol": 4,
+          "gridRow": 1,
+          "gridCol": 3,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -496,8 +496,8 @@
           "filename": "Textures/UI/ItemIcons/HELaunchedGrenadeItemIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/HELaunchedGrenadeItemIcon.png",
           "quantity": 60,
-          "gridRow": 0,
-          "gridCol": 3
+          "gridRow": 2,
+          "gridCol": 6
         }
       ]
     },
@@ -505,10 +505,10 @@
       "id": "3deb0b6c-c68d-4d88-bf4a-4de9ef9dc5b2",
       "title": "Heavy Ammo (MPF)",
       "color": "#8b3538",
-      "x": 36.246743484468944,
-      "y": 93.19559721666599,
-      "width": 568,
-      "height": 151.99999287180657,
+      "x": 33.61900625819156,
+      "y": 18.743042472140356,
+      "width": 384.90354663264145,
+      "height": 228.16924826072082,
       "icons": [
         {
           "id": "aeffb653-86d6-4ac1-8c3e-bb7e488c5a7c",
@@ -517,7 +517,7 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/HeavyArtilleryAmmoItemIcon.png",
           "quantity": 200,
           "gridRow": 0,
-          "gridCol": 0,
+          "gridCol": 3,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -527,7 +527,7 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/LightArtilleryAmmoItemIcon.png",
           "quantity": 200,
           "gridRow": 0,
-          "gridCol": 1,
+          "gridCol": 2,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -536,8 +536,8 @@
           "filename": "Textures/UI/ItemIcons/MortarTankIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/MortarTankIcon.png",
           "quantity": 50,
-          "gridRow": 0,
-          "gridCol": 2,
+          "gridRow": 1,
+          "gridCol": 0,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -547,7 +547,7 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/ATAmmoIcon.png",
           "quantity": 100,
           "gridRow": 0,
-          "gridCol": 3,
+          "gridCol": 1,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -557,7 +557,7 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/LightTankAmmoItemIcon.png",
           "quantity": 100,
           "gridRow": 0,
-          "gridCol": 4,
+          "gridCol": 0,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -566,8 +566,28 @@
           "filename": "Textures/UI/VehicleIcons/LightAAAmmoIcon.png",
           "path": "/assets/icons/Textures/UI/VehicleIcons/LightAAAmmoIcon.png",
           "quantity": 40,
-          "gridRow": 0,
-          "gridCol": 5,
+          "gridRow": 1,
+          "gridCol": 2,
+          "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
+        },
+        {
+          "id": "b0470fe2-32de-4aaf-8e76-0db9da0ee7ad",
+          "iconId": "Textures/UI/VehicleIcons/AircraftAmmoIcon.png",
+          "filename": "Textures/UI/VehicleIcons/AircraftAmmoIcon.png",
+          "path": "/assets/icons/Textures/UI/VehicleIcons/AircraftAmmoIcon.png",
+          "quantity": 70,
+          "gridRow": 1,
+          "gridCol": 1,
+          "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
+        },
+        {
+          "id": "00d18b68-1338-4271-9c7a-a2f700456822",
+          "iconId": "Textures/UI/VehicleIcons/AAAmmoIcon.png",
+          "filename": "Textures/UI/VehicleIcons/AAAmmoIcon.png",
+          "path": "/assets/icons/Textures/UI/VehicleIcons/AAAmmoIcon.png",
+          "quantity": 20,
+          "gridRow": 1,
+          "gridCol": 3,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         }
       ]
@@ -632,7 +652,7 @@
           "filename": "Textures/UI/ItemIcons/TorpedoIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/TorpedoIcon.png",
           "quantity": 0,
-          "gridRow": 2,
+          "gridRow": 3,
           "gridCol": 2
         },
         {
@@ -642,15 +662,6 @@
           "path": "/assets/icons/Textures/UI/ATLargeAmmoIcon.png",
           "quantity": 200,
           "gridRow": 2,
-          "gridCol": 1
-        },
-        {
-          "id": "b0470fe2-32de-4aaf-8e76-0db9da0ee7ad",
-          "iconId": "Textures/UI/VehicleIcons/AircraftAmmoIcon.png",
-          "filename": "Textures/UI/VehicleIcons/AircraftAmmoIcon.png",
-          "path": "/assets/icons/Textures/UI/VehicleIcons/AircraftAmmoIcon.png",
-          "quantity": 50,
-          "gridRow": 3,
           "gridCol": 1
         },
         {
@@ -672,22 +683,13 @@
           "gridCol": 1
         },
         {
-          "id": "00d18b68-1338-4271-9c7a-a2f700456822",
-          "iconId": "Textures/UI/VehicleIcons/AAAmmoIcon.png",
-          "filename": "Textures/UI/VehicleIcons/AAAmmoIcon.png",
-          "path": "/assets/icons/Textures/UI/VehicleIcons/AAAmmoIcon.png",
-          "quantity": 20,
-          "gridRow": 3,
-          "gridCol": 2
-        },
-        {
           "id": "ebdb84f5-69c5-4da7-a8a6-deda89e45575",
           "iconId": "Textures/UI/ItemIcons/AircraftTorpedoAmmoIcon.png",
           "filename": "Textures/UI/ItemIcons/AircraftTorpedoAmmoIcon.png",
           "path": "/assets/icons/Textures/UI/ItemIcons/AircraftTorpedoAmmoIcon.png",
-          "quantity": 50,
+          "quantity": 0,
           "gridRow": 3,
-          "gridCol": 0
+          "gridCol": 1
         }
       ]
     },
@@ -1121,7 +1123,8 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/Uniforms/ScoutUniformWIcon.png",
           "quantity": 60,
           "gridRow": 1,
-          "gridCol": 0
+          "gridCol": 0,
+          "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
           "id": "e43a2a7b-b51e-4508-b6aa-3637532f1d5b",
@@ -1130,7 +1133,8 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/Uniforms/TankUniformWIcon.png",
           "quantity": 60,
           "gridRow": 1,
-          "gridCol": 1
+          "gridCol": 1,
+          "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
           "id": "8d4d1870-9946-417d-9b6c-161d30b9cb97",
@@ -1139,7 +1143,8 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/Uniforms/NavalUniformW.png",
           "quantity": 20,
           "gridRow": 1,
-          "gridCol": 2
+          "gridCol": 2,
+          "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
           "id": "1f680c87-552d-454c-9e67-cd4d26f0d5b5",
@@ -1148,7 +1153,8 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/Uniforms/OfficerUniformWIcon.png",
           "quantity": 20,
           "gridRow": 1,
-          "gridCol": 3
+          "gridCol": 3,
+          "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
           "id": "5ea00074-dc19-4885-840d-aa6c4bad9c88",
@@ -1157,7 +1163,8 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/Uniforms/SnowUniformWIcon.png",
           "quantity": 30,
           "gridRow": 0,
-          "gridCol": 2
+          "gridCol": 2,
+          "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
           "id": "8e345b64-467f-431e-a22b-4f762bf289f0",
@@ -1166,7 +1173,8 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/Uniforms/MedicUniformWIcon.png",
           "quantity": 50,
           "gridRow": 0,
-          "gridCol": 1
+          "gridCol": 1,
+          "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
           "id": "e327f56f-7c52-44d1-9058-55ebdbff63e1",
@@ -1175,7 +1183,8 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/Uniforms/EngineerUniformWIcon.png",
           "quantity": 50,
           "gridRow": 1,
-          "gridCol": 4
+          "gridCol": 4,
+          "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
           "id": "d1954e64-4c0f-42d9-b39e-9f99a7443331",
@@ -1184,7 +1193,8 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/Uniforms/ParatrooperUniformWIcon.png",
           "quantity": 0,
           "gridRow": 0,
-          "gridCol": 5
+          "gridCol": 5,
+          "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
           "id": "073d477f-7de6-4e62-bcf9-bdfdd647edd7",
@@ -1193,7 +1203,8 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/Uniforms/PilotUniformWIcon.png",
           "quantity": 0,
           "gridRow": 1,
-          "gridCol": 5
+          "gridCol": 5,
+          "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
           "id": "9e58592f-8d76-411a-998c-960db4c71898",
@@ -1202,7 +1213,8 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/Uniforms/ArmourUniformW.png",
           "quantity": 20,
           "gridRow": 0,
-          "gridCol": 3
+          "gridCol": 3,
+          "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
           "id": "68cef1ee-7d7b-4842-95b4-fc87b0b24f61",
@@ -1211,7 +1223,8 @@
           "path": "/assets/icons/Textures/UI/ItemIcons/Uniforms/AmmoUniformWIcon.png",
           "quantity": 70,
           "gridRow": 0,
-          "gridCol": 0
+          "gridCol": 0,
+          "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         }
       ]
     },
@@ -1219,10 +1232,10 @@
       "id": "0be574ca-0a19-4341-a760-c7e91d515c91",
       "title": "Structures",
       "color": "#6b5234",
-      "x": 1503.1171669698822,
-      "y": 22.94845360824742,
-      "width": 389.3906552029639,
-      "height": 232,
+      "x": 1560,
+      "y": 30,
+      "width": 290.41265111770076,
+      "height": 232.00000178204837,
       "icons": [
         {
           "id": "a9b7ab51-1099-4e36-bcb1-6c9b9887a256",
@@ -1230,8 +1243,8 @@
           "filename": "Textures/UI/StructureIcons/HeavyArtilleryW.png",
           "path": "/assets/icons/Textures/UI/StructureIcons/HeavyArtilleryW.png",
           "quantity": 5,
-          "gridRow": 0,
-          "gridCol": 1,
+          "gridRow": 1,
+          "gridCol": 0,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -1241,7 +1254,7 @@
           "path": "/assets/icons/Textures/UI/StructureIcons/EmplacedATIcon.png",
           "quantity": 5,
           "gridRow": 1,
-          "gridCol": 2,
+          "gridCol": 1,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -1251,7 +1264,7 @@
           "path": "/assets/icons/Textures/UI/StructureIcons/EmplacedMGIcon.png",
           "quantity": 5,
           "gridRow": 0,
-          "gridCol": 3,
+          "gridCol": 2,
           "subtype": "/assets/icons/subtypes/SubtypeCrateIcon.png"
         },
         {
@@ -1261,7 +1274,7 @@
           "path": "/assets/icons/Textures/UI/VehicleIcons/EmplacedAircraftWIcon.png",
           "quantity": 3,
           "gridRow": 1,
-          "gridCol": 3
+          "gridCol": 2
         },
         {
           "id": "e189cfc7-9b42-4258-8da5-1d9765d04d7d",
@@ -1366,8 +1379,8 @@
       "id": "224f8bbc-4d77-481b-b582-23fd0362c001",
       "title": "Vehicles",
       "color": "#8b3538",
-      "x": 619.7938144329896,
-      "y": 101.44329896907246,
+      "x": 550,
+      "y": 90,
       "width": 866.7912371134021,
       "height": 150,
       "icons": [
